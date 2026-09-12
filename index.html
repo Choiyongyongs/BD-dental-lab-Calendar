@@ -1,0 +1,4236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>근무표 & 근태 관리 시스템</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --work-bg: #ecfdf5;
+      --work-text: #047857;
+      --work-border: #a7f3d0;
+      --off-bg: #fef2f2;
+      --off-text: #b91c1c;
+      --off-border: #fecaca;
+      --leave-bg: #fffbeb;
+      --leave-text: #b45309;
+      --leave-border: #fde68a;
+      --ot-bg: #f5f3ff;
+      --ot-text: #6d28d9;
+      --ot-border: #ddd6fe;
+    }
+
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif; }
+    html { overflow-y: scroll; } /* 스크롤바 생성/제거로 인한 달력 가로폭 흔들림 및 크기 변화 방지 */
+    body { padding: 20px; background-color: var(--bg); color: var(--text-main); margin: 0; min-height: 100vh; }
+    .container { max-width: 1320px; margin: 0 auto; background: var(--card-bg); padding: 28px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08); }
+
+    /* Top Navigation Tabs */
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .app-title-area {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .app-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+      margin: 0;
+    }
+    .app-badge {
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 3px 9px;
+      background: #e0e7ff;
+      color: #3730a3;
+      border-radius: 20px;
+    }
+    .nav-tabs {
+      display: flex;
+      gap: 6px;
+      background: #f1f5f9;
+      padding: 5px;
+      border-radius: 12px;
+    }
+    .tab-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #475569;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .tab-btn:hover {
+      color: #0f172a;
+      background: rgba(255, 255, 255, 0.6);
+    }
+    .tab-btn.active {
+      background: #ffffff;
+      color: var(--primary);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Tab Contents */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Controls & Buttons */
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+    .title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+    .controls { display: flex; gap: 8px; align-items: center; }
+    
+    button { 
+      padding: 8px 16px; 
+      border: 1px solid #cbd5e1; 
+      background: #ffffff; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      font-size: 13.5px; 
+      font-weight: 600; 
+      color: #334155; 
+      transition: all 0.2s; 
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 5px;
+    }
+    button:hover { background: #f8fafc; border-color: #94a3b8; }
+    .btn-primary { background-color: var(--primary); color: #ffffff; border-color: var(--primary); }
+    .btn-primary:hover { background-color: var(--primary-hover); border-color: var(--primary-hover); }
+    .btn-danger { color: #dc2626; border-color: #fecaca; background: #fff; }
+    .btn-danger:hover { background-color: #fee2e2; }
+    .btn-settings { background-color: #f8fafc; border-color: #94a3b8; color: #0f172a; }
+
+    /* Calendar */
+    .calendar { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .calendar th, .calendar td { border: 1px solid #e2e8f0; }
+    .calendar th { padding: 12px 0; background: #f8fafc; font-size: 14px; font-weight: 700; text-align: center; }
+    .calendar th:first-child { color: #e11d48; }
+    .calendar th:last-child { color: #2563eb; }
+
+    .calendar td { height: 145px; padding: 7px; vertical-align: top; background: #ffffff; position: relative; }
+    
+    .cell-holiday { background-color: #fff1f2 !important; }
+    .cell-sub-holiday { background-color: rgba(59, 130, 246, 0.08) !important; }
+
+    .date-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+    .date-num { font-size: 15px; font-weight: 700; line-height: 1; }
+    .sunday .date-num { color: #e11d48; }
+    .saturday .date-num { color: #2563eb; }
+
+    .holiday-label { font-size: 10.5px; font-weight: 700; padding: 2px 4px; border-radius: 4px; line-height: 1.2; text-align: right; }
+    .holiday-label.red { color: #e11d48; background: #ffe4e6; }
+    .holiday-label.blue { color: #1d4ed8; background: #dbeafe; }
+
+    .badge-box { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 4px; 
+      min-height: 106px;
+      height: calc(100% - 24px);
+    }
+    .badge { border-radius: 5px; line-height: 1.35; word-break: keep-all; font-size: 12px; font-weight: 600; padding: 3px 6px; }
+    .badge-work { 
+      background-color: var(--work-bg); 
+      color: var(--work-text); 
+      border: 1px solid var(--work-border); 
+    }
+    .badge-off { 
+      font-size: 11.5px; 
+      font-weight: 500; 
+      background-color: var(--off-bg); 
+      color: var(--off-text); 
+      border: 1px solid var(--off-border); 
+      margin-top: auto; /* 항상 날짜칸 가장 아래쪽에 고정 */
+    }
+    .badge-leave {
+      background-color: var(--leave-bg);
+      color: var(--leave-text);
+      border: 1px solid var(--leave-border);
+      font-weight: 700;
+    }
+    .badge-leave-approved {
+      background-color: var(--leave-bg);
+      color: var(--leave-text);
+      border: 1px solid var(--leave-border);
+      font-weight: 700;
+    }
+    .badge-leave-pending {
+      background-color: #fff7ed;
+      color: #c2410c;
+      border: 1px dashed #f97316;
+      font-weight: 700;
+    }
+    .leave-calendar td {
+      height: 96px;
+      min-height: 96px;
+    }
+    .leave-calendar .badge-box,
+    .ot-calendar .badge-box {
+      min-height: 55px;
+      height: auto;
+    }
+    .badge-ot {
+      background-color: var(--ot-bg);
+      color: var(--ot-text);
+      border: 1px solid var(--ot-border);
+      font-weight: 700;
+    }
+    .badge-ot-work {
+      background-color: #f5f3ff;
+      color: #6d28d9;
+      border: 1px solid #ddd6fe;
+      font-weight: 700;
+    }
+    .badge-ot-parttime {
+      background-color: #f0fdfa;
+      color: #0f766e;
+      border: 1px solid #99f6e4;
+      font-weight: 700;
+    }
+    .badge-ot-remain {
+      background-color: #fff7ed;
+      color: #c2410c;
+      border: 1px solid #fed7aa;
+      font-weight: 700;
+    }
+
+    /* 직원 필터 칩 스타일 */
+    .member-filter-chip {
+      padding: 4px 11px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #475569;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 18px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      outline: none;
+    }
+    .member-filter-chip:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    .member-filter-chip.active {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #1d4ed8;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+    }
+
+    /* 직원 필터 적용 시 달력 셀 하이라이트 */
+    .calendar td.cell-member-work {
+      background-color: #eef2ff !important;
+      box-shadow: inset 0 0 0 2.5px #4f46e5;
+      position: relative;
+    }
+    .calendar td.cell-member-leave {
+      background-color: #fef3c7 !important;
+      box-shadow: inset 0 0 0 2.5px #f59e0b;
+      position: relative;
+    }
+    .calendar td.cell-member-dimmed {
+      opacity: 0.24 !important;
+      filter: grayscale(35%);
+    }
+
+    /* 맞바꿈(Swap) 배지 및 스타일 */
+    .badge-swapped {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: #eef2ff;
+      color: #4338ca;
+      border: 1px solid #c7d2fe;
+      border-radius: 4px;
+      padding: 0 4px;
+      font-weight: 700;
+    }
+    .swap-card-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      gap: 10px;
+    }
+    .swap-card-item:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+
+    /* 오늘 날짜 (Today) 특별 하이라이트 - 대체공휴일(파랑)과 겹치지 않는 선명한 오렌지/앰버 톤 */
+    .calendar td.cell-today {
+      background-color: #fff7ed !important;
+      box-shadow: inset 0 0 0 2.5px #ea580c !important;
+      position: relative;
+      z-index: 2;
+    }
+    .calendar td.cell-today .date-num {
+      background: #ea580c;
+      color: #ffffff !important;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 11px;
+      font-size: 13px;
+      font-weight: 800;
+      box-shadow: 0 2px 5px rgba(234, 88, 12, 0.35);
+    }
+    .badge-today {
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #ffffff;
+      background: #ea580c;
+      padding: 1.5px 6px;
+      border-radius: 10px;
+      letter-spacing: -0.2px;
+      box-shadow: 0 1px 3px rgba(234, 88, 12, 0.3);
+      display: inline-block;
+      line-height: 1.3;
+    }
+    @keyframes todayPulse {
+      0% { box-shadow: inset 0 0 0 2.5px #ea580c, 0 0 0 0 rgba(234, 88, 12, 0.7); }
+      50% { box-shadow: inset 0 0 0 3.5px #c2410c, 0 0 0 10px rgba(234, 88, 12, 0); }
+      100% { box-shadow: inset 0 0 0 2.5px #ea580c, 0 0 0 0 rgba(234, 88, 12, 0); }
+    }
+    .cell-today-pulse {
+      animation: todayPulse 1.2s ease-in-out 3 !important;
+    }
+
+    /* 하이라이트된 배지 내 직원 이름 강조 - 줄바꿈 및 크기 변화 방지 */
+    .name-highlight {
+      background: #fef08a;
+      color: #854d0e;
+      padding: 0 2px;
+      border-radius: 3px;
+      font-weight: 700;
+      display: inline;
+    }
+    .badge-member-tag {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 1.5px 6px;
+      border-radius: 10px;
+      margin-left: 4px;
+      vertical-align: middle;
+      display: inline-block;
+    }
+    .badge-member-tag.work {
+      background: #4f46e5;
+      color: #ffffff;
+    }
+    .badge-member-tag.leave {
+      background: #d97706;
+      color: #ffffff;
+    }
+
+    /* Forms & Cards */
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 22px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      align-items: flex-end;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-group label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      padding: 9px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      background: #fff;
+    }
+    .form-group input:focus, .form-group select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    /* Data Tables */
+    .data-table-container {
+      overflow-x: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13.5px;
+    }
+    .data-table th {
+      background: #f8fafc;
+      padding: 12px 14px;
+      font-weight: 700;
+      color: #475569;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+    .data-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #1e293b;
+    }
+    .data-table tr:hover td {
+      background-color: #f8fafc;
+    }
+
+    /* Summary Stat Cards */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 18px;
+      position: relative;
+    }
+    .stat-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+    .stat-card-value {
+      font-size: 26px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .stat-card-sub {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+    .leave-history-container {
+      margin-top: 10px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 8px;
+    }
+    .leave-history-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .leave-history-list {
+      max-height: 195px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-right: 2px;
+    }
+    .leave-history-item {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 4px 8px;
+      color: #1e293b;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .leave-history-item:hover {
+      border-color: #6366f1;
+      background: #f8fafc;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    /* Modals */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.45); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    #ot-detail-modal, #leave-detail-modal { z-index: 1200 !important; }
+    #admin-auth-modal { z-index: 1500 !important; }
+    .modal-card { background: #ffffff; border-radius: 14px; width: 420px; max-width: 92%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+    .modal-card h3 { margin: 0 0 16px 0; font-size: 18px; font-weight: 700; color: #0f172a; }
+    .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 14px; font-weight: 500; }
+    .setting-item select { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 600; outline: none; }
+    .modal-footer { margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px; }
+    .modal-footer button { justify-content: center; text-align: center; }
+
+    /* Pill Badges */
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .pill-leave { background: #fef3c7; color: #92400e; }
+    .pill-am { background: #e0e7ff; color: #3730a3; }
+    .pill-pm { background: #ede9fe; color: #5b21b6; }
+    .pill-ot { background: #f3e8ff; color: #6b21a8; }
+    .pill-ot-work { background: #ede9fe; color: #5b21b6; }
+    .pill-ot-parttime { background: #ccfbf1; color: #0f766e; }
+    .pill-ot-remain { background: #ffedd5; color: #c2410c; }
+
+    /* Filter segmented button */
+    .segmented-control {
+      display: inline-flex;
+      background: #e2e8f0;
+      padding: 3px;
+      border-radius: 8px;
+    }
+    .segmented-btn {
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #475569;
+    }
+    .segmented-btn.active {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  
+  <!-- 상단 네비게이션 탭 -->
+  <div class="top-nav">
+    <div class="app-title-area">
+      <h1 class="app-title">근무·근태 관리 시스템</h1>
+      <span class="app-badge">통합 v2.0</span>
+    </div>
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('calendar')">📅 근무표</button>
+      <button class="tab-btn" onclick="switchTab('leave')">🌴 연차관리</button>
+      <button class="tab-btn" onclick="switchTab('overtime')">⏰ 연장근무</button>
+      <button class="tab-btn" onclick="switchTab('stats')">📊 통계</button>
+    </div>
+  </div>
+
+  <!-- 1. 근무표 탭 -->
+  <div id="tab-calendar" class="tab-content active">
+    <div class="header" style="align-items: flex-end; min-height: 72px;">
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 2px;">
+        <div class="title" id="current-month-display" style="margin: 0;">2026년 9월</div>
+        <div id="filter-status-banner" style="font-size: 13px; font-weight: 700; color: #4338ca; display: none; background: #eef2ff; border: 1px solid #c7d2fe; padding: 3px 10px; border-radius: 20px;"></div>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+        <!-- 조 설정 바로 위: 직원 필터 바 (용희, 찬유, 소영, 세진, 서영, 이슬) -->
+        <div class="member-filter-bar" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
+          <span style="font-size: 12.5px; font-weight: 700; color: #64748b; margin-right: 2px;">👤 직원 필터:</span>
+          <button type="button" class="member-filter-chip active" id="filter-btn-ALL" onclick="setMemberFilter('ALL')">전체</button>
+          <button type="button" class="member-filter-chip" id="filter-btn-용희" onclick="setMemberFilter('용희')">용희</button>
+          <button type="button" class="member-filter-chip" id="filter-btn-찬유" onclick="setMemberFilter('찬유')">찬유</button>
+          <button type="button" class="member-filter-chip" id="filter-btn-소영" onclick="setMemberFilter('소영')">소영</button>
+          <button type="button" class="member-filter-chip" id="filter-btn-세진" onclick="setMemberFilter('세진')">세진</button>
+          <button type="button" class="member-filter-chip" id="filter-btn-서영" onclick="setMemberFilter('서영')">서영</button>
+          <button type="button" class="member-filter-chip" id="filter-btn-이슬" onclick="setMemberFilter('이슬')">이슬</button>
+        </div>
+        <div class="controls">
+          <button class="btn-primary" onclick="openSwapModal()" style="background:#4f46e5; border-color:#4338ca;">🔄 근무 맞바꿈</button>
+          <button class="btn-settings" onclick="openSettingsModal()">⚙️ 조 설정</button>
+          <button onclick="changeMonth(-1)">◀ 이전 달</button>
+          <button onclick="goToday()" style="font-weight: 800; background: #fff7ed; color: #c2410c; border: 1.5px solid #fdba74;">📍 오늘</button>
+          <button onclick="changeMonth(1)">다음 달 ▶</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 달력 범례 (단독 행으로 고정하여 높이 변화 방지) -->
+    <div style="display:flex; align-items: center; margin-bottom:14px; gap: 16px; font-size:12.5px; color:#475569; flex-wrap:wrap; min-height: 24px;">
+      <span style="display:flex; align-items:center; gap:5px;"><span style="width:12px; height:12px; background:#fff7ed; border:2px solid #ea580c; border-radius:3px;"></span> 📍 오늘</span>
+      <span style="display:flex; align-items:center; gap:5px;"><span style="width:12px; height:12px; background:var(--work-bg); border:1px solid var(--work-border); border-radius:3px;"></span> 근무</span>
+      <span style="display:flex; align-items:center; gap:5px;"><span style="width:12px; height:12px; background:var(--off-bg); border:1px solid var(--off-border); border-radius:3px;"></span> 휴무</span>
+      <span style="display:flex; align-items:center; gap:5px;"><span style="width:12px; height:12px; background:var(--leave-bg); border:1px solid var(--leave-border); border-radius:3px;"></span> 🌴 연차/반차</span>
+      <span style="display:flex; align-items:center; gap:5px;"><span class="badge-swapped" style="padding:1px 5px; font-size:11px;">홍길동(⇄김철수)</span> 🔄 맞바꿈</span>
+    </div>
+
+    <table class="calendar">
+      <thead>
+        <tr>
+          <th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th>
+        </tr>
+      </thead>
+      <tbody id="calendar-body"></tbody>
+    </table>
+  </div>
+
+  <!-- 2. 연차관리 탭 -->
+  <div id="tab-leave" class="tab-content">
+    <div class="header">
+      <div class="title">🌴 연차 신청 및 사용 현황</div>
+      <div class="controls">
+        <button class="btn-primary" onclick="openLeaveApplyModal()">➕ 연차신청</button>
+        <button onclick="openLeaveGrantModal()" style="font-weight: 600;">⚙️ 연차 부여 관리</button>
+      </div>
+    </div>
+
+    <!-- 직원별 연차 현황 카드 (승인된 연차 세로 목록 포함) -->
+    <div class="stat-grid" id="leave-member-summary-cards"></div>
+
+    <!-- 연차 신청내역 테이블 (관리자 승인 대기 목록) -->
+    <div class="card">
+      <div class="card-title" style="justify-content: space-between;">
+        <span>📋 연차 신청내역</span>
+        <span style="font-size: 13px; font-weight: normal; color: #64748b;" id="leave-total-count">대기 0건</span>
+      </div>
+      <div class="data-table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>연차 사용일</th>
+              <th>직원명</th>
+              <th>구분</th>
+              <th>차감 일수</th>
+              <th>사유</th>
+              <th>신청 일시</th>
+              <th style="text-align: right;">승인 관리</th>
+            </tr>
+          </thead>
+          <tbody id="leave-list-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 연차 현황 전용 달력 (승인된 연차와 승인 대기 중인 연차만 표기) -->
+    <div class="card" style="margin-top: 24px;">
+      <div class="header" style="margin-bottom: 12px;">
+        <div class="title" id="leave-cal-title" style="font-size: 17px;">📅 연차 전용 캘린더</div>
+        <div class="controls">
+          <button onclick="changeLeaveCalMonth(-1)">◀ 이전 달</button>
+          <button onclick="goTodayLeaveCal()" style="font-weight: 800; background: #fff7ed; color: #c2410c; border: 1.5px solid #fdba74;">📍 오늘</button>
+          <button onclick="changeLeaveCalMonth(1)">다음 달 ▶</button>
+        </div>
+      </div>
+      <!-- 범례 -->
+      <div style="display:flex; gap:16px; margin-bottom:12px; font-size:12.5px; color:#475569; flex-wrap:wrap; align-items:center;">
+        <span style="display:flex; align-items:center; gap:5px;">
+          <span style="width:12px; height:12px; background:var(--leave-bg); border:1px solid var(--leave-border); border-radius:3px;"></span> 🌴 승인된 연차
+        </span>
+        <span style="display:flex; align-items:center; gap:5px;">
+          <span style="width:12px; height:12px; background:#fff7ed; border:1px dashed #f97316; border-radius:3px;"></span> ⏳ 승인 대기 연차
+        </span>
+      </div>
+      <!-- 연차 달력 테이블 -->
+      <table class="calendar leave-calendar">
+        <thead>
+          <tr>
+            <th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th>
+          </tr>
+        </thead>
+        <tbody id="leave-calendar-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 3. 연장근무 탭 -->
+  <div id="tab-overtime" class="tab-content">
+    <div class="header">
+      <div class="title" style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+        <span>⏰ 연장근무(OT) 신청 및 기록</span>
+        <span style="font-size: 13.5px; font-weight: 600; color: #64748b;" id="ot-header-month-count"></span>
+      </div>
+      <div class="controls">
+        <button class="btn-primary" onclick="openOtModal()">➕ 연장근무 등록</button>
+      </div>
+    </div>
+
+    <!-- 직원별 연장근무 요약 카드 -->
+    <div class="stat-grid" id="ot-member-summary-cards"></div>
+
+    <!-- 연장근무 전용 달력 (가장 아래) -->
+    <div class="card" style="margin-top: 24px;">
+      <div class="header" style="margin-bottom: 12px;">
+        <div class="title" id="ot-cal-title" style="font-size: 17px;">📅 연장근무 전용 캘린더</div>
+        <div class="controls">
+          <button onclick="changeOtCalMonth(-1)">◀ 이전 달</button>
+          <button onclick="goTodayOtCal()" style="font-weight: 800; background: #fff7ed; color: #c2410c; border: 1.5px solid #fdba74;">📍 오늘</button>
+          <button onclick="changeOtCalMonth(1)">다음 달 ▶</button>
+        </div>
+      </div>
+      <!-- 범례 -->
+      <div style="display:flex; gap:16px; margin-bottom:12px; font-size:12.5px; color:#475569; flex-wrap:wrap; align-items:center;">
+        <span style="display:flex; align-items:center; gap:5px;">
+          <span style="width:12px; height:12px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:3px;"></span> ⏰ 퇴근후 연장 (분)
+        </span>
+        <span style="display:flex; align-items:center; gap:5px;">
+          <span style="width:12px; height:12px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:3px;"></span> 💼 휴무일 알바 (갯수)
+        </span>
+        <span style="display:flex; align-items:center; gap:5px;">
+          <span style="width:12px; height:12px; background:#fff7ed; border:1px solid #fed7aa; border-radius:3px;"></span> 📑 휴무일 잔여업무 (분)
+        </span>
+      </div>
+      <!-- 연장근무 달력 테이블 -->
+      <table class="calendar ot-calendar">
+        <thead>
+          <tr>
+            <th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th>
+          </tr>
+        </thead>
+        <tbody id="ot-calendar-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 4. 통계 탭 (월/년 선택) -->
+  <div id="tab-stats" class="tab-content">
+    <div class="header">
+      <div class="title">📊 근태 및 근무 종합 통계</div>
+      <div class="controls">
+        <div class="segmented-control">
+          <button class="segmented-btn active" id="btn-stats-month" onclick="changeStatsMode('month')">월별 통계</button>
+          <button class="segmented-btn" id="btn-stats-year" onclick="changeStatsMode('year')">1년(연간) 통계</button>
+        </div>
+        <select id="stats-year-select" onchange="renderStats()" style="padding: 7px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-weight: 600;"></select>
+        <select id="stats-month-select" onchange="renderStats()" style="padding: 7px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-weight: 600;"></select>
+      </div>
+    </div>
+
+    <!-- 통계 요약 카드 -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-card-title" id="stat-card-title-period">기준 기간</div>
+        <div class="stat-card-value" id="stat-period-display" style="font-size: 20px;">2026년 9월</div>
+        <div class="stat-card-sub" id="stat-period-sub">월간 누적 현황</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-title">🌴 총 연차 사용 일수</div>
+        <div class="stat-card-value" id="stat-total-leave-days" style="color: #b45309;">0<span style="font-size: 16px; font-weight: normal; margin-left: 4px;">일</span></div>
+        <div class="stat-card-sub" id="stat-total-leave-count">신청 0건</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-title">⏰ 총 연장근무 (퇴근후/알바/잔여)</div>
+        <div class="stat-card-value" id="stat-total-ot-hours" style="color: #6d28d9; font-size: 18px;">-</div>
+        <div class="stat-card-sub" id="stat-total-ot-count">기록 0건</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-title">🏢 총 근무배정일수(연차제외)</div>
+        <div class="stat-card-value" id="stat-total-work-days" style="color: #047857;">0<span style="font-size: 16px; font-weight: normal; margin-left: 4px;">일</span></div>
+        <div class="stat-card-sub">직원 합계 기준</div>
+      </div>
+    </div>
+
+    <!-- 직원별 상세 통계 매트릭스 테이블 -->
+    <div class="card">
+      <div class="card-title">👥 직원별 종합 집계표</div>
+      <div class="data-table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>직원명</th>
+              <th>소속 조</th>
+              <th id="stats-th-work-days">근무배정일수(연차제외)</th>
+              <th id="stats-th-duty-days">당직(일)</th>
+              <th>연차 사용 일수</th>
+              <th>연장근무 (퇴근후 / 알바 / 잔여)</th>
+              <th>비고</th>
+            </tr>
+          </thead>
+          <tbody id="stats-table-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 데이터 관리 (백업/내보내기) -->
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+      <button onclick="exportDataToJson()">📥 데이터 백업 (JSON)</button>
+      <button onclick="importDataFromJson()">📤 데이터 복원</button>
+      <input type="file" id="json-file-input" accept=".json" style="display: none;" onchange="handleFileChosen(event)">
+    </div>
+  </div>
+
+</div>
+
+<!-- 관리자 비밀번호 확인 모달 -->
+<div class="modal-overlay" id="admin-auth-modal">
+  <div class="modal-card" style="width: 350px; max-width: 90%; text-align: center; border-radius: 14px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);">
+    <div style="width: 50px; height: 50px; background: #eef2ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto; font-size: 26px;">🔒</div>
+    <h3 style="margin: 0 0 6px 0; font-size: 18px; color: #0f172a;">관리자 인증</h3>
+    <p style="font-size: 13px; color: #64748b; margin: 0 0 18px 0; line-height: 1.4;">
+      관리자 전용 설정 메뉴입니다.<br>비밀번호 4자리를 입력해주세요.
+    </p>
+    <div style="margin-bottom: 6px;">
+      <input type="password" id="admin-auth-password-input" 
+             placeholder="••••" 
+             maxlength="10"
+             autocomplete="off"
+             style="width: 100%; padding: 10px 14px; font-size: 20px; border: 1.5px solid #cbd5e1; border-radius: 8px; text-align: center; letter-spacing: 6px; outline: none; box-sizing: border-box;"
+             onkeydown="if(event.key==='Enter'){ event.preventDefault(); submitAdminAuth(); }" 
+             oninput="document.getElementById('admin-auth-error-msg').style.display='none';" />
+      <div id="admin-auth-error-msg" style="color: #ef4444; font-size: 12.5px; font-weight: 700; margin-top: 8px; display: none;">⚠️ 비밀번호가 일치하지 않습니다.</div>
+    </div>
+    <div class="modal-footer" style="justify-content: center; gap: 10px; margin-top: 20px;">
+      <button type="button" onclick="closeAdminAuthModal()" style="min-width: 85px; padding: 8px 16px; justify-content: center; text-align: center;">취소</button>
+      <button type="button" class="btn-primary" onclick="submitAdminAuth()" style="min-width: 85px; padding: 8px 18px; background: #4f46e5; border-color: #4338ca; justify-content: center; text-align: center;">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- 조 배정 모달 -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal-card">
+    <h3>조 배정 설정</h3>
+    <div id="modal-settings-list"></div>
+    <div style="font-size: 12px; color: #64748b; margin-top: 8px; border-top: 1px solid #f1f5f9; padding-top: 8px; line-height: 1.6;">
+      * <strong>용희</strong>: 월·화·목·금 고정 근무<br>
+      * <strong>A조 (화수목금)</strong>: 당번 시 <strong>당번 주 화요일</strong> 대체휴무 (예: 1/9~10 당번 ➔ 1/5 휴무)<br>
+      * <strong>B조 (월화수목)</strong>: 당번 시 <strong>다음 주 목요일</strong> 대체휴무 (예: 1/16~17 당번 ➔ 1/21 휴무)<br>
+      * 2027년 1월 2일(토) 당번 시작 (당번 순서: 세진 ➔ 소영 ➔ 이슬 ➔ 서영 ➔ 찬유)
+    </div>
+    <div class="modal-footer">
+      <button type="button" onclick="closeSettingsModal()">닫기</button>
+      <button type="button" class="btn-primary" onclick="saveSettings()">저장 및 적용</button>
+    </div>
+  </div>
+</div>
+
+<!-- 연차 신청 모달 -->
+<div class="modal-overlay" id="leave-apply-modal">
+  <div class="modal-card">
+    <h3>✍️ 연차 신청</h3>
+    <form id="modal-leave-form" onsubmit="handleLeaveApplySubmit(event)">
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="form-group">
+          <label for="modal-leave-person">직원 이름</label>
+          <select id="modal-leave-person" required style="width: 100%;"></select>
+        </div>
+        <div class="form-group">
+          <label for="modal-leave-date">연차 사용일</label>
+          <input type="date" id="modal-leave-date" required style="width: 100%;" />
+        </div>
+        <div class="form-group">
+          <label for="modal-leave-type">구분</label>
+          <select id="modal-leave-type" required style="width: 100%;">
+            <option value="전일">전일 연차 (1.0일)</option>
+            <option value="오전반차">오전 반차 (0.5일)</option>
+            <option value="오후반차">오후 반차 (0.5일)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="modal-leave-reason">사유 (선택)</label>
+          <input type="text" id="modal-leave-reason" placeholder="개인사유, 병원 방문, 경조사 등" style="width: 100%;" />
+        </div>
+      </div>
+      <div class="modal-footer" style="margin-top: 24px;">
+        <button type="button" onclick="closeLeaveApplyModal()">취소</button>
+        <button type="submit" class="btn-primary">신청 완료</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 연차 부여 모달 -->
+<div class="modal-overlay" id="leave-grant-modal">
+  <div class="modal-card" style="width: 440px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h3 style="margin: 0;">⚙️ 직원별 연차 부여 관리</h3>
+      <button type="button" onclick="closeLeaveGrantModal()" style="padding: 3px 8px; font-size: 13px; border: none; background: #f1f5f9; border-radius: 6px; cursor: pointer; color: #64748b; font-weight: 700;">✕</button>
+    </div>
+    
+    <!-- 부여 대상 연도 선택 바 -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; background: #f1f5f9; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1;">
+      <label for="leave-grant-year-select" style="font-weight: 700; font-size: 13.5px; color: #0f172a;">📅 부여 기준 연도</label>
+      <select id="leave-grant-year-select" onchange="onLeaveGrantYearChange()" style="padding: 6px 12px; font-size: 14px; font-weight: 700; border-radius: 6px; border: 1.5px solid #2563eb; background: #ffffff; color: #1e293b; cursor: pointer;">
+        <option value="2025">2025년</option>
+        <option value="2026">2026년</option>
+        <option value="2027">2027년</option>
+        <option value="2028">2028년</option>
+        <option value="2029">2029년</option>
+        <option value="2030">2030년</option>
+        <option value="2031">2031년</option>
+        <option value="2032">2032년</option>
+        <option value="2033">2033년</option>
+        <option value="2034">2034년</option>
+        <option value="2035">2035년</option>
+      </select>
+    </div>
+
+    <p style="font-size: 12.5px; color: #64748b; margin-top: 0; margin-bottom: 14px; line-height: 1.5;">
+      선택한 연도의 각 직원별 기본 연차 부여일수를 입력하세요.<br>
+      <span style="color: #2563eb; font-weight: 600;">*연도별로 부여일수가 각각 독립적으로 저장·관리됩니다.</span>
+    </p>
+
+    <div id="modal-grant-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 280px; overflow-y: auto; padding-right: 4px;"></div>
+    
+    <div class="modal-footer" style="margin-top: 20px;">
+      <button type="button" onclick="closeLeaveGrantModal()">닫기</button>
+      <button type="button" class="btn-primary" onclick="saveLeaveGrants()">저장 및 적용</button>
+    </div>
+  </div>
+</div>
+
+<!-- 연차 단건 상세 내역 및 삭제 모달 -->
+<div class="modal-overlay" id="leave-detail-modal" style="z-index: 1200;">
+  <div class="modal-card" style="width: 440px; max-width: 92%;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;" id="leave-detail-modal-title">🌴 연차 상세 내역</h3>
+      <button type="button" onclick="closeLeaveDetailModal()" style="border: none; background: none; font-size: 18px; cursor: pointer; color: #64748b; padding: 4px;">✕</button>
+    </div>
+
+    <div id="leave-detail-content" style="display: flex; flex-direction: column; gap: 10px; font-size: 13.5px;">
+      <!-- JS로 채워짐 -->
+    </div>
+
+    <div class="modal-footer" style="margin-top: 22px; justify-content: space-between;">
+      <button type="button" class="btn-danger" id="leave-detail-delete-btn" style="padding: 7px 14px;">🗑️ 연차 삭제</button>
+      <button type="button" onclick="closeLeaveDetailModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 연장근무 등록 모달 -->
+<div class="modal-overlay" id="ot-modal">
+  <div class="modal-card" style="width: 450px;">
+    <h3>⏰ 연장근무 등록</h3>
+    <form id="modal-ot-form" onsubmit="handleOtSubmit(event)">
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="form-group">
+          <label for="ot-person">대상 직원</label>
+          <select id="ot-person" required style="width: 100%;"></select>
+        </div>
+        <div class="form-group">
+          <label for="ot-date">근무 날짜</label>
+          <input type="date" id="ot-date" required style="width: 100%;" />
+        </div>
+        <div class="form-group">
+          <label for="ot-type">연장근무 형태</label>
+          <select id="ot-type" required style="width: 100%;" onchange="handleOtTypeChange()">
+            <option value="출근일 연장">출근일 연장 (퇴근시간 초과)</option>
+            <option value="휴무일 알바">휴무일 알바 (비출근일 신규 업무)</option>
+            <option value="휴무일 잔여업무">휴무일 잔여업무 (비출근일 전일 미완료)</option>
+          </select>
+        </div>
+
+        <!-- 시작 시간 & 끝 시간 (알바 포함 모든 형태 입력 가능) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label for="ot-start-time">시작 시간</label>
+            <input type="time" id="ot-start-time" style="width: 100%;" onchange="calculateOtMinutes()" oninput="calculateOtMinutes()" />
+          </div>
+          <div class="form-group">
+            <label for="ot-end-time">끝 시간</label>
+            <input type="time" id="ot-end-time" style="width: 100%;" onchange="calculateOtMinutes()" oninput="calculateOtMinutes()" />
+          </div>
+        </div>
+
+        <!-- 연장 시간 (분) 섹션 (출근일 연장, 휴무일 잔여업무 선택 시 표시 - 자동 계산) -->
+        <div id="ot-minutes-section" class="form-group">
+          <label for="ot-minutes">연장 시간 (분) <span style="font-size: 11.5px; color: #64748b; font-weight: normal;">*시작·끝시간 기준 자동 입력</span></label>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="number" id="ot-minutes" min="1" step="1" placeholder="자동 계산" style="width: 100%; font-weight: 700; background: #f8fafc;" />
+            <span style="font-size: 14px; font-weight: 700; color: #475569; white-space: nowrap;">분</span>
+          </div>
+        </div>
+
+        <!-- 알바 갯수 입력 섹션 (휴무일 알바 선택 시 표시 - 갯수 직접 입력) -->
+        <div id="ot-count-section" class="form-group" style="display: none;">
+          <label for="ot-count">알바 갯수 <span style="font-size: 11.5px; color: #64748b; font-weight: normal;">*작업 건수/개수 직접 입력</span></label>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="number" id="ot-count" min="1" step="1" placeholder="예: 5" style="width: 100%; font-weight: 700;" />
+            <span style="font-size: 14px; font-weight: 700; color: #475569; white-space: nowrap;">개</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="margin-top: 24px;">
+        <button type="button" onclick="closeOtModal()">취소</button>
+        <button type="submit" class="btn-primary">➕ 등록 완료</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 연장근무 단건 상세/수정/삭제 모달 (상위 모달 위로 뜨도록 z-index: 1200) -->
+<div class="modal-overlay" id="ot-detail-modal" style="z-index: 1200;">
+  <div class="modal-card" style="width: 460px; max-width: 92%;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;" id="ot-detail-modal-title">🔍 연장근무 상세 내역</h3>
+      <button type="button" onclick="closeOtDetailModal()" style="border: none; background: none; font-size: 18px; cursor: pointer; color: #64748b; padding: 4px;">✕</button>
+    </div>
+
+    <!-- 1. 조회 뷰 (View Mode) -->
+    <div id="ot-detail-view-mode">
+      <div id="ot-detail-content" style="display: flex; flex-direction: column; gap: 10px; font-size: 13.5px;">
+        <!-- JS로 채워짐 -->
+      </div>
+      <div class="modal-footer" style="margin-top: 22px; justify-content: space-between;">
+        <button type="button" class="btn-danger" id="ot-detail-delete-btn" style="padding: 7px 14px;">🗑️ 기록 삭제</button>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn-primary" onclick="switchToOtEditMode()" style="background: #4f46e5; border-color: #4338ca; padding: 7px 14px;">✏️ 수정하기</button>
+          <button type="button" onclick="closeOtDetailModal()">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 수정 폼 뷰 (Edit Mode) -->
+    <div id="ot-detail-edit-mode" style="display: none;">
+      <form id="ot-detail-edit-form" onsubmit="handleOtEditSubmit(event)">
+        <input type="hidden" id="ot-edit-id" />
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="form-group">
+            <label for="ot-edit-person">대상 직원</label>
+            <select id="ot-edit-person" required style="width: 100%;"></select>
+          </div>
+          <div class="form-group">
+            <label for="ot-edit-date">근무 날짜</label>
+            <input type="date" id="ot-edit-date" required style="width: 100%;" />
+          </div>
+          <div class="form-group">
+            <label for="ot-edit-type">연장근무 형태</label>
+            <select id="ot-edit-type" required style="width: 100%;" onchange="handleOtEditTypeChange()">
+              <option value="출근일 연장">출근일 연장 (퇴근시간 초과)</option>
+              <option value="휴무일 알바">휴무일 알바 (비출근일 신규 업무)</option>
+              <option value="휴무일 잔여업무">휴무일 잔여업무 (비출근일 전일 미완료)</option>
+            </select>
+          </div>
+
+          <!-- 시작 시간 & 끝 시간 -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label for="ot-edit-start-time">시작 시간</label>
+              <input type="time" id="ot-edit-start-time" style="width: 100%;" onchange="calculateOtEditMinutes()" oninput="calculateOtEditMinutes()" />
+            </div>
+            <div class="form-group">
+              <label for="ot-edit-end-time">끝 시간</label>
+              <input type="time" id="ot-edit-end-time" style="width: 100%;" onchange="calculateOtEditMinutes()" oninput="calculateOtEditMinutes()" />
+            </div>
+          </div>
+
+          <!-- 연장 시간 (분) (출근일 연장, 휴무일 잔여업무) -->
+          <div id="ot-edit-minutes-section" class="form-group">
+            <label for="ot-edit-minutes">연장 시간 (분) <span style="font-size: 11.5px; color: #64748b; font-weight: normal;">*시작·끝시간 기준 자동 입력</span></label>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="number" id="ot-edit-minutes" min="1" step="1" placeholder="자동 계산" style="width: 100%; font-weight: 700; background: #f8fafc;" />
+              <span style="font-size: 14px; font-weight: 700; color: #475569; white-space: nowrap;">분</span>
+            </div>
+          </div>
+
+          <!-- 알바 갯수 (휴무일 알바) -->
+          <div id="ot-edit-count-section" class="form-group" style="display: none;">
+            <label for="ot-edit-count">알바 갯수 <span style="font-size: 11.5px; color: #64748b; font-weight: normal;">*작업 건수/개수 직접 입력</span></label>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="number" id="ot-edit-count" min="1" step="1" placeholder="예: 5" style="width: 100%; font-weight: 700;" />
+              <span style="font-size: 14px; font-weight: 700; color: #475569; white-space: nowrap;">개</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="margin-top: 22px;">
+          <button type="button" onclick="switchToOtViewMode()">취소</button>
+          <button type="submit" class="btn-primary" style="background: #2563eb;">💾 수정 완료</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 직원별 월별 연장근무 전체 목록 모달 -->
+<div class="modal-overlay" id="ot-member-list-modal">
+  <div class="modal-card" style="width: 780px; max-width: 95%; max-height: 90vh; display: flex; flex-direction: column;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <h3 style="margin: 0;" id="ot-member-list-title">📋 연장근무 전체 내역</h3>
+      <button type="button" onclick="closeOtMemberListModal()" style="border: none; background: #f1f5f9; border-radius: 6px; font-size: 14px; cursor: pointer; color: #64748b; padding: 4px 10px; font-weight: 700;">✕</button>
+    </div>
+    <div id="ot-member-list-summary" style="margin-bottom: 14px;">
+      <!-- 상단 요약 배지 -->
+    </div>
+    <div class="data-table-container" style="max-height: 380px; overflow-y: auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>날짜</th>
+            <th>형태 구분</th>
+            <th>근무 시간대</th>
+            <th>연장 (분 / 갯수)</th>
+            <th>등록 일시</th>
+            <th style="text-align: right;">관리</th>
+          </tr>
+        </thead>
+        <tbody id="ot-member-list-tbody"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer" style="margin-top: 18px;">
+      <button type="button" onclick="closeOtMemberListModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 근무 맞바꿈 모달 -->
+<div class="modal-overlay" id="swap-modal">
+  <div class="modal-card" style="width: 540px; max-width: 95%; max-height: 90vh; display: flex; flex-direction: column;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">🔄 근무 맞바꿈 (교환)</h3>
+      <button type="button" onclick="closeSwapModal()" style="padding: 3px 8px; font-size: 13px; border: none; background: #f1f5f9; border-radius: 6px; cursor: pointer; color: #64748b; font-weight: 700;">✕</button>
+    </div>
+
+    <div style="font-size: 13px; font-weight: 700; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+      ⚠️ <span>근무 맞바꿈 전에 기공실장에게 꼭 확인부탁드립니다.</span>
+    </div>
+
+    <!-- 등록 폼 영역 -->
+    <form id="swap-form" onsubmit="handleSwapSubmit(event)" style="margin-bottom: 16px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+        <!-- 대상 1 -->
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px;">
+          <div style="font-weight: 700; font-size: 12.5px; color: #1e293b; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
+            <span style="display: inline-block; width: 8px; height: 8px; background: #2563eb; border-radius: 50%;"></span> 직원 1 (기존 근무/일정)
+          </div>
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label style="font-size: 11.5px; font-weight: 600; color: #475569;">근무 날짜</label>
+            <input type="date" id="swap-date-1" required style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px;" onchange="onSwapDateChange(1)">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 11.5px; font-weight: 600; color: #475569;">직원 선택</label>
+            <select id="swap-person-1" required style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; font-weight: 600;">
+            </select>
+          </div>
+        </div>
+
+        <!-- 대상 2 -->
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px;">
+          <div style="font-weight: 700; font-size: 12.5px; color: #1e293b; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
+            <span style="display: inline-block; width: 8px; height: 8px; background: #059669; border-radius: 50%;"></span> 직원 2 (맞바꿀 대상)
+          </div>
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label style="font-size: 11.5px; font-weight: 600; color: #475569;">근무 날짜</label>
+            <input type="date" id="swap-date-2" required style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px;" onchange="onSwapDateChange(2)">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 11.5px; font-weight: 600; color: #475569;">직원 선택</label>
+            <select id="swap-person-2" required style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; font-weight: 600;">
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label for="swap-reason" style="font-size: 11.5px; font-weight: 600; color: #475569;">맞바꿈 사유 (선택)</label>
+        <input type="text" id="swap-reason" placeholder="예: 개인 사정, 주말 당번 상호 교환 등" style="width: 100%; padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px;" />
+      </div>
+
+      <div style="display: flex; justify-content: flex-end;">
+        <button type="submit" class="btn-primary" style="background: #4f46e5; border-color: #4338ca; padding: 7px 16px; font-weight: 700;">🔄 맞바꿈 등록 및 적용</button>
+      </div>
+    </form>
+
+    <!-- 맞바꿈 내역 리스트 -->
+    <div style="border-top: 2px solid #f1f5f9; padding-top: 12px; flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+        <div style="font-size: 13.5px; font-weight: 700; color: #0f172a;" id="swap-list-header-title">📋 맞바꿈 적용 목록 (<span id="swap-count-badge" style="color: #4f46e5;">0</span>건)</div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" id="swap-filter-toggle-btn" onclick="toggleSwapListFilter()" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 11.5px; font-weight: 600; padding: 3px 8px; color: #475569; cursor: pointer;">전체 보기</button>
+          <span style="font-size: 11px; color: #94a3b8;">*삭제 시 즉시 원상 복원</span>
+        </div>
+      </div>
+      <div id="swap-items-list" style="overflow-y: auto; max-height: 200px; display: flex; flex-direction: column; gap: 6px; padding-right: 2px;">
+        <!-- 동적 렌더링 -->
+      </div>
+    </div>
+
+    <div class="modal-footer" style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #f1f5f9;">
+      <button type="button" onclick="closeSwapModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* =========================================================================
+     1. 기본 데이터 및 상태 관리
+     ========================================================================= */
+  const ALL_MEMBERS = ['용희', '세진', '소영', '이슬', '서영', '찬유'];
+  const DUTY_ROSTER = ['세진', '소영', '이슬', '서영', '찬유'];
+  const ANNUAL_DEFAULT_LEAVE = 15; // 1인당 기본 연차 부여일수 (기본값)
+
+  const WEEKDAYS_KOR = ['일', '월', '화', '수', '목', '금', '토'];
+  function getDayOfWeekStr(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    return WEEKDAYS_KOR[d.getDay()] || '';
+  }
+
+  let selectedLeaveYear = 2026;
+
+  function getAllStoredLeaveGrants() {
+    try {
+      const saved = localStorage.getItem('duty_leave_grants_by_year');
+      if (saved) return JSON.parse(saved);
+
+      // 구버전 duty_leave_grants 마이그레이션 호환 처리
+      const oldSaved = localStorage.getItem('duty_leave_grants');
+      if (oldSaved) {
+        const oldParsed = JSON.parse(oldSaved);
+        if (!oldParsed['2026'] && (oldParsed['용희'] !== undefined || oldParsed['세진'] !== undefined)) {
+          return { '2026': oldParsed };
+        }
+        return oldParsed;
+      }
+    } catch(e) {}
+    return {};
+  }
+
+  function getStoredLeaveGrants(year = (typeof leaveCalYear !== 'undefined' ? leaveCalYear : 2026)) {
+    const yKey = String(year);
+    const allGrants = getAllStoredLeaveGrants();
+    const defaults = {};
+    ALL_MEMBERS.forEach(m => { defaults[m] = ANNUAL_DEFAULT_LEAVE; });
+
+    if (allGrants[yKey]) {
+      return { ...defaults, ...allGrants[yKey] };
+    }
+    // 해당 연도에 설정된 값이 없으면 2026년 설정값 또는 기본값 활용
+    if (allGrants['2026']) {
+      return { ...defaults, ...allGrants['2026'] };
+    }
+    return defaults;
+  }
+
+  function saveStoredLeaveGrants(year, grants) {
+    const yKey = String(year);
+    const allGrants = getAllStoredLeaveGrants();
+    allGrants[yKey] = grants;
+    localStorage.setItem('duty_leave_grants_by_year', JSON.stringify(allGrants));
+    localStorage.setItem('duty_leave_grants', JSON.stringify(allGrants));
+  }
+
+  let personGroup = {
+    '세진': 'B',
+    '소영': 'A',
+    '이슬': 'B',
+    '서영': 'A',
+    '찬유': 'B'
+  };
+
+  // 로컬스토리지에서 설정 불러오기
+  try {
+    const savedGroup = localStorage.getItem('duty_personGroup');
+    if (savedGroup) personGroup = JSON.parse(savedGroup);
+  } catch(e) {}
+
+  // 2026년 하반기(7월~12월 31일) 실측 근무 데이터
+  const EXCEL_2026_DATA = {
+    // 7월 (6/28 ~ 8/1)
+    '2026-06-28': { work: ['이슬'] },
+    '2026-06-29': { work: ['용희', '찬유', '세진', '이슬'] },
+    '2026-06-30': { work: ['용희', '찬유', '이슬', '세진'] },
+    '2026-07-01': { work: ['소영', '세진', '서영', '이슬'] },
+    '2026-07-02': { work: ['용희', '소영', '찬유', '세진', '서영'] },
+    '2026-07-03': { work: ['용희', '세진', '찬유'] },
+    '2026-07-04': { work: ['세진', '찬유'] },
+
+    '2026-07-05': { work: ['찬유'] },
+    '2026-07-06': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-07-07': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-07-08': { work: ['소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-07-09': { work: ['용희', '소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-07-10': { work: ['용희', '세진', '찬유'] },
+    '2026-07-11': { work: ['세진', '찬유'] },
+
+    '2026-07-12': { work: ['소영'] },
+    '2026-07-13': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-07-14': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-07-15': { work: ['소영', '찬유', '서영', '이슬'] },
+    '2026-07-16': { work: ['용희', '찬유', '세진', '서영', '이슬'] },
+    '2026-07-17': { work: ['용희', '세진', '찬유'] },
+    '2026-07-18': { work: ['세진', '찬유'] },
+
+    '2026-07-19': { work: ['세진'] },
+    '2026-07-20': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-07-21': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-07-22': { work: ['소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-07-23': { work: ['용희', '소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-07-24': { work: ['용희', '세진', '찬유'] },
+    '2026-07-25': { work: ['세진', '찬유'] },
+
+    '2026-07-26': { work: ['서영'] },
+    '2026-07-27': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-07-28': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-07-29': { work: ['소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-07-30': { work: ['용희', '소영', '찬유', '세진', '이슬'] },
+    '2026-07-31': { work: ['용희', '세진', '찬유'] },
+    '2026-08-01': { work: ['세진', '찬유'] },
+
+    // 8월 (8/2 ~ 8/29)
+    '2026-08-02': { work: ['이슬'] },
+    '2026-08-03': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-08-04': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-08-05': { work: ['소영', '세진', '서영', '이슬'] },
+    '2026-08-06': { work: ['용희', '소영', '찬유', '세진', '서영'] },
+    '2026-08-07': { work: ['용희', '세진', '찬유'] },
+    '2026-08-08': { work: ['세진', '찬유'] },
+
+    '2026-08-09': { work: ['찬유'] },
+    '2026-08-10': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-08-11': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-08-12': { work: ['소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-08-13': { work: ['용희', '소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-08-14': { work: ['용희', '세진', '찬유'] },
+    '2026-08-15': { work: [] }, // 광복절
+
+    '2026-08-16': { work: ['소영'] },
+    '2026-08-17': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-08-18': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-08-19': { work: ['소영', '찬유', '서영', '이슬'] },
+    '2026-08-20': { work: ['용희', '찬유', '세진', '서영', '이슬'] },
+    '2026-08-21': { work: ['용희', '세진', '찬유'] },
+    '2026-08-22': { work: ['세진', '찬유'] },
+
+    '2026-08-23': { work: ['세진'] },
+    '2026-08-24': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-08-25': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-08-26': { work: ['소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-08-27': { work: ['용희', '소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-08-28': { work: ['용희', '세진', '찬유'] },
+    '2026-08-29': { work: ['세진', '찬유'] },
+
+    // 9월 (8/30 ~ 10/3)
+    '2026-08-30': { work: ['서영'] },
+    '2026-08-31': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-09-01': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-09-02': { work: ['소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-09-03': { work: ['용희', '소영', '찬유', '세진', '이슬'] },
+    '2026-09-04': { work: ['용희', '세진', '찬유'] },
+    '2026-09-05': { work: ['세진', '찬유'] },
+
+    '2026-09-06': { work: ['이슬'] },
+    '2026-09-07': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-09-08': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-09-09': { work: ['소영', '세진', '서영', '이슬'] },
+    '2026-09-10': { work: ['용희', '소영', '찬유', '세진', '서영'] },
+    '2026-09-11': { work: ['용희', '세진', '찬유'] },
+    '2026-09-12': { work: ['세진', '찬유'] },
+
+    '2026-09-13': { work: ['찬유'] },
+    '2026-09-14': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-09-15': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-09-16': { work: ['소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-09-17': { work: ['용희', '소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-09-18': { work: ['용희', '세진', '찬유'] },
+    '2026-09-19': { work: ['세진', '찬유'] },
+
+    '2026-09-20': { work: ['소영'] },
+    '2026-09-21': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-09-22': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-09-23': { work: ['소영', '찬유', '서영', '이슬'] },
+    '2026-09-24': { work: [] }, // 추석 연휴
+    '2026-09-25': { work: [] }, // 추석
+    '2026-09-26': { work: [] }, // 추석 연휴
+
+    '2026-09-27': { work: ['세진'] },
+    '2026-09-28': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-09-29': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-09-30': { work: ['소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-10-01': { work: ['용희', '소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-10-02': { work: ['용희', '세진', '찬유'] },
+    '2026-10-03': { work: [] }, // 개천절
+
+    // 10월 (10/4 ~ 10/31)
+    '2026-10-04': { work: ['서영'] },
+    '2026-10-05': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-10-06': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-10-07': { work: ['소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-10-08': { work: ['용희', '소영', '찬유', '세진', '이슬'] },
+    '2026-10-09': { work: [] }, // 한글날
+    '2026-10-10': { work: ['세진', '찬유'] },
+
+    '2026-10-11': { work: ['이슬'] },
+    '2026-10-12': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-10-13': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-10-14': { work: ['소영', '세진', '서영', '이슬'] },
+    '2026-10-15': { work: ['용희', '소영', '찬유', '세진', '서영'] },
+    '2026-10-16': { work: ['용희', '세진', '찬유'] },
+    '2026-10-17': { work: ['세진', '찬유'] },
+
+    '2026-10-18': { work: ['찬유'] },
+    '2026-10-19': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-10-20': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-10-21': { work: ['소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-10-22': { work: ['용희', '소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-10-23': { work: ['용희', '세진', '찬유'] },
+    '2026-10-24': { work: ['세진', '찬유'] },
+
+    '2026-10-25': { work: ['소영'] },
+    '2026-10-26': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-10-27': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-10-28': { work: ['소영', '찬유', '서영', '이슬'] },
+    '2026-10-29': { work: ['용희', '찬유', '세진', '서영', '이슬'] },
+    '2026-10-30': { work: ['용희', '세진', '찬유'] },
+    '2026-10-31': { work: ['세진', '찬유'] },
+
+    // 11월 (11/1 ~ 11/28)
+    '2026-11-01': { work: ['세진'] },
+    '2026-11-02': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-11-03': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-11-04': { work: ['소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-11-05': { work: ['용희', '소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-11-06': { work: ['용희', '세진', '찬유'] },
+    '2026-11-07': { work: ['세진', '찬유'] },
+
+    '2026-11-08': { work: ['서영'] },
+    '2026-11-09': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-11-10': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-11-11': { work: ['소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-11-12': { work: ['용희', '소영', '찬유', '세진', '이슬'] },
+    '2026-11-13': { work: ['용희', '세진', '찬유'] },
+    '2026-11-14': { work: ['세진', '찬유'] },
+
+    '2026-11-15': { work: ['이슬'] },
+    '2026-11-16': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-11-17': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-11-18': { work: ['소영', '세진', '서영', '이슬'] },
+    '2026-11-19': { work: ['용희', '소영', '찬유', '세진', '서영'] },
+    '2026-11-20': { work: ['용희', '세진', '찬유'] },
+    '2026-11-21': { work: ['세진', '찬유'] },
+
+    '2026-11-22': { work: ['찬유'] },
+    '2026-11-23': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-11-24': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-11-25': { work: ['소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-11-26': { work: ['용희', '소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-11-27': { work: ['용희', '세진', '찬유'] },
+    '2026-11-28': { work: ['세진', '찬유'] },
+
+    // 12월 (11/29 ~ 12/31)
+    '2026-11-29': { work: ['소영'] },
+    '2026-11-30': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-12-01': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-12-02': { work: ['소영', '찬유', '서영', '이슬'] },
+    '2026-12-03': { work: ['용희', '찬유', '세진', '서영', '이슬'] },
+    '2026-12-04': { work: ['용희', '세진', '찬유'] },
+    '2026-12-05': { work: ['세진', '찬유'] },
+
+    '2026-12-06': { work: ['세진'] },
+    '2026-12-07': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-12-08': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-12-09': { work: ['소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-12-10': { work: ['용희', '소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-12-11': { work: ['용희', '세진', '찬유'] },
+    '2026-12-12': { work: ['세진', '찬유'] },
+
+    '2026-12-13': { work: ['서영'] },
+    '2026-12-14': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-12-15': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-12-16': { work: ['소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-12-17': { work: ['용희', '소영', '찬유', '세진', '이슬'] },
+    '2026-12-18': { work: ['용희', '세진', '찬유'] },
+    '2026-12-19': { work: ['세진', '찬유'] },
+
+    '2026-12-20': { work: ['이슬'] },
+    '2026-12-21': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-12-22': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-12-23': { work: ['소영', '세진', '서영', '이슬'] },
+    '2026-12-24': { work: ['용희', '소영', '찬유', '세진', '서영'] },
+    '2026-12-25': { work: [] }, // 성탄절
+    '2026-12-26': { work: ['세진', '찬유'] },
+
+    '2026-12-27': { work: ['찬유'] },
+    '2026-12-28': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-12-29': { work: ['용희', '소영', '서영', '이슬'] },
+    '2026-12-30': { work: ['소영', '찬유', '세진', '서영', '이슬'] },
+    '2026-12-31': { work: ['용희', '소영', '찬유', '세진', '서영', '이슬'] }
+  };
+
+  const ROTATION_START_DATE = new Date(2027, 0, 1); // 2027-01-01
+  const NEW_DUTY_ANCHOR = new Date(2027, 0, 2);       // 2027-01-02 (토)
+
+  let currentYear = 2026;
+  let currentMonth = 8; // 9월
+
+  // 통계 탭 상태
+  let statsMode = 'month'; // 'month' or 'year'
+  let statsYear = 2026;
+  let statsMonth = 8;
+
+  /* =========================================================================
+     2. 연차(Leave) 및 연장근무(OT) 스토리지 관리
+     ========================================================================= */
+  function getStoredLeaves() {
+    try {
+      const data = localStorage.getItem('duty_leaves_list');
+      return data ? JSON.parse(data) : [];
+    } catch(e) { return []; }
+  }
+
+  function saveStoredLeaves(list) {
+    localStorage.setItem('duty_leaves_list', JSON.stringify(list));
+  }
+
+  function getStoredOvertimes() {
+    try {
+      const data = localStorage.getItem('duty_overtime_list');
+      return data ? JSON.parse(data) : [];
+    } catch(e) { return []; }
+  }
+
+  function saveStoredOvertimes(list) {
+    localStorage.setItem('duty_overtime_list', JSON.stringify(list));
+  }
+
+  /* =========================================================================
+     2-1. 근무 맞바꿈(Shift Swap) 스토리지 관리
+     ========================================================================= */
+  function getStoredSwaps() {
+    try {
+      const data = localStorage.getItem('duty_swaps_list');
+      return data ? JSON.parse(data) : [];
+    } catch(e) { return []; }
+  }
+
+  function saveStoredSwaps(list) {
+    localStorage.setItem('duty_swaps_list', JSON.stringify(list));
+  }
+
+  /* =========================================================================
+     3. 탭 전환 처리
+     ========================================================================= */
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+    const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
+    if (activeBtn) activeBtn.classList.add('active');
+
+    const target = document.getElementById(`tab-${tabId}`);
+    if (target) target.classList.add('active');
+
+    if (tabId === 'calendar') {
+      renderCalendar();
+    } else if (tabId === 'leave') {
+      renderLeaveTab();
+    } else if (tabId === 'overtime') {
+      renderOvertimeTab();
+    } else if (tabId === 'stats') {
+      initStatsControls();
+      renderStats();
+    }
+  }
+
+  /* =========================================================================
+     4. 공휴일 및 달력 계산 로직 (기존 정밀 엔진 유지)
+     ========================================================================= */
+  const LUNAR_HOLIDAYS = {
+    2024: { seollal: '2024-02-10', buddha: '2024-05-15', chuseok: '2024-09-17' },
+    2025: { seollal: '2025-01-29', buddha: '2025-05-05', chuseok: '2025-10-06' },
+    2026: { seollal: '2026-02-17', buddha: '2026-05-24', chuseok: '2026-09-25' },
+    2027: { seollal: '2027-02-07', buddha: '2027-05-13', chuseok: '2027-09-15' },
+    2028: { seollal: '2028-01-27', buddha: '2028-05-02', chuseok: '2028-10-03' },
+    2029: { seollal: '2029-02-13', buddha: '2029-05-20', chuseok: '2029-09-22' },
+    2030: { seollal: '2030-02-03', buddha: '2030-05-09', chuseok: '2030-09-12' },
+    2031: { seollal: '2031-01-23', buddha: '2031-05-28', chuseok: '2031-10-01' },
+    2032: { seollal: '2032-02-11', buddha: '2032-05-16', chuseok: '2032-09-19' },
+    2033: { seollal: '2033-01-31', buddha: '2033-05-06', chuseok: '2033-10-08' },
+    2034: { seollal: '2034-02-19', buddha: '2034-05-25', chuseok: '2034-09-27' },
+    2035: { seollal: '2035-02-08', buddha: '2035-05-15', chuseok: '2035-09-16' }
+  };
+
+  function formatDateKey(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function parseDateKey(str) {
+    const parts = str.split('-').map(Number);
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+
+  function getHolidaysForYear(year) {
+    const holidays = {};
+    function addHoliday(dateStr, name, isLunarFest = false) {
+      if (!holidays[dateStr]) holidays[dateStr] = { name, type: 'holiday', isLunarFest };
+    }
+
+    addHoliday(`${year}-01-01`, '신정');
+    addHoliday(`${year}-03-01`, '3·1절');
+    addHoliday(`${year}-05-05`, '어린이날');
+    addHoliday(`${year}-06-06`, '현충일');
+    addHoliday(`${year}-08-15`, '광복절');
+    addHoliday(`${year}-10-03`, '개천절');
+    addHoliday(`${year}-10-09`, '한글날');
+    addHoliday(`${year}-12-25`, '성탄절');
+
+    const lunar = LUNAR_HOLIDAYS[year];
+    if (lunar) {
+      const seol = parseDateKey(lunar.seollal);
+      const seolPrev = new Date(seol); seolPrev.setDate(seolPrev.getDate() - 1);
+      const seolNext = new Date(seol); seolNext.setDate(seolNext.getDate() + 1);
+      addHoliday(formatDateKey(seolPrev), '설날 전날', true);
+      addHoliday(formatDateKey(seol), '설날', true);
+      addHoliday(formatDateKey(seolNext), '설날 다음날', true);
+      addHoliday(lunar.buddha, '부처님 오신 날');
+
+      const chu = parseDateKey(lunar.chuseok);
+      const chuPrev = new Date(chu); chuPrev.setDate(chuPrev.getDate() - 1);
+      const chuNext = new Date(chu); chuNext.setDate(chuNext.getDate() + 1);
+      addHoliday(formatDateKey(chuPrev), '추석 전날', true);
+      addHoliday(formatDateKey(chu), '추석', true);
+      addHoliday(formatDateKey(chuNext), '추석 다음날', true);
+    }
+
+    const substituteHolidays = {};
+    const checkDays = Object.keys(holidays).sort();
+
+    checkDays.forEach(dateStr => {
+      const h = holidays[dateStr];
+      const d = parseDateKey(dateStr);
+      const day = d.getDay();
+
+      if (h.isLunarFest) {
+        if (day === 0) {
+          let subDate = new Date(d);
+          while (true) {
+            subDate.setDate(subDate.getDate() + 1);
+            const subKey = formatDateKey(subDate);
+            if (!holidays[subKey] && !substituteHolidays[subKey] && subDate.getDay() !== 0 && subDate.getDay() !== 6) {
+              substituteHolidays[subKey] = { name: `대체공휴일(${h.name})`, type: 'sub' };
+              break;
+            }
+          }
+        }
+      } else if (h.name !== '신정' && h.name !== '현충일') {
+        if (day === 0 || day === 6) {
+          let subDate = new Date(d);
+          while (true) {
+            subDate.setDate(subDate.getDate() + 1);
+            const subKey = formatDateKey(subDate);
+            if (!holidays[subKey] && !substituteHolidays[subKey] && subDate.getDay() !== 0 && subDate.getDay() !== 6) {
+              substituteHolidays[subKey] = { name: `대체공휴일(${h.name})`, type: 'sub' };
+              break;
+            }
+          }
+        }
+      }
+    });
+
+    return { ...holidays, ...substituteHolidays };
+  }
+
+  function getTransitionDate(year, monthIndex) {
+    const lastDayOfMonth = new Date(year, monthIndex + 1, 0);
+    const dayOfWeek = lastDayOfMonth.getDay();
+    const endOfWeekSaturday = new Date(lastDayOfMonth);
+    endOfWeekSaturday.setDate(endOfWeekSaturday.getDate() + (6 - dayOfWeek));
+
+    const nextWeekMonday = new Date(endOfWeekSaturday);
+    nextWeekMonday.setDate(nextWeekMonday.getDate() + 2);
+    return nextWeekMonday;
+  }
+
+  function isRotatedPeriod(date) {
+    if (date < ROTATION_START_DATE) return false;
+    const y = date.getFullYear();
+    const tJune = getTransitionDate(y, 5);
+    const tDec = getTransitionDate(y, 11);
+    const prevDec = getTransitionDate(y - 1, 11);
+
+    if (date >= prevDec && date < tJune) {
+      return false;
+    } else if (date >= tJune && date < tDec) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  function getDutyPersonByDate(satDate) {
+    const diffTime = satDate.getTime() - NEW_DUTY_ANCHOR.getTime();
+    const diffWeeks = Math.round(diffTime / (1000 * 60 * 60 * 24 * 7));
+    const index = ((diffWeeks % DUTY_ROSTER.length) + DUTY_ROSTER.length) % DUTY_ROSTER.length;
+    return DUTY_ROSTER[index];
+  }
+
+  function generateAutoDutyMap(calcStart, calcEnd, holidaysMap) {
+    const map = { duties: {}, altOffs: {} };
+    let loop = new Date(calcStart);
+
+    while (loop <= calcEnd) {
+      if (loop.getDay() === 6 && loop >= NEW_DUTY_ANCHOR) {
+        const sat = new Date(loop);
+        const sun = new Date(loop);
+        sun.setDate(sun.getDate() + 1);
+
+        const satKey = formatDateKey(sat);
+        const sunKey = formatDateKey(sun);
+
+        const dutyPerson = getDutyPersonByDate(sat);
+
+        const satIsHol = holidaysMap[satKey]?.type === 'holiday';
+        const sunIsHol = holidaysMap[sunKey]?.type === 'holiday';
+
+        if (!satIsHol) map.duties[satKey] = dutyPerson;
+        if (!sunIsHol) map.duties[sunKey] = dutyPerson;
+
+        if (!satIsHol || !sunIsHol) {
+          const rawGroup = personGroup[dutyPerson];
+          const rotated = isRotatedPeriod(sat);
+          
+          let effectiveGroup = rawGroup;
+          if (rotated) {
+            effectiveGroup = (rawGroup === 'A') ? 'B' : 'A';
+          }
+
+          if (effectiveGroup === 'A') {
+            // A조(화수목금): 당번 주 화요일 휴무 (sat - 4일)
+            const offDay = new Date(sat);
+            offDay.setDate(offDay.getDate() - 4);
+            map.altOffs[formatDateKey(offDay)] = dutyPerson;
+          } else {
+            // B조(월화수목): 다음 주 목요일 휴무 (sat + 5일)
+            const offDay = new Date(sat);
+            offDay.setDate(offDay.getDate() + 5);
+            map.altOffs[formatDateKey(offDay)] = dutyPerson;
+          }
+        }
+      }
+      loop.setDate(loop.getDate() + 1);
+    }
+    return map;
+  }
+
+  /* =========================================================================
+     4-1. 근무표 직원 일정 필터링 관리
+     ========================================================================= */
+  let selectedMemberFilter = 'ALL';
+
+  function setMemberFilter(member) {
+    if (selectedMemberFilter === member && member !== 'ALL') {
+      selectedMemberFilter = 'ALL';
+    } else {
+      selectedMemberFilter = member;
+    }
+
+    // 칩 버튼 활성화 상태 갱신
+    document.querySelectorAll('.member-filter-chip').forEach(btn => {
+      btn.classList.toggle('active', btn.id === `filter-btn-${selectedMemberFilter}`);
+    });
+
+    renderCalendar();
+  }
+
+  /* =========================================================================
+     4-2. 특정 날짜 기본 근무자 조회 헬퍼 (맞바꿈 도우미용)
+     ========================================================================= */
+  function getBaseWorkListForDate(dateStr) {
+    if (!dateStr) return [];
+    const targetDate = parseDateKey(dateStr);
+    const dayOfWeek = targetDate.getDay();
+    const targetYear = targetDate.getFullYear();
+    const holidaysMap = {
+      ...getHolidaysForYear(targetYear - 1),
+      ...getHolidaysForYear(targetYear),
+      ...getHolidaysForYear(targetYear + 1)
+    };
+    const holidayInfo = holidaysMap[dateStr];
+
+    if (holidayInfo && holidayInfo.type === 'holiday') {
+      return [];
+    }
+
+    if (targetDate < ROTATION_START_DATE && EXCEL_2026_DATA[dateStr]) {
+      return [...(EXCEL_2026_DATA[dateStr].work || [])];
+    }
+
+    let works = [];
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      const calcStart = new Date(targetDate);
+      calcStart.setDate(calcStart.getDate() - 14);
+      const calcEnd = new Date(targetDate);
+      calcEnd.setDate(calcEnd.getDate() + 14);
+      const { duties, altOffs } = generateAutoDutyMap(calcStart, calcEnd, holidaysMap);
+
+      const altOffPerson = altOffs[dateStr];
+      const rotated = isRotatedPeriod(targetDate);
+
+      DUTY_ROSTER.forEach(person => {
+        if (altOffPerson === person) return;
+        const rawGroup = personGroup[person];
+        let effectiveGroup = rotated ? ((rawGroup === 'A') ? 'B' : 'A') : rawGroup;
+        const isAWork = effectiveGroup === 'A' && (dayOfWeek >= 2 && dayOfWeek <= 5);
+        const isBWork = effectiveGroup === 'B' && (dayOfWeek >= 1 && dayOfWeek <= 4);
+        if (isAWork || isBWork) works.push(person);
+      });
+
+      if ([1, 2, 4, 5].includes(dayOfWeek)) {
+        works.push('용희');
+      }
+    } else {
+      const calcStart = new Date(targetDate);
+      calcStart.setDate(calcStart.getDate() - 7);
+      const calcEnd = new Date(targetDate);
+      calcEnd.setDate(calcEnd.getDate() + 7);
+      const { duties } = generateAutoDutyMap(calcStart, calcEnd, holidaysMap);
+      const dutyPerson = duties[dateStr];
+      if (dutyPerson) works.push(dutyPerson);
+    }
+    return works;
+  }
+
+  /* =========================================================================
+     5. 근무표 렌더링 (연차 배지 & 맞바꿈 배지 융합)
+     ========================================================================= */
+  function renderCalendar() {
+    document.getElementById('current-month-display').innerText = `${currentYear}년 ${currentMonth + 1}월`;
+    const firstDay = new Date(currentYear, currentMonth, 1);
+    const lastDay = new Date(currentYear, currentMonth + 1, 0);
+
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - startDate.getDay());
+    const endDate = new Date(lastDay);
+    endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+
+    const calcStart = new Date(startDate);
+    calcStart.setDate(calcStart.getDate() - 14);
+    const calcEnd = new Date(endDate);
+    calcEnd.setDate(calcEnd.getDate() + 14);
+
+    const holidaysMap = {
+      ...getHolidaysForYear(currentYear - 1),
+      ...getHolidaysForYear(currentYear),
+      ...getHolidaysForYear(currentYear + 1)
+    };
+
+    const { duties, altOffs } = generateAutoDutyMap(calcStart, calcEnd, holidaysMap);
+    const leaves = getStoredLeaves();
+    const overtimes = getStoredOvertimes();
+    const swaps = getStoredSwaps();
+
+    const tbody = document.getElementById('calendar-body');
+    tbody.innerHTML = '';
+
+    let curr = new Date(startDate);
+    let row = document.createElement('tr');
+
+    const today = new Date();
+    const todayKey = formatDateKey(today);
+
+    const isFiltered = (selectedMemberFilter !== 'ALL');
+    let filterMonthWorkCount = 0;
+    let filterMonthWeekdayWorkCount = 0;
+    let filterMonthDutyCount = 0;
+    let filterMonthDutyDates = [];
+    let filterMonthLeaveCount = 0;
+
+    while (curr <= endDate) {
+      const cell = document.createElement('td');
+      const dateKey = formatDateKey(curr);
+      const dayOfWeek = curr.getDay();
+      const holidayInfo = holidaysMap[dateKey];
+
+      const isToday = (dateKey === todayKey);
+      if (isToday) {
+        cell.classList.add('cell-today');
+        cell.id = 'calendar-today-cell';
+      }
+
+      if (dayOfWeek === 0) cell.classList.add('sunday');
+      if (dayOfWeek === 6) cell.classList.add('saturday');
+
+      if (holidayInfo) {
+        cell.classList.add(holidayInfo.type === 'holiday' ? 'cell-holiday' : 'cell-sub-holiday');
+      }
+
+      let holidayTitleHtml = '';
+      if (holidayInfo) {
+        const colorClass = holidayInfo.type === 'holiday' ? 'red' : 'blue';
+        holidayTitleHtml = `<span class="holiday-label ${colorClass}">${holidayInfo.name}</span>`;
+      }
+
+      let workList = [];
+      let offList = [];
+
+      // 당일 연차 및 연장근무 데이터 사전 조회 (승인된 연차만 달력 반영)
+      const dayLeaves = leaves.filter(l => l.date === dateKey && l.status !== 'pending');
+      const fullLeavePersons = dayLeaves.filter(l => l.type === '전일').map(l => l.person);
+      const leaveDisplayItems = dayLeaves.map(l => l.type === '전일' ? l.person : `${l.person}(${l.type})`);
+
+      // A. 2026년 하반기 (엑셀 데이터)
+      if (curr < ROTATION_START_DATE && EXCEL_2026_DATA[dateKey]) {
+        const excelDay = EXCEL_2026_DATA[dateKey];
+        if (holidayInfo && holidayInfo.type === 'holiday') {
+          // 공휴일
+        } else if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+          // 근무 명단에서 전일 연차자 제외
+          workList = excelDay.work.filter(p => !fullLeavePersons.includes(p));
+          // 휴무 명단에서 연차자 제외 (연차 배지로 별도 표시)
+          offList = ALL_MEMBERS.filter(p => !excelDay.work.includes(p) && !dayLeaves.some(l => l.person === p));
+        } else {
+          workList = excelDay.work.filter(p => !fullLeavePersons.includes(p));
+        }
+      }
+      // B. 자동 계산 엔진
+      else {
+        if (holidayInfo && holidayInfo.type === 'holiday') {
+          // 법정공휴일
+        } else if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+          const altOffPerson = altOffs[dateKey];
+          const rotated = isRotatedPeriod(curr);
+
+          DUTY_ROSTER.forEach(person => {
+            if (altOffPerson === person) {
+              offList.push(person);
+              return;
+            }
+            
+            const rawGroup = personGroup[person];
+            let effectiveGroup = rawGroup;
+            if (rotated) {
+              effectiveGroup = (rawGroup === 'A') ? 'B' : 'A';
+            }
+
+            const isAWork = effectiveGroup === 'A' && (dayOfWeek >= 2 && dayOfWeek <= 5);
+            const isBWork = effectiveGroup === 'B' && (dayOfWeek >= 1 && dayOfWeek <= 4);
+
+            if (isAWork || isBWork) {
+              workList.push(person);
+            } else {
+              offList.push(person);
+            }
+          });
+
+          // 용희 고정 근무
+          if ([1, 2, 4, 5].includes(dayOfWeek)) {
+            workList.push('용희');
+          } else {
+            offList.push('용희');
+          }
+
+          // 근무 명단에서 전일 연차자 제거
+          workList = workList.filter(p => !fullLeavePersons.includes(p));
+          // 휴무 명단에서도 연차자 제거
+          offList = offList.filter(p => !dayLeaves.some(l => l.person === p));
+        } else {
+          // 주말: 당번
+          const dutyPerson = duties[dateKey];
+          if (dutyPerson && !fullLeavePersons.includes(dutyPerson)) {
+            workList.push(dutyPerson);
+          }
+        }
+      }
+
+      // C. 근무 맞바꿈(Shift Swap) 예외 적용
+      const swapTags = {};
+      const swappedOffTags = {};
+      swaps.forEach(sw => {
+        // 1) 같은 날짜 맞바꿈
+        if (sw.date1 === dateKey && sw.date2 === dateKey) {
+          const p1InWork = workList.includes(sw.person1);
+          const p2InWork = workList.includes(sw.person2);
+          if (p1InWork && !p2InWork) {
+            workList = workList.filter(p => p !== sw.person1);
+            if (!workList.includes(sw.person2)) workList.push(sw.person2);
+            offList = offList.filter(p => p !== sw.person2);
+            if (!offList.includes(sw.person1)) offList.push(sw.person1);
+            swapTags[sw.person2] = { replaced: sw.person1, reason: sw.reason };
+            swappedOffTags[sw.person1] = { replacedBy: sw.person2, reason: sw.reason };
+          } else if (p2InWork && !p1InWork) {
+            workList = workList.filter(p => p !== sw.person2);
+            if (!workList.includes(sw.person1)) workList.push(sw.person1);
+            offList = offList.filter(p => p !== sw.person1);
+            if (!offList.includes(sw.person2)) offList.push(sw.person2);
+            swapTags[sw.person1] = { replaced: sw.person2, reason: sw.reason };
+            swappedOffTags[sw.person2] = { replacedBy: sw.person1, reason: sw.reason };
+          }
+        }
+        // 2) 다른 날짜 맞바꿈: date1 당일 (person1 대신 person2 근무)
+        else if (sw.date1 === dateKey) {
+          if (workList.includes(sw.person1)) {
+            workList = workList.filter(p => p !== sw.person1);
+            if (!workList.includes(sw.person2)) workList.push(sw.person2);
+            offList = offList.filter(p => p !== sw.person2);
+            if (!offList.includes(sw.person1)) offList.push(sw.person1);
+            swapTags[sw.person2] = { replaced: sw.person1, partnerDate: sw.date2, reason: sw.reason };
+            swappedOffTags[sw.person1] = { replacedBy: sw.person2, partnerDate: sw.date2, reason: sw.reason };
+          }
+        }
+        // 3) 다른 날짜 맞바꿈: date2 당일 (person2 대신 person1 근무)
+        else if (sw.date2 === dateKey) {
+          if (workList.includes(sw.person2)) {
+            workList = workList.filter(p => p !== sw.person2);
+            if (!workList.includes(sw.person1)) workList.push(sw.person1);
+            offList = offList.filter(p => p !== sw.person1);
+            if (!offList.includes(sw.person2)) offList.push(sw.person2);
+            swapTags[sw.person1] = { replaced: sw.person2, partnerDate: sw.date1, reason: sw.reason };
+            swappedOffTags[sw.person2] = { replacedBy: sw.person1, partnerDate: sw.date1, reason: sw.reason };
+          }
+        }
+      });
+
+      // 직원 필터 적용 여부 및 상태 판별
+      const isMemberWork = isFiltered && workList.includes(selectedMemberFilter);
+      const dayMemberLeaves = dayLeaves.filter(l => l.person === selectedMemberFilter);
+      const isMemberLeave = isFiltered && dayMemberLeaves.length > 0;
+
+      const isDutyDay = (curr.getFullYear() <= 2026) ? (dayOfWeek === 0) : (dayOfWeek === 0 || dayOfWeek === 6);
+
+      if (isFiltered && curr.getMonth() === currentMonth) {
+        let memberLeaveDays = 0;
+        dayMemberLeaves.forEach(l => {
+          memberLeaveDays += (l.type === '전일' ? 1.0 : 0.5);
+        });
+
+        if (isMemberWork) {
+          if (isDutyDay) {
+            filterMonthDutyCount++;
+            filterMonthDutyDates.push(curr.getDate() + '일');
+          } else {
+            // 반차인 경우 근무일수는 (1.0 - 연차일수)로 계산 (전일 연차는 이미 workList에서 제외되어 isMemberWork가 false임)
+            const actualWorkDay = Math.max(0, 1.0 - memberLeaveDays);
+            filterMonthWeekdayWorkCount += actualWorkDay;
+          }
+        }
+        if (isMemberLeave) {
+          filterMonthLeaveCount += memberLeaveDays;
+        }
+      }
+
+      if (isFiltered) {
+        if (isMemberWork) {
+          cell.classList.add('cell-member-work');
+        } else if (isMemberLeave) {
+          cell.classList.add('cell-member-leave');
+        } else {
+          cell.classList.add('cell-member-dimmed');
+        }
+      }
+
+      let todayBadgeHtml = isToday ? `<span class="badge-today">오늘</span>` : '';
+
+      let html = `
+        <div class="date-header">
+          <div style="display:flex; align-items:center; gap:5px;">
+            <span class="date-num" style="cursor: pointer;" title="클릭 시 이 날짜로 근무 맞바꿈 등록" onclick="openSwapModal('${dateKey}')">${curr.getDate()}</span>
+            ${todayBadgeHtml}
+          </div>
+          ${holidayTitleHtml}
+        </div>
+        <div class="badge-box">
+      `;
+
+      // 하이라이트 및 맞바꿈 배지 이름 포맷터
+      const formatNames = (names, isWorkType = true) => {
+        return names.map(n => {
+          let displayName = n;
+          if (isWorkType && swapTags[n]) {
+            const info = swapTags[n];
+            const tooltip = `${info.replaced} 님과 맞바꿈 근무${info.reason ? ` (${info.reason})` : ''}`;
+            displayName = `<span class="badge-swapped" title="${tooltip}">${n}(⇄${info.replaced})</span>`;
+          } else if (!isWorkType && swappedOffTags[n]) {
+            const info = swappedOffTags[n];
+            const tooltip = `${info.replacedBy} 님과 맞바꿈 휴무${info.reason ? ` (${info.reason})` : ''}`;
+            displayName = `<span title="${tooltip}" style="text-decoration: underline dotted;">${n}(교환휴무)</span>`;
+          }
+
+          if (isFiltered && (n === selectedMemberFilter || n.startsWith(selectedMemberFilter + '('))) {
+            return `<span class="name-highlight">${displayName}</span>`;
+          }
+          return displayName;
+        }).join(', ');
+      };
+
+      // 1. 근무 배지
+      if (workList.length > 0) html += `<span class="badge badge-work">근무: ${formatNames(workList, true)}</span>`;
+
+      // 2. 연차 배지
+      if (leaveDisplayItems.length > 0) html += `<span class="badge badge-leave">연차: ${formatNames(leaveDisplayItems, false)}</span>`;
+
+      // 3. 휴무 배지 (★ 항상 가장 맨 아래 & margin-top: auto로 날짜칸 바닥에 고정)
+      if (offList.length > 0) html += `<span class="badge badge-off">휴무: ${formatNames(offList, false)}</span>`;
+
+      html += `</div>`;
+
+      if (curr.getMonth() !== currentMonth) {
+        cell.style.opacity = '0.32';
+      }
+
+      cell.innerHTML = html;
+      row.appendChild(cell);
+
+      if (curr.getDay() === 6) {
+        tbody.appendChild(row);
+        row = document.createElement('tr');
+      }
+
+      curr.setDate(curr.getDate() + 1);
+    }
+
+    // 상단 필터 상태 안내 배너 업데이트
+    const bannerEl = document.getElementById('filter-status-banner');
+    if (bannerEl) {
+      if (isFiltered) {
+        bannerEl.style.display = 'inline-flex';
+        bannerEl.style.alignItems = 'center';
+        bannerEl.style.gap = '8px';
+
+        // 2026년까지는 일요일만 당직, 2027년부터는 토·일이 당직
+        const is2027OrLater = (currentYear >= 2027);
+        const dutyLabel = is2027OrLater ? '당직(토,일)' : '당직(일)';
+
+        const workCountStr = Number(filterMonthWeekdayWorkCount.toFixed(1));
+        const dutyCountStr = filterMonthDutyCount;
+        const leaveCountStr = Number(filterMonthLeaveCount.toFixed(1));
+
+        bannerEl.innerHTML = `
+          <span>🔍 <b>${selectedMemberFilter}</b> 님 (근무: <b>${workCountStr}일</b>, ${dutyLabel}: <b>${dutyCountStr}일</b> / 연차: <b>${leaveCountStr}일</b>)</span>
+          <button type="button" onclick="setMemberFilter('ALL')" style="background:none; border:none; color:#4338ca; text-decoration:underline; font-weight:700; cursor:pointer; padding:0 4px; font-size:12px;">필터 해제 ✕</button>
+        `;
+      } else {
+        bannerEl.style.display = 'none';
+      }
+    }
+  }
+
+  function changeMonth(diff) {
+    currentMonth += diff;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    } else if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    renderCalendar();
+    const swapModal = document.getElementById('swap-modal');
+    if (swapModal && swapModal.classList.contains('active')) {
+      renderSwapList();
+    }
+  }
+
+  function goToday() {
+    const today = new Date();
+    currentYear = today.getFullYear();
+    currentMonth = today.getMonth();
+    renderCalendar();
+    const swapModal = document.getElementById('swap-modal');
+    if (swapModal && swapModal.classList.contains('active')) {
+      renderSwapList();
+    }
+
+    // 오늘 날짜 셀로 부드러운 스크롤 이동 및 펄스 강조
+    setTimeout(() => {
+      const todayCell = document.getElementById('calendar-today-cell');
+      if (todayCell) {
+        todayCell.classList.remove('cell-today-pulse');
+        void todayCell.offsetWidth; // 리플로우 강제 트리거
+        todayCell.classList.add('cell-today-pulse');
+        todayCell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 60);
+  }
+
+  /* =========================================================================
+     6. 연차관리 탭 구현 (모달 신청, 직원별 연차 부여, 승인 워크플로우)
+     ========================================================================= */
+  let leaveCalYear = 2026;
+  let leaveCalMonth = 8; // 9월
+
+  function renderLeaveTab() {
+    // 하단 연차 전용 캘린더의 현재 연도(leaveCalYear)에 맞춰 상단 현황표 자동 연동
+    const targetYear = leaveCalYear;
+    const grants = getStoredLeaveGrants(targetYear);
+    const leaves = getStoredLeaves();
+
+    // 대기 건과 승인 건 분리 (기존 데이터는 status가 없으면 approved로 호환)
+    const pendingLeaves = leaves.filter(l => l.status === 'pending');
+    const approvedLeaves = leaves.filter(l => l.status !== 'pending');
+
+    // 연차 캘린더의 연도(targetYear)에 해당하는 승인 연차 필터링
+    const yearPrefix = `${targetYear}-`;
+    const yearApprovedLeaves = approvedLeaves.filter(l => l.date && l.date.startsWith(yearPrefix));
+
+    document.getElementById('leave-total-count').innerText = `전체 대기 ${pendingLeaves.length}건`;
+
+    // 직원별 연차 사용/잔여 및 승인 내역 카드 렌더링 (선택된 연도 기준)
+    const memberStats = {};
+    ALL_MEMBERS.forEach(m => {
+      memberStats[m] = { used: 0, count: 0 };
+    });
+
+    yearApprovedLeaves.forEach(l => {
+      const days = l.type === '전일' ? 1.0 : 0.5;
+      if (memberStats[l.person]) {
+        memberStats[l.person].used += days;
+        memberStats[l.person].count += 1;
+      }
+    });
+
+    const summaryCardsEl = document.getElementById('leave-member-summary-cards');
+    summaryCardsEl.innerHTML = ALL_MEMBERS.map(m => {
+      const grant = grants[m] ?? ANNUAL_DEFAULT_LEAVE;
+      const used = memberStats[m].used;
+      const remain = grant - used;
+
+      // 해당 직원의 해당 연도 승인된 연차 목록 (빠른 날짜부터 오름차순 정렬)
+      const memberLeaves = yearApprovedLeaves
+        .filter(l => l.person === m)
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      let historyHtml = '';
+      if (memberLeaves.length > 0) {
+        historyHtml = memberLeaves.map(l => {
+          const yoil = getDayOfWeekStr(l.date);
+          let pillClass = 'pill-leave';
+          if (l.type === '오전반차') pillClass = 'pill-am';
+          if (l.type === '오후반차') pillClass = 'pill-pm';
+          const typeLabel = l.type === '전일' ? '연차' : l.type;
+
+          return `
+            <div class="leave-history-item" onclick="openLeaveDetailModal('${l.id}')" title="클릭 시 상세 사유 확인 및 연차 삭제">
+              <span style="font-weight: 700; font-size: 11.5px; color: #0f172a; white-space: nowrap;">📅 ${l.date} (${yoil})</span>
+              <span class="pill ${pillClass}" style="font-size: 10px; padding: 1px 6px; white-space: nowrap; flex-shrink: 0;">${typeLabel}</span>
+            </div>
+          `;
+        }).join('');
+      } else {
+        historyHtml = `<div style="font-size: 11px; color: #94a3b8; text-align: center; padding: 6px 0;">승인된 연차 내역 없음</div>`;
+      }
+
+      return `
+        <div class="stat-card">
+          <div class="stat-card-title" style="white-space: nowrap;">${m} 님 연차 현황 <span style="font-size: 11.5px; font-weight: normal; color: #64748b;">(${targetYear}년)</span></div>
+          <div class="stat-card-value" style="font-size: 22px;">
+            ${remain}<span style="font-size: 14px; font-weight: normal; color: #64748b; margin-left: 2px;">일 남음</span>
+          </div>
+          <div class="stat-card-sub" style="display: flex; justify-content: space-between;">
+            <span>사용: <b>${used}일</b> (${memberStats[m].count}건)</span>
+            <span>부여: <b>${grant}일</b></span>
+          </div>
+          <div class="leave-history-container">
+            <div class="leave-history-title">
+              <span>📅 ${targetYear}년 승인 연차 (${memberLeaves.length}건)</span>
+            </div>
+            <div class="leave-history-list">
+              ${historyHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // 연차 신청내역 테이블 렌더링 (대기 목록만 표시, 최신 신청순)
+    const sortedPending = [...pendingLeaves].sort((a, b) => (b.createdAt || b.date).localeCompare(a.createdAt || a.date));
+    const tbody = document.getElementById('leave-list-tbody');
+    if (sortedPending.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 24px;">승인 대기 중인 연차 신청이 없습니다.</td></tr>`;
+    } else {
+      tbody.innerHTML = sortedPending.map(l => {
+        const days = l.type === '전일' ? '1.0일' : '0.5일';
+        const yoil = getDayOfWeekStr(l.date);
+        let pillClass = 'pill-leave';
+        if (l.type === '오전반차') pillClass = 'pill-am';
+        if (l.type === '오후반차') pillClass = 'pill-pm';
+
+        return `
+          <tr>
+            <td style="font-weight: 700;">${l.date} (${yoil})</td>
+            <td><b>${l.person}</b></td>
+            <td><span class="pill ${pillClass}">${l.type}</span></td>
+            <td><b>${days}</b></td>
+            <td>${l.reason || '-'}</td>
+            <td style="color: #94a3b8; font-size: 12px;">${l.createdAt ? l.createdAt.substring(0, 16) : '-'}</td>
+            <td style="text-align: right;">
+              <button class="btn-primary" style="padding: 4px 10px; font-size: 12px; margin-right: 4px;" onclick="approveLeave('${l.id}')">승인</button>
+              <button class="btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="rejectLeave('${l.id}')">반려</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 하단 연차 전용 달력 렌더링 (대기 건 유무와 상관없이 항상 갱신)
+    renderLeaveCalendar();
+  }
+
+  // --- 연차 신청 모달 제어 ---
+  function openLeaveApplyModal() {
+    const select = document.getElementById('modal-leave-person');
+    select.innerHTML = ALL_MEMBERS.map(m => `<option value="${m}">${m}</option>`).join('');
+    const todayStr = formatDateKey(new Date());
+    if (!document.getElementById('modal-leave-date').value) {
+      document.getElementById('modal-leave-date').value = todayStr;
+    }
+    document.getElementById('modal-leave-reason').value = '';
+    document.getElementById('leave-apply-modal').classList.add('active');
+  }
+
+  function closeLeaveApplyModal() {
+    document.getElementById('leave-apply-modal').classList.remove('active');
+  }
+
+  function handleLeaveApplySubmit(e) {
+    e.preventDefault();
+    const person = document.getElementById('modal-leave-person').value;
+    const date = document.getElementById('modal-leave-date').value;
+    const type = document.getElementById('modal-leave-type').value;
+    const reason = document.getElementById('modal-leave-reason').value.trim();
+
+    if (!person || !date || !type) return;
+
+    const leaves = getStoredLeaves();
+    const newLeave = {
+      id: 'leave_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+      person,
+      date,
+      type,
+      reason,
+      status: 'pending', // 대기 상태 등록
+      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+
+    leaves.push(newLeave);
+    saveStoredLeaves(leaves);
+
+    // 신청한 날짜의 년/월로 연차 캘린더 이동하여 즉시 확인 가능하도록 처리
+    const dateParts = date.split('-');
+    if (dateParts.length === 3) {
+      leaveCalYear = parseInt(dateParts[0], 10);
+      leaveCalMonth = parseInt(dateParts[1], 10) - 1;
+    }
+
+    closeLeaveApplyModal();
+    alert(`[${person}] ${date} (${getDayOfWeekStr(date)}) ${type} 신청이 접수되었습니다.\n관리자 승인 대기 목록에 등록되었습니다.`);
+
+    renderLeaveTab();
+    renderLeaveCalendar();
+  }
+
+  // --- 연차 결재 승인 / 반려 / 취소 ---
+  function approveLeave(id) {
+    let leaves = getStoredLeaves();
+    const target = leaves.find(l => l.id === id);
+    if (!target) return;
+
+    if (!confirm(`[${target.person}] ${target.date} (${getDayOfWeekStr(target.date)}) ${target.type} 신청을 승인하시겠습니까?\n\n승인 즉시 근무표 달력에 반영되고 신청내역에서 목록으로 이동합니다.`)) return;
+
+    target.status = 'approved';
+    saveStoredLeaves(leaves);
+
+    // 해당 연차의 년/월로 캘린더 뷰 동기화
+    const dateParts = target.date.split('-');
+    if (dateParts.length === 3) {
+      leaveCalYear = parseInt(dateParts[0], 10);
+      leaveCalMonth = parseInt(dateParts[1], 10) - 1;
+    }
+
+    alert(`[${target.person}] 연차가 승인되었습니다.\n근무표 달력 및 ${target.person} 님의 연차 현황에 반영되었습니다.`);
+    renderLeaveTab();
+    renderLeaveCalendar();
+    renderCalendar();
+    if (typeof renderStats === 'function') renderStats();
+  }
+
+  function rejectLeave(id) {
+    let leaves = getStoredLeaves();
+    const target = leaves.find(l => l.id === id);
+    if (!target) return;
+
+    if (!confirm(`[${target.person}] ${target.date} (${getDayOfWeekStr(target.date)}) ${target.type} 신청을 반려(삭제)하시겠습니까?`)) return;
+
+    const targetDate = target.date;
+    leaves = leaves.filter(l => l.id !== id);
+    saveStoredLeaves(leaves);
+
+    // 해당 연차의 년/월로 캘린더 뷰 동기화
+    const dateParts = targetDate.split('-');
+    if (dateParts.length === 3) {
+      leaveCalYear = parseInt(dateParts[0], 10);
+      leaveCalMonth = parseInt(dateParts[1], 10) - 1;
+    }
+
+    alert(`[${target.person}] 연차 신청이 반려되었습니다.`);
+    renderLeaveTab();
+    renderLeaveCalendar();
+    renderCalendar();
+    if (typeof renderStats === 'function') renderStats();
+  }
+
+  /* =========================================================================
+     연차 상세 내역 조회 및 삭제 모달 로직
+     ========================================================================= */
+  function openLeaveDetailModal(id) {
+    const leaves = getStoredLeaves();
+    const l = leaves.find(item => item.id === id);
+    if (!l) return;
+
+    const yoil = getDayOfWeekStr(l.date);
+    let pillClass = 'pill-leave';
+    if (l.type === '오전반차') pillClass = 'pill-am';
+    if (l.type === '오후반차') pillClass = 'pill-pm';
+    const typeLabel = l.type === '전일' ? '전일 연차' : l.type;
+    const days = l.type === '전일' ? '1.0일' : '0.5일';
+
+    const isPending = l.status === 'pending';
+    const statusBadge = isPending
+      ? `<span class="badge badge-leave-pending" style="font-size: 12px; padding: 3px 8px;">⏳ 승인 대기중</span>`
+      : `<span class="badge badge-leave-approved" style="font-size: 12px; padding: 3px 8px;">🌴 승인 완료</span>`;
+
+    const contentEl = document.getElementById('leave-detail-content');
+    if (contentEl) {
+      contentEl.innerHTML = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 11px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+            <span style="color: #64748b; font-weight: 600;">대상 직원</span>
+            <span style="font-weight: 800; color: #0f172a; font-size: 15px;">${l.person}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+            <span style="color: #64748b; font-weight: 600;">연차 날짜</span>
+            <span style="font-weight: 700; color: #0f172a;">${l.date} (${yoil})</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+            <span style="color: #64748b; font-weight: 600;">구분 / 차감일수</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="pill ${pillClass}">${typeLabel}</span>
+              <span style="font-weight: 700; color: #475569;">(${days} 차감)</span>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+            <span style="color: #64748b; font-weight: 600; white-space: nowrap; margin-right: 12px;">연차 사유</span>
+            <span style="font-weight: 600; color: #1e293b; text-align: right; word-break: break-all;">${l.reason ? l.reason : '<span style="color: #94a3b8; font-weight: normal;">(사유 미입력)</span>'}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+            <span style="color: #64748b; font-weight: 600;">진행 상태</span>
+            <span>${statusBadge}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #64748b; font-weight: 600;">신청 일시</span>
+            <span style="color: #94a3b8; font-size: 12px;">${l.createdAt || '-'}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const deleteBtn = document.getElementById('leave-detail-delete-btn');
+    if (deleteBtn) {
+      deleteBtn.onclick = () => {
+        deleteLeave(l.id);
+      };
+    }
+
+    document.getElementById('leave-detail-modal').classList.add('active');
+  }
+
+  function closeLeaveDetailModal() {
+    const modal = document.getElementById('leave-detail-modal');
+    if (modal) modal.classList.remove('active');
+  }
+
+  function deleteLeave(id) {
+    let leaves = getStoredLeaves();
+    const target = leaves.find(l => l.id === id);
+    if (!target) return;
+
+    const yoil = getDayOfWeekStr(target.date);
+    const typeLabel = target.type === '전일' ? '전일 연차' : target.type;
+    const msg = `[${target.person}] ${target.date} (${yoil}) ${typeLabel} 기록을 삭제하시겠습니까?\n\n삭제 시 근무표 달력 및 잔여 연차 일수가 즉시 원상 복구됩니다.`;
+    if (!confirm(msg)) return;
+
+    const targetDate = target.date;
+    const targetPerson = target.person;
+    leaves = leaves.filter(l => l.id !== id);
+    saveStoredLeaves(leaves);
+
+    // 해당 연차의 년/월로 캘린더 뷰 동기화
+    const dateParts = targetDate.split('-');
+    if (dateParts.length === 3) {
+      leaveCalYear = parseInt(dateParts[0], 10);
+      leaveCalMonth = parseInt(dateParts[1], 10) - 1;
+    }
+
+    closeLeaveDetailModal();
+    alert(`[${targetPerson}] 연차 기록이 삭제되었습니다.`);
+
+    renderLeaveTab();
+    renderLeaveCalendar();
+    renderCalendar();
+    if (typeof renderStats === 'function') renderStats();
+  }
+
+  function cancelApprovedLeave(id) {
+    deleteLeave(id);
+  }
+
+  // --- 연차 부여 모달 제어 (관리자 인증 필요) ---
+  function openLeaveGrantModal(defaultYear = null) {
+    requestAdminAuth(() => {
+      const targetYear = defaultYear || leaveCalYear || 2026;
+      const yearSelect = document.getElementById('leave-grant-year-select');
+      if (yearSelect) {
+        yearSelect.value = targetYear;
+      }
+      renderGrantInputsForYear(targetYear);
+      document.getElementById('leave-grant-modal').classList.add('active');
+    });
+  }
+
+  function closeLeaveGrantModal() {
+    document.getElementById('leave-grant-modal').classList.remove('active');
+  }
+
+  function onLeaveGrantYearChange() {
+    const yearSelect = document.getElementById('leave-grant-year-select');
+    const targetYear = parseInt(yearSelect.value, 10) || 2026;
+    renderGrantInputsForYear(targetYear);
+  }
+
+  function renderGrantInputsForYear(year) {
+    const grants = getStoredLeaveGrants(year);
+    const container = document.getElementById('modal-grant-list');
+    container.innerHTML = ALL_MEMBERS.map(m => `
+      <div class="setting-item">
+        <span style="font-weight: 600;">${m}</span>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <input type="number" id="grant-input-${m}" value="${grants[m] ?? ANNUAL_DEFAULT_LEAVE}" min="0" max="50" step="0.5" 
+                 style="width: 75px; padding: 5px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 700; text-align: right;" />
+          <span style="font-size: 13px; color: #64748b;">일</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function saveLeaveGrants() {
+    const yearSelect = document.getElementById('leave-grant-year-select');
+    const targetYear = parseInt(yearSelect.value, 10) || 2026;
+    const grants = {};
+    ALL_MEMBERS.forEach(m => {
+      const el = document.getElementById(`grant-input-${m}`);
+      const val = parseFloat(el.value);
+      grants[m] = !isNaN(val) ? val : ANNUAL_DEFAULT_LEAVE;
+    });
+
+    saveStoredLeaveGrants(targetYear, grants);
+    closeLeaveGrantModal();
+    alert(`${targetYear}년도 직원별 연차 부여일수가 저장 및 적용되었습니다.`);
+
+    // 저장한 연도를 달력 기준 연도와 동기화하여 상단 현황표와 하단 캘린더 함께 갱신
+    leaveCalYear = targetYear;
+    renderLeaveTab();
+    if (typeof renderStats === 'function') renderStats();
+  }
+
+  // --- 연차 전용 달력 (승인/대기 연차만 표기) ---
+  function changeLeaveCalMonth(diff) {
+    leaveCalMonth += diff;
+    if (leaveCalMonth < 0) {
+      leaveCalMonth = 11;
+      leaveCalYear--;
+    } else if (leaveCalMonth > 11) {
+      leaveCalMonth = 0;
+      leaveCalYear++;
+    }
+    // 하단 달력뿐만 아니라 상단 연차 현황표(leaveCalYear 기준)도 함께 자동 갱신
+    renderLeaveTab();
+  }
+
+  function goTodayLeaveCal() {
+    const today = new Date();
+    leaveCalYear = today.getFullYear();
+    leaveCalMonth = today.getMonth();
+    renderLeaveTab(); // 상단 연차 현황표 및 하단 달력 함께 자동 갱신
+
+    setTimeout(() => {
+      const todayCell = document.getElementById('leave-calendar-today-cell');
+      if (todayCell) {
+        todayCell.classList.remove('cell-today-pulse');
+        void todayCell.offsetWidth;
+        todayCell.classList.add('cell-today-pulse');
+        todayCell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 60);
+  }
+
+  function renderLeaveCalendar() {
+    const titleEl = document.getElementById('leave-cal-title');
+    if (titleEl) {
+      titleEl.innerText = `📅 연차 전용 캘린더 (${leaveCalYear}년 ${leaveCalMonth + 1}월)`;
+    }
+
+    const firstDay = new Date(leaveCalYear, leaveCalMonth, 1);
+    const lastDay = new Date(leaveCalYear, leaveCalMonth + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - startDate.getDay());
+    const endDate = new Date(lastDay);
+    endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+
+    const holidaysMap = {
+      ...getHolidaysForYear(leaveCalYear - 1),
+      ...getHolidaysForYear(leaveCalYear),
+      ...getHolidaysForYear(leaveCalYear + 1)
+    };
+
+    const leaves = getStoredLeaves();
+    const tbody = document.getElementById('leave-calendar-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    let curr = new Date(startDate);
+    let row = document.createElement('tr');
+
+    const today = new Date();
+    const todayKey = formatDateKey(today);
+
+    while (curr <= endDate) {
+      const cell = document.createElement('td');
+      const dateKey = formatDateKey(curr);
+      const dayOfWeek = curr.getDay();
+      const holidayInfo = holidaysMap[dateKey];
+
+      const isToday = (dateKey === todayKey);
+      if (isToday) {
+        cell.classList.add('cell-today');
+        cell.id = 'leave-calendar-today-cell';
+      }
+
+      if (dayOfWeek === 0) cell.classList.add('sunday');
+      if (dayOfWeek === 6) cell.classList.add('saturday');
+      if (holidayInfo) {
+        cell.classList.add(holidayInfo.type === 'holiday' ? 'cell-holiday' : 'cell-sub-holiday');
+      }
+
+      let holidayTitleHtml = '';
+      if (holidayInfo) {
+        const colorClass = holidayInfo.type === 'holiday' ? 'red' : 'blue';
+        holidayTitleHtml = `<span class="holiday-label ${colorClass}">${holidayInfo.name}</span>`;
+      }
+
+      let todayBadgeHtml = isToday ? `<span class="badge-today">오늘</span>` : '';
+
+      let html = `
+        <div class="date-header">
+          <div style="display:flex; align-items:center; gap:5px;">
+            <span class="date-num">${curr.getDate()}</span>
+            ${todayBadgeHtml}
+          </div>
+          ${holidayTitleHtml}
+        </div>
+        <div class="badge-box">
+      `;
+
+      // ★ 오직 연차만 표기 (승인된 연차와 대기 중인 연차 구분)
+      const dayLeaves = leaves.filter(l => l.date === dateKey);
+      if (dayLeaves.length > 0) {
+        dayLeaves.forEach(l => {
+          const isPending = l.status === 'pending';
+          const typeLabel = l.type === '전일' ? '연차' : l.type;
+
+          if (isPending) {
+            html += `<span class="badge badge-leave-pending" onclick="openLeaveDetailModal('${l.id}')" style="cursor: pointer;" title="클릭 시 상세 정보 및 삭제: [승인대기] ${l.person} (${l.type})${l.reason ? ' - ' + l.reason : ''}">⏳ ${l.person}(대기-${typeLabel})</span>`;
+          } else {
+            html += `<span class="badge badge-leave-approved" onclick="openLeaveDetailModal('${l.id}')" style="cursor: pointer;" title="클릭 시 상세 정보 및 삭제: [승인완료] ${l.person} (${l.type})${l.reason ? ' - ' + l.reason : ''}">🌴 ${l.person}(${typeLabel})</span>`;
+          }
+        });
+      }
+
+      html += `</div>`;
+
+      if (curr.getMonth() !== leaveCalMonth) {
+        cell.style.opacity = '0.32';
+      }
+
+      cell.innerHTML = html;
+      row.appendChild(cell);
+
+      if (curr.getDay() === 6) {
+        tbody.appendChild(row);
+        row = document.createElement('tr');
+      }
+
+      curr.setDate(curr.getDate() + 1);
+    }
+  }
+
+  /* =========================================================================
+     7. 연장근무 탭 구현 (모달 등록, 시작·끝시간 분 자동계산, 알바 갯수, 연장 전용 캘린더)
+     ========================================================================= */
+  function openOtModal() {
+    const select = document.getElementById('ot-person');
+    select.innerHTML = ALL_MEMBERS.map(m => `<option value="${m}">${m}</option>`).join('');
+
+    const todayStr = formatDateKey(new Date());
+    if (!document.getElementById('ot-date').value) {
+      document.getElementById('ot-date').value = todayStr;
+    }
+
+    // 기본값: 출근일 연장
+    document.getElementById('ot-type').value = '출근일 연장';
+    document.getElementById('ot-start-time').value = '20:00';
+    document.getElementById('ot-end-time').value = '';
+    document.getElementById('ot-minutes').value = '';
+    const countInput = document.getElementById('ot-count');
+    if (countInput) countInput.value = '';
+
+    handleOtTypeChange();
+    document.getElementById('ot-modal').classList.add('active');
+  }
+
+  function closeOtModal() {
+    document.getElementById('ot-modal').classList.remove('active');
+  }
+
+  function handleOtTypeChange() {
+    const type = document.getElementById('ot-type').value;
+    const minutesSection = document.getElementById('ot-minutes-section');
+    const countSection = document.getElementById('ot-count-section');
+    const startTimeInput = document.getElementById('ot-start-time');
+
+    if (type === '휴무일 알바') {
+      if (minutesSection) minutesSection.style.display = 'none';
+      if (countSection) countSection.style.display = 'block';
+    } else {
+      if (minutesSection) minutesSection.style.display = 'block';
+      if (countSection) countSection.style.display = 'none';
+      if (type === '출근일 연장') {
+        if (!startTimeInput.value) startTimeInput.value = '20:00';
+      }
+      calculateOtMinutes();
+    }
+  }
+
+  function calculateOtMinutes() {
+    const type = document.getElementById('ot-type').value;
+    if (type === '휴무일 알바') {
+      // 알바는 시간 자동 계산 제외 (갯수 직접 입력 유지)
+      return;
+    }
+
+    const startTime = document.getElementById('ot-start-time').value;
+    const endTime = document.getElementById('ot-end-time').value;
+    const minutesInput = document.getElementById('ot-minutes');
+
+    if (!minutesInput) return;
+
+    if (!startTime || !endTime) {
+      minutesInput.value = '';
+      return;
+    }
+
+    const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+
+    let startM = sh * 60 + sm;
+    let endM = eh * 60 + em;
+
+    // 종료시간이 시작시간보다 작은 경우 (자정 넘어서 퇴근한 경우 대응)
+    if (endM < startM) {
+      endM += 24 * 60;
+    }
+
+    const diff = endM - startM;
+    minutesInput.value = diff > 0 ? diff : 0;
+  }
+
+  function handleOtSubmit(e) {
+    e.preventDefault();
+    const person = document.getElementById('ot-person').value;
+    const date = document.getElementById('ot-date').value;
+    const type = document.getElementById('ot-type').value;
+
+    if (!person || !date || !type) return;
+
+    let newOt = {
+      id: 'ot_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+      person,
+      date,
+      type,
+      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+
+    if (type === '휴무일 알바') {
+      const count = parseInt(document.getElementById('ot-count').value, 10);
+      if (isNaN(count) || count <= 0) {
+        alert('알바 갯수(1개 이상)를 입력해주세요.');
+        return;
+      }
+      newOt.count = count;
+      newOt.hours = count; // 하위 호환
+      newOt.minutes = 0;
+      newOt.startTime = document.getElementById('ot-start-time').value || '';
+      newOt.endTime = document.getElementById('ot-end-time').value || '';
+    } else {
+      const startTime = document.getElementById('ot-start-time').value;
+      const endTime = document.getElementById('ot-end-time').value;
+      const minutes = parseInt(document.getElementById('ot-minutes').value, 10);
+
+      if (!startTime || !endTime || isNaN(minutes) || minutes <= 0) {
+        alert('시작 시간과 끝 시간을 올바르게 입력해주세요.');
+        return;
+      }
+      newOt.startTime = startTime;
+      newOt.endTime = endTime;
+      newOt.minutes = minutes;
+      newOt.count = 0;
+      newOt.hours = Math.round((minutes / 60) * 10) / 10; // 하위 호환
+    }
+
+    const overtimes = getStoredOvertimes();
+    overtimes.push(newOt);
+    saveStoredOvertimes(overtimes);
+
+    // 해당 연장근무 날짜의 년/월로 연장근무 캘린더 동기화
+    const dateParts = date.split('-');
+    if (dateParts.length === 3) {
+      otCalYear = parseInt(dateParts[0], 10);
+      otCalMonth = parseInt(dateParts[1], 10) - 1;
+    }
+
+    closeOtModal();
+
+    if (type === '휴무일 알바') {
+      const timeInfo = newOt.startTime && newOt.endTime ? ` (${newOt.startTime}~${newOt.endTime})` : '';
+      alert(`[${person}] ${date} [${type}] (${newOt.count}개${timeInfo}) 기록이 등록되었습니다.`);
+    } else {
+      alert(`[${person}] ${date} [${type}] (${newOt.minutes}분 / ${newOt.startTime}~${newOt.endTime}) 기록이 등록되었습니다.`);
+    }
+
+    renderOvertimeTab();
+    renderOtCalendar();
+    renderCalendar();
+    if (typeof renderStats === 'function') renderStats();
+  }
+
+  function deleteOvertime(id) {
+    if (!confirm('해당 연장근무 기록을 삭제하시겠습니까?')) return;
+    let overtimes = getStoredOvertimes();
+    overtimes = overtimes.filter(o => o.id !== id);
+    saveStoredOvertimes(overtimes);
+
+    renderOvertimeTab();
+    renderOtCalendar();
+    renderCalendar();
+    if (typeof renderStats === 'function') renderStats();
+  }
+
+  function renderOvertimeTab() {
+    const allOvertimes = getStoredOvertimes();
+
+    // 연장근무 전용 캘린더의 현재 선택된 년/월 기준으로 필터링
+    const monthStr = String(otCalMonth + 1).padStart(2, '0');
+    const targetMonthPrefix = `${otCalYear}-${monthStr}`; // 예: "2026-09"
+    const monthlyOvertimes = allOvertimes.filter(o => o.date && o.date.startsWith(targetMonthPrefix));
+
+    const headerCountEl = document.getElementById('ot-header-month-count');
+    if (headerCountEl) {
+      headerCountEl.innerText = `(${otCalYear}년 ${otCalMonth + 1}월 총 ${monthlyOvertimes.length}건)`;
+    }
+
+    // 직원별 연장근무 누적 요약 (해당 월 기준)
+    const memberStats = {};
+    ALL_MEMBERS.forEach(m => { 
+      memberStats[m] = { 
+        workMinutes: 0,    // 출근일 연장
+        remainMinutes: 0,  // 휴무일 잔여업무
+        parttimeCount: 0,  // 휴무일 알바
+        count: 0
+      }; 
+    });
+
+    monthlyOvertimes.forEach(o => {
+      if (memberStats[o.person]) {
+        const type = o.type || '출근일 연장';
+        memberStats[o.person].count += 1;
+
+        if (type === '휴무일 알바') {
+          const cnt = o.count !== undefined ? Number(o.count) : (Number(o.hours) || 0);
+          memberStats[o.person].parttimeCount += cnt;
+        } else if (type === '휴무일 잔여업무') {
+          const min = o.minutes !== undefined ? Number(o.minutes) : Math.round((Number(o.hours) || 0) * 60);
+          memberStats[o.person].remainMinutes += min;
+        } else {
+          const min = o.minutes !== undefined ? Number(o.minutes) : Math.round((Number(o.hours) || 0) * 60);
+          memberStats[o.person].workMinutes += min;
+        }
+      }
+    });
+
+    const summaryCardsEl = document.getElementById('ot-member-summary-cards');
+    if (summaryCardsEl) {
+      summaryCardsEl.innerHTML = ALL_MEMBERS.map(m => {
+        const s = memberStats[m];
+
+        // 해당 직원의 이번 달 연장근무 날짜별 상세 내역 (오름차순 정렬)
+        const memberOts = monthlyOvertimes
+          .filter(o => o.person === m)
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        let historyHtml = '';
+        if (memberOts.length > 0) {
+          historyHtml = memberOts.map(o => {
+            const yoil = getDayOfWeekStr(o.date);
+            const type = o.type || '출근일 연장';
+            let typeColor = '#6d28d9';
+            let typeBg = '#f5f3ff';
+            let typeBorder = '#ddd6fe';
+            let amountStr = '';
+            let timeStr = o.startTime && o.endTime ? ` (${o.startTime}~${o.endTime})` : '';
+
+            if (type === '휴무일 알바') {
+              typeColor = '#0f766e';
+              typeBg = '#f0fdfa';
+              typeBorder = '#99f6e4';
+              const count = o.count !== undefined ? o.count : (o.hours || 0);
+              amountStr = `<b>${count}개</b>`;
+            } else if (type === '휴무일 잔여업무') {
+              typeColor = '#c2410c';
+              typeBg = '#fff7ed';
+              typeBorder = '#fed7aa';
+              const min = o.minutes !== undefined ? o.minutes : Math.round((Number(o.hours) || 0) * 60);
+              amountStr = `<b>${min}분</b>`;
+            } else {
+              const min = o.minutes !== undefined ? o.minutes : Math.round((Number(o.hours) || 0) * 60);
+              amountStr = `<b>${min}분</b>`;
+            }
+
+            return `
+              <div onclick="openOtDetailModal('${o.id}')" title="클릭 시 상세 내역 및 삭제" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 9px; font-size: 11.5px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.borderColor='#6366f1'; this.style.backgroundColor='#f8fafc';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.backgroundColor='#ffffff';">
+                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 4px;">
+                  <span style="font-weight: 700; color: #1e293b;">${Number(o.date.split('-')[1])}/${Number(o.date.split('-')[2])}(${yoil})</span>
+                  <span style="font-size: 10px; background: ${typeBg}; color: ${typeColor}; border: 1px solid ${typeBorder}; padding: 1px 4px; border-radius: 4px; font-weight: 700;">${type}</span>
+                  <span style="font-size: 10px; color: #94a3b8;">${timeStr}</span>
+                </div>
+                <div style="color: ${typeColor}; font-size: 11.5px; font-weight: 800; white-space: nowrap; margin-left: 6px;">
+                  ${amountStr}
+                </div>
+              </div>
+            `;
+          }).join('');
+        } else {
+          historyHtml = `<div style="font-size: 11px; color: #94a3b8; text-align: center; padding: 8px 0; background: #ffffff; border-radius: 6px; border: 1px dashed #e2e8f0;">내역 없음</div>`;
+        }
+
+        return `
+          <div class="stat-card">
+            <div class="stat-card-title" style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span><b>${m}</b> 님</span>
+              <span style="font-size: 11px; font-weight: normal; color: #64748b;">${otCalYear}년 ${otCalMonth + 1}월</span>
+            </div>
+            <!-- 월별 총합 박스: 클릭 시 해당 월 전체 목록 모달 오픈 -->
+            <div class="ot-summary-metrics" onclick="openOtMemberListModal('${m}')" title="클릭 시 ${m} 님의 ${otCalMonth + 1}월 전체 연장근무 목록 보기" style="display: flex; flex-direction: column; gap: 4px; margin: 8px 0 10px 0; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; font-size: 13px; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.borderColor='#6366f1'; this.style.backgroundColor='#f5f3ff';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.backgroundColor='#ffffff';">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #64748b; font-weight: 600;">연장 :</span>
+                <span style="font-weight: 800; color: #6d28d9;">${s.workMinutes}분</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #64748b; font-weight: 600;">알바 :</span>
+                <span style="font-weight: 800; color: #0f766e;">${s.parttimeCount}개</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #64748b; font-weight: 600;">휴무잔여 :</span>
+                <span style="font-weight: 800; color: #c2410c;">${s.remainMinutes}분</span>
+              </div>
+              <div style="text-align: right; font-size: 11px; color: #6366f1; font-weight: 700; margin-top: 3px; border-top: 1px dashed #e2e8f0; padding-top: 3px;">
+                월별종합 전체보기(총${memberOts.length}건)
+              </div>
+            </div>
+            <!-- 날짜별 리스트: 각 항목 클릭 시 단건 상세/삭제 모달 오픈 -->
+            <div class="leave-history-container" style="margin-top: 6px; border-top: 1px solid #e2e8f0; padding-top: 6px;">
+              <div class="leave-history-title" style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 5px; display: flex; justify-content: space-between;">
+                <span>📋 날짜별 리스트</span>
+                <span style="color: #6366f1; font-weight: 700;">${memberOts.length}건</span>
+              </div>
+              <div class="leave-history-list" style="max-height: 140px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;">
+                ${historyHtml}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 하단 연장근무 전용 달력 렌더링
+    renderOtCalendar();
+  }
+
+  /* =========================================================================
+     연장근무 상세 조회 및 직원별 전체 목록 모달 로직
+     ========================================================================= */
+  let currentOtDetailId = null;
+
+  function openOtDetailModal(id, startInEdit = false) {
+    const overtimes = getStoredOvertimes();
+    const ot = overtimes.find(o => o.id === id);
+    if (!ot) return;
+
+    currentOtDetailId = id;
+
+    // 모달을 기본 조회 모드로 초기화
+    switchToOtViewMode();
+
+    const yoil = getDayOfWeekStr(ot.date);
+    const type = ot.type || '출근일 연장';
+    let pillClass = 'pill-ot-work';
+    let typeIcon = '⏰';
+    let typeColor = '#6d28d9';
+    let amountText = '';
+
+    if (type === '휴무일 알바') {
+      pillClass = 'pill-ot-parttime';
+      typeIcon = '💼';
+      typeColor = '#0f766e';
+      const count = ot.count !== undefined ? ot.count : (ot.hours || 0);
+      amountText = `${count}개`;
+    } else if (type === '휴무일 잔여업무') {
+      pillClass = 'pill-ot-remain';
+      typeIcon = '📑';
+      typeColor = '#c2410c';
+      const min = ot.minutes !== undefined ? ot.minutes : Math.round((Number(ot.hours) || 0) * 60);
+      amountText = `${min}분`;
+    } else {
+      pillClass = 'pill-ot-work';
+      typeIcon = '⏰';
+      typeColor = '#6d28d9';
+      const min = ot.minutes !== undefined ? ot.minutes : Math.round((Number(ot.hours) || 0) * 60);
+      amountText = `${min}분`;
+    }
+
+    const timeRange = ot.startTime && ot.endTime ? `${ot.startTime} ~ ${ot.endTime}` : '시간 미지정';
+
+    const contentEl = document.getElementById('ot-detail-content');
+    if (contentEl) {
+      contentEl.innerHTML = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 11px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+            <span style="color: #64748b; font-weight: 600;">대상 직원</span>
+            <span style="font-weight: 800; color: #0f172a; font-size: 15px;">${ot.person}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+            <span style="color: #64748b; font-weight: 600;">근무 날짜</span>
+            <span style="font-weight: 700; color: #0f172a;">${ot.date} (${yoil})</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+            <span style="color: #64748b; font-weight: 600;">형태 구분</span>
+            <span class="pill ${pillClass}">${typeIcon} ${type}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+            <span style="color: #64748b; font-weight: 600;">근무 시간대</span>
+            <span style="font-weight: 700; color: #0f172a;">${timeRange}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+            <span style="color: #64748b; font-weight: 600;">연장 (분 / 갯수)</span>
+            <span style="font-weight: 800; font-size: 17px; color: ${typeColor};">${amountText}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #64748b; font-weight: 600;">등록 일시</span>
+            <span style="color: #94a3b8; font-size: 12px;">${ot.createdAt || '-'}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const deleteBtn = document.getElementById('ot-detail-delete-btn');
+    if (deleteBtn) {
+      deleteBtn.onclick = () => {
+        closeOtDetailModal();
+        deleteOvertime(ot.id);
+      };
+    }
+
+    if (startInEdit) {
+      switchToOtEditMode();
+    }
+
+    document.getElementById('ot-detail-modal').classList.add('active');
+  }
+
+  function closeOtDetailModal() {
+    const modal = document.getElementById('ot-detail-modal');
+    if (modal) modal.classList.remove('active');
+  }
+
+  function switchToOtEditMode() {
+    if (!currentOtDetailId) return;
+    const overtimes = getStoredOvertimes();
+    const ot = overtimes.find(o => o.id === currentOtDetailId);
+    if (!ot) return;
+
+    // 직원 선택 옵션 구성
+    const personSelect = document.getElementById('ot-edit-person');
+    if (personSelect) {
+      const members = ALL_MEMBERS.includes(ot.person) ? ALL_MEMBERS : [ot.person, ...ALL_MEMBERS];
+      personSelect.innerHTML = members.map(m => `<option value="${m}" ${m === ot.person ? 'selected' : ''}>${m}</option>`).join('');
+    }
+
+    document.getElementById('ot-edit-id').value = ot.id;
+    document.getElementById('ot-edit-date').value = ot.date || '';
+    document.getElementById('ot-edit-type').value = ot.type || '출근일 연장';
+    document.getElementById('ot-edit-start-time').value = ot.startTime || '';
+    document.getElementById('ot-edit-end-time').value = ot.endTime || '';
+
+    const type = ot.type || '출근일 연장';
+    if (type === '휴무일 알바') {
+      const count = ot.count !== undefined ? ot.count : (ot.hours || '');
+      document.getElementById('ot-edit-count').value = count;
+      document.getElementById('ot-edit-minutes').value = '';
+    } else {
+      const min = ot.minutes !== undefined ? ot.minutes : Math.round((Number(ot.hours) || 0) * 60);
+      document.getElementById('ot-edit-minutes').value = min || '';
+      document.getElementById('ot-edit-count').value = '';
+    }
+
+    handleOtEditTypeChange();
+
+    const titleEl = document.getElementById('ot-detail-modal-title');
+    if (titleEl) titleEl.innerHTML = '✏️ 연장근무 내역 수정';
+
+    const viewMode = document.getElementById('ot-detail-view-mode');
+    const editMode = document.getElementById('ot-detail-edit-mode');
+    if (viewMode) viewMode.style.display = 'none';
+    if (editMode) editMode.style.display = 'block';
+  }
+
+  function switchToOtViewMode() {
+    const titleEl = document.getElementById('ot-detail-modal-title');
+    if (titleEl) titleEl.innerHTML = '🔍 연장근무 상세 내역';
+
+    const viewMode = document.getElementById('ot-detail-view-mode');
+    const editMode = document.getElementById('ot-detail-edit-mode');
+    if (viewMode) viewMode.style.display = 'block';
+    if (editMode) editMode.style.display = 'none';
+  }
+
+  function handleOtEditTypeChange() {
+    const type = document.getElementById('ot-edit-type').value;
+    const minutesSection = document.getElementById('ot-edit-minutes-section');
+    const countSection = document.getElementById('ot-edit-count-section');
+    const startTimeInput = document.getElementById('ot-edit-start-time');
+
+    if (type === '휴무일 알바') {
+      if (minutesSection) minutesSection.style.display = 'none';
+      if (countSection) countSection.style.display = 'block';
+    } else {
+      if (minutesSection) minutesSection.style.display = 'block';
+      if (countSection) countSection.style.display = 'none';
+      if (type === '출근일 연장' && !startTimeInput.value) {
+        startTimeInput.value = '20:00';
+      }
+      calculateOtEditMinutes();
+    }
+  }
+
+  function calculateOtEditMinutes() {
+    const type = document.getElementById('ot-edit-type').value;
+    if (type === '휴무일 알바') return;
+
+    const startTime = document.getElementById('ot-edit-start-time').value;
+    const endTime = document.getElementById('ot-edit-end-time').value;
+    const minutesInput = document.getElementById('ot-edit-minutes');
+    if (!minutesInput) return;
+
+    if (!startTime || !endTime) {
+      return;
+    }
+
+    const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+
+    let startM = sh * 60 + sm;
+    let endM = eh * 60 + em;
+
+    if (endM < startM) {
+      endM += 24 * 60; // 자정 넘김 대응
+    }
+
+    const diff = endM - startM;
+    minutesInput.value = diff > 0 ? diff : 0;
+  }
+
+  function handleOtEditSubmit(e) {
+    e.preventDefault();
+    if (!currentOtDetailId) return;
+
+    const id = document.getElementById('ot-edit-id').value;
+    const person = document.getElementById('ot-edit-person').value;
+    const date = document.getElementById('ot-edit-date').value;
+    const type = document.getElementById('ot-edit-type').value;
+    const startTime = document.getElementById('ot-edit-start-time').value || '';
+    const endTime = document.getElementById('ot-edit-end-time').value || '';
+
+    if (!person || !date || !type) {
+      alert('필수 입력 항목을 모두 입력해주세요.');
+      return;
+    }
+
+    let minutes = 0;
+    let count = 0;
+
+    if (type === '휴무일 알바') {
+      count = parseInt(document.getElementById('ot-edit-count').value, 10);
+      if (isNaN(count) || count <= 0) {
+        alert('알바 갯수(1개 이상)를 입력해주세요.');
+        return;
+      }
+    } else {
+      minutes = parseInt(document.getElementById('ot-edit-minutes').value, 10);
+      if (isNaN(minutes) || minutes <= 0) {
+        alert('연장 시간(1분 이상)을 입력해주세요.');
+        return;
+      }
+    }
+
+    let overtimes = getStoredOvertimes();
+    const idx = overtimes.findIndex(o => o.id === id);
+    if (idx === -1) {
+      alert('수정할 연장근무 기록을 찾을 수 없습니다.');
+      return;
+    }
+
+    const updated = {
+      ...overtimes[idx],
+      person,
+      date,
+      type,
+      startTime,
+      endTime
+    };
+
+    if (type === '휴무일 알바') {
+      updated.count = count;
+      updated.hours = count;
+      updated.minutes = 0;
+    } else {
+      updated.minutes = minutes;
+      updated.count = 0;
+      updated.hours = Math.round((minutes / 60) * 10) / 10;
+    }
+
+    overtimes[idx] = updated;
+    saveStoredOvertimes(overtimes);
+
+    alert('연장근무 기록이 성공적으로 수정되었습니다.');
+
+    // 화면 및 달력 재계산 렌더링
+    renderOvertimeTab();
+    renderOtCalendar();
+    renderCalendar();
+    if (typeof renderStats === 'function') renderStats();
+
+    // 상세 모달을 갱신된 정보로 다시 조회 모드로 열기
+    openOtDetailModal(id);
+
+    // 직원별 목록 모달이 열려 있다면 목록도 새로고침
+    const memberListModal = document.getElementById('ot-member-list-modal');
+    if (memberListModal && memberListModal.classList.contains('active')) {
+      openOtMemberListModal(person);
+    }
+  }
+
+  function openOtMemberListModal(person) {
+    const allOvertimes = getStoredOvertimes();
+    const monthStr = String(otCalMonth + 1).padStart(2, '0');
+    const targetMonthPrefix = `${otCalYear}-${monthStr}`;
+    const list = allOvertimes
+      .filter(o => o.person === person && o.date && o.date.startsWith(targetMonthPrefix))
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    let workMinutes = 0;
+    let remainMinutes = 0;
+    let parttimeCount = 0;
+
+    list.forEach(o => {
+      const type = o.type || '출근일 연장';
+      if (type === '휴무일 알바') {
+        parttimeCount += (o.count !== undefined ? Number(o.count) : (Number(o.hours) || 0));
+      } else if (type === '휴무일 잔여업무') {
+        remainMinutes += (o.minutes !== undefined ? Number(o.minutes) : Math.round((Number(o.hours) || 0) * 60));
+      } else {
+        workMinutes += (o.minutes !== undefined ? Number(o.minutes) : Math.round((Number(o.hours) || 0) * 60));
+      }
+    });
+
+    const titleEl = document.getElementById('ot-member-list-title');
+    if (titleEl) {
+      titleEl.innerText = `📋 ${person} 님 ${otCalYear}년 ${otCalMonth + 1}월 연장근무 전체 내역`;
+    }
+
+    const summaryEl = document.getElementById('ot-member-list-summary');
+    if (summaryEl) {
+      summaryEl.innerHTML = `
+        <div style="display: flex; gap: 14px; flex-wrap: wrap; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 13px; align-items: center;">
+          <span>⏰ 연장: <b style="color: #6d28d9;">${workMinutes}분</b></span>
+          <span style="color: #cbd5e1;">|</span>
+          <span>💼 알바: <b style="color: #0f766e;">${parttimeCount}개</b></span>
+          <span style="color: #cbd5e1;">|</span>
+          <span>📑 휴무잔여: <b style="color: #c2410c;">${remainMinutes}분</b></span>
+          <span style="color: #cbd5e1;">|</span>
+          <span style="color: #475569; font-weight: 700;">총 <b>${list.length}건</b></span>
+        </div>
+      `;
+    }
+
+    const tbody = document.getElementById('ot-member-list-tbody');
+    if (tbody) {
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 28px;">${otCalYear}년 ${otCalMonth + 1}월에 등록된 연장근무 내역이 없습니다.</td></tr>`;
+      } else {
+        tbody.innerHTML = list.map(o => {
+          const yoil = getDayOfWeekStr(o.date);
+          const type = o.type || '출근일 연장';
+          let pillClass = 'pill-ot-work';
+          let typeIcon = '⏰';
+          let amountHtml = '';
+
+          if (type === '휴무일 알바') {
+            pillClass = 'pill-ot-parttime';
+            typeIcon = '💼';
+            const count = o.count !== undefined ? o.count : (o.hours || 0);
+            amountHtml = `<span class="pill pill-ot-parttime" style="font-weight: 700;">${count}개</span>`;
+          } else if (type === '휴무일 잔여업무') {
+            pillClass = 'pill-ot-remain';
+            typeIcon = '📑';
+            const min = o.minutes !== undefined ? o.minutes : Math.round((Number(o.hours) || 0) * 60);
+            amountHtml = `<span class="pill pill-ot-remain" style="font-weight: 700;">+${min}분</span>`;
+          } else {
+            pillClass = 'pill-ot-work';
+            typeIcon = '⏰';
+            const min = o.minutes !== undefined ? o.minutes : Math.round((Number(o.hours) || 0) * 60);
+            amountHtml = `<span class="pill pill-ot-work" style="font-weight: 700;">+${min}분</span>`;
+          }
+
+          const timeRange = o.startTime && o.endTime ? `${o.startTime} ~ ${o.endTime}` : '-';
+
+          return `
+            <tr>
+              <td style="font-weight: 700;">${o.date} (${yoil})</td>
+              <td><span class="pill ${pillClass}">${typeIcon} ${type}</span></td>
+              <td><b>${timeRange}</b></td>
+              <td>${amountHtml}</td>
+              <td style="color: #94a3b8; font-size: 12px;">${o.createdAt ? o.createdAt.substring(0, 16) : '-'}</td>
+              <td style="text-align: right; white-space: nowrap;">
+                <button class="btn-settings" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="openOtDetailModal('${o.id}', true)">수정</button>
+                <button class="btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteOvertimeFromList('${o.id}', '${person}')">삭제</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    document.getElementById('ot-member-list-modal').classList.add('active');
+  }
+
+  function closeOtMemberListModal() {
+    const modal = document.getElementById('ot-member-list-modal');
+    if (modal) modal.classList.remove('active');
+  }
+
+  function deleteOvertimeFromList(id, person) {
+    if (!confirm('해당 연장근무 기록을 삭제하시겠습니까?')) return;
+    let overtimes = getStoredOvertimes();
+    overtimes = overtimes.filter(o => o.id !== id);
+    saveStoredOvertimes(overtimes);
+
+    renderOvertimeTab();
+    renderOtCalendar();
+    renderCalendar();
+    if (typeof renderStats === 'function') renderStats();
+
+    // 현재 열려있는 모달 목록 즉시 갱신
+    openOtMemberListModal(person);
+  }
+
+  // --- 연장근무 전용 달력 제어 ---
+  let otCalYear = new Date().getFullYear();
+  let otCalMonth = new Date().getMonth();
+
+  function changeOtCalMonth(diff) {
+    otCalMonth += diff;
+    if (otCalMonth < 0) {
+      otCalMonth = 11;
+      otCalYear--;
+    } else if (otCalMonth > 11) {
+      otCalMonth = 0;
+      otCalYear++;
+    }
+    renderOtCalendar();
+    renderOvertimeTab();
+  }
+
+  function goTodayOtCal() {
+    const today = new Date();
+    otCalYear = today.getFullYear();
+    otCalMonth = today.getMonth();
+    renderOtCalendar();
+    renderOvertimeTab();
+
+    setTimeout(() => {
+      const todayCell = document.getElementById('ot-calendar-today-cell');
+      if (todayCell) {
+        todayCell.classList.remove('cell-today-pulse');
+        void todayCell.offsetWidth;
+        todayCell.classList.add('cell-today-pulse');
+        todayCell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 60);
+  }
+
+  function renderOtCalendar() {
+    const titleEl = document.getElementById('ot-cal-title');
+    if (titleEl) {
+      titleEl.innerText = `📅 연장근무 전용 캘린더 (${otCalYear}년 ${otCalMonth + 1}월)`;
+    }
+
+    const firstDay = new Date(otCalYear, otCalMonth, 1);
+    const lastDay = new Date(otCalYear, otCalMonth + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - startDate.getDay());
+    const endDate = new Date(lastDay);
+    endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+
+    const holidaysMap = {
+      ...getHolidaysForYear(otCalYear - 1),
+      ...getHolidaysForYear(otCalYear),
+      ...getHolidaysForYear(otCalYear + 1)
+    };
+
+    const overtimes = getStoredOvertimes();
+    const tbody = document.getElementById('ot-calendar-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    let curr = new Date(startDate);
+    let row = document.createElement('tr');
+
+    const today = new Date();
+    const todayKey = formatDateKey(today);
+
+    while (curr <= endDate) {
+      const cell = document.createElement('td');
+      const dateKey = formatDateKey(curr);
+      const dayOfWeek = curr.getDay();
+      const holidayInfo = holidaysMap[dateKey];
+
+      const isToday = (dateKey === todayKey);
+      if (isToday) {
+        cell.classList.add('cell-today');
+        cell.id = 'ot-calendar-today-cell';
+      }
+
+      if (dayOfWeek === 0) cell.classList.add('sunday');
+      if (dayOfWeek === 6) cell.classList.add('saturday');
+      if (holidayInfo) {
+        cell.classList.add(holidayInfo.type === 'holiday' ? 'cell-holiday' : 'cell-sub-holiday');
+      }
+
+      let holidayTitleHtml = '';
+      if (holidayInfo) {
+        const colorClass = holidayInfo.type === 'holiday' ? 'red' : 'blue';
+        holidayTitleHtml = `<span class="holiday-label ${colorClass}">${holidayInfo.name}</span>`;
+      }
+
+      let todayBadgeHtml = isToday ? `<span class="badge-today">오늘</span>` : '';
+
+      let html = `
+        <div class="date-header">
+          <div style="display:flex; align-items:center; gap:5px;">
+            <span class="date-num">${curr.getDate()}</span>
+            ${todayBadgeHtml}
+          </div>
+          ${holidayTitleHtml}
+        </div>
+        <div class="badge-box">
+      `;
+
+      const dayOts = overtimes.filter(o => o.date === dateKey);
+      if (dayOts.length > 0) {
+        dayOts.forEach(o => {
+          const type = o.type || '출근일 연장';
+          if (type === '휴무일 알바') {
+            const count = o.count !== undefined ? o.count : (o.hours || 0);
+            html += `<span class="badge badge-ot-parttime" onclick="openOtDetailModal('${o.id}')" style="cursor: pointer;" title="클릭 시 상세/삭제: [알바] ${o.person} (${count}개)">💼 ${o.person}(알바 ${count}개)</span>`;
+          } else if (type === '휴무일 잔여업무') {
+            const minutes = o.minutes !== undefined ? o.minutes : Math.round((Number(o.hours) || 0) * 60);
+            const timeDesc = o.startTime && o.endTime ? ` (${o.startTime}~${o.endTime})` : '';
+            html += `<span class="badge badge-ot-remain" onclick="openOtDetailModal('${o.id}')" style="cursor: pointer;" title="클릭 시 상세/삭제: [잔여업무] ${o.person} (${minutes}분)${timeDesc}">📑 ${o.person}(잔여 ${minutes}분)</span>`;
+          } else {
+            const minutes = o.minutes !== undefined ? o.minutes : Math.round((Number(o.hours) || 0) * 60);
+            const timeDesc = o.startTime && o.endTime ? ` (${o.startTime}~${o.endTime})` : '';
+            html += `<span class="badge badge-ot-work" onclick="openOtDetailModal('${o.id}')" style="cursor: pointer;" title="클릭 시 상세/삭제: [퇴근후 연장] ${o.person} (${minutes}분)${timeDesc}">⏰ ${o.person}(퇴근후 ${minutes}분)</span>`;
+          }
+        });
+      }
+
+      html += `</div>`;
+
+      if (curr.getMonth() !== otCalMonth) {
+        cell.style.opacity = '0.32';
+      }
+
+      cell.innerHTML = html;
+      row.appendChild(cell);
+
+      if (curr.getDay() === 6) {
+        tbody.appendChild(row);
+        row = document.createElement('tr');
+      }
+
+      curr.setDate(curr.getDate() + 1);
+    }
+  }
+
+  /* =========================================================================
+     8. 통계 탭 구현 (월 통계 / 년 통계 전환 및 종합 집계)
+     ========================================================================= */
+  function initStatsControls() {
+    const yearSelect = document.getElementById('stats-year-select');
+    const monthSelect = document.getElementById('stats-month-select');
+
+    if (yearSelect.children.length === 0) {
+      const years = [2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035];
+      yearSelect.innerHTML = years.map(y => `<option value="${y}" ${y === statsYear ? 'selected' : ''}>${y}년</option>`).join('');
+    }
+
+    if (monthSelect.children.length === 0) {
+      let mHtml = '';
+      for (let m = 0; m < 12; m++) {
+        mHtml += `<option value="${m}" ${m === statsMonth ? 'selected' : ''}>${m + 1}월</option>`;
+      }
+      monthSelect.innerHTML = mHtml;
+    }
+  }
+
+  function changeStatsMode(mode) {
+    statsMode = mode;
+    document.getElementById('btn-stats-month').classList.toggle('active', mode === 'month');
+    document.getElementById('btn-stats-year').classList.toggle('active', mode === 'year');
+    document.getElementById('stats-month-select').style.display = (mode === 'month') ? 'inline-block' : 'none';
+    renderStats();
+  }
+
+  // 지정된 기간 동안의 실제 근무일 및 주말 당번을 시뮬레이션 계산
+  function calculateWorkRosterForPeriod(startDate, endDate) {
+    const holidaysMap = {
+      ...getHolidaysForYear(startDate.getFullYear() - 1),
+      ...getHolidaysForYear(startDate.getFullYear()),
+      ...getHolidaysForYear(startDate.getFullYear() + 1),
+      ...getHolidaysForYear(endDate.getFullYear())
+    };
+
+    const calcStart = new Date(startDate);
+    calcStart.setDate(calcStart.getDate() - 14);
+    const calcEnd = new Date(endDate);
+    calcEnd.setDate(calcEnd.getDate() + 14);
+
+    const { duties, altOffs } = generateAutoDutyMap(calcStart, calcEnd, holidaysMap);
+
+    const statsResult = {};
+    ALL_MEMBERS.forEach(m => {
+      statsResult[m] = { workDays: 0, dutyCount: 0, dutyDates: [], weekdayWorkDays: 0 };
+    });
+
+    const swaps = getStoredSwaps();
+    let curr = new Date(startDate);
+    while (curr <= endDate) {
+      const dateKey = formatDateKey(curr);
+      const dayOfWeek = curr.getDay();
+      const holidayInfo = holidaysMap[dateKey];
+      let dayWorks = [];
+
+      // 2026 엑셀 기간
+      if (curr < ROTATION_START_DATE && EXCEL_2026_DATA[dateKey]) {
+        const excelDay = EXCEL_2026_DATA[dateKey];
+        if (!(holidayInfo && holidayInfo.type === 'holiday')) {
+          if (excelDay.work && excelDay.work.length > 0) {
+            dayWorks = [...excelDay.work];
+          }
+        }
+      }
+      // 로테이션 기간
+      else {
+        if (holidayInfo && holidayInfo.type === 'holiday') {
+          // 공휴일 휴무
+        } else if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+          const altOffPerson = altOffs[dateKey];
+          const rotated = isRotatedPeriod(curr);
+
+          DUTY_ROSTER.forEach(person => {
+            if (altOffPerson === person) return;
+            const rawGroup = personGroup[person];
+            let effectiveGroup = rotated ? ((rawGroup === 'A') ? 'B' : 'A') : rawGroup;
+            const isAWork = effectiveGroup === 'A' && (dayOfWeek >= 2 && dayOfWeek <= 5);
+            const isBWork = effectiveGroup === 'B' && (dayOfWeek >= 1 && dayOfWeek <= 4);
+
+            if (isAWork || isBWork) {
+              dayWorks.push(person);
+            }
+          });
+
+          // 용희 고정 근무
+          if ([1, 2, 4, 5].includes(dayOfWeek)) {
+            dayWorks.push('용희');
+          }
+        } else {
+          // 주말 당번
+          const dutyPerson = duties[dateKey];
+          if (dutyPerson) {
+            dayWorks.push(dutyPerson);
+          }
+        }
+      }
+
+      // 맞바꿈(Swap) 적용
+      swaps.forEach(sw => {
+        if (sw.date1 === dateKey && sw.date2 === dateKey) {
+          const p1InWork = dayWorks.includes(sw.person1);
+          const p2InWork = dayWorks.includes(sw.person2);
+          if (p1InWork && !p2InWork) {
+            dayWorks = dayWorks.filter(p => p !== sw.person1);
+            if (!dayWorks.includes(sw.person2)) dayWorks.push(sw.person2);
+          } else if (p2InWork && !p1InWork) {
+            dayWorks = dayWorks.filter(p => p !== sw.person2);
+            if (!dayWorks.includes(sw.person1)) dayWorks.push(sw.person1);
+          }
+        } else if (sw.date1 === dateKey) {
+          if (dayWorks.includes(sw.person1)) {
+            dayWorks = dayWorks.filter(p => p !== sw.person1);
+            if (!dayWorks.includes(sw.person2)) dayWorks.push(sw.person2);
+          }
+        } else if (sw.date2 === dateKey) {
+          if (dayWorks.includes(sw.person2)) {
+            dayWorks = dayWorks.filter(p => p !== sw.person2);
+            if (!dayWorks.includes(sw.person1)) dayWorks.push(sw.person1);
+          }
+        }
+      });
+
+      // 집계 부여 (2026년까지는 일요일만 당직, 2027년부터는 토·일 당직)
+      const isDutyDay = (curr.getFullYear() <= 2026) ? (dayOfWeek === 0) : (dayOfWeek === 0 || dayOfWeek === 6);
+
+      dayWorks.forEach(p => {
+        if (statsResult[p]) {
+          statsResult[p].workDays += 1;
+          if (isDutyDay) {
+            statsResult[p].dutyCount += 1;
+            statsResult[p].dutyDates.push(dateKey);
+          } else {
+            statsResult[p].weekdayWorkDays += 1;
+          }
+        }
+      });
+
+      curr.setDate(curr.getDate() + 1);
+    }
+
+    // 연차 사용일만큼 실제 근무일수(평일근무일수)에서 차감 (승인된 연차만 차감)
+    const leavesList = getStoredLeaves();
+    const startStr = formatDateKey(startDate);
+    const endStr = formatDateKey(endDate);
+    leavesList.forEach(l => {
+      if (l.status !== 'pending' && l.date >= startStr && l.date <= endStr && statsResult[l.person]) {
+        const days = l.type === '전일' ? 1.0 : 0.5;
+        statsResult[l.person].weekdayWorkDays = Math.max(0, statsResult[l.person].weekdayWorkDays - days);
+        statsResult[l.person].workDays = statsResult[l.person].weekdayWorkDays + statsResult[l.person].dutyCount;
+      }
+    });
+
+    return statsResult;
+  }
+
+  function renderStats() {
+    const rawYear = parseInt(document.getElementById('stats-year-select').value);
+    const rawMonth = parseInt(document.getElementById('stats-month-select').value);
+    const year = !isNaN(rawYear) ? rawYear : statsYear;
+    const month = !isNaN(rawMonth) ? rawMonth : statsMonth;
+
+    let startDate, endDate, periodLabel, subLabel;
+
+    if (statsMode === 'month') {
+      startDate = new Date(year, month, 1);
+      endDate = new Date(year, month + 1, 0);
+      periodLabel = `${year}년 ${month + 1}월`;
+      subLabel = `월간 집계 (${year}-${String(month+1).padStart(2,'0')})`;
+    } else {
+      startDate = new Date(year, 0, 1);
+      endDate = new Date(year, 11, 31);
+      periodLabel = `${year}년 연간`;
+      subLabel = `1년(12개월) 전체 누적 집계`;
+    }
+
+    document.getElementById('stat-period-display').innerText = periodLabel;
+    document.getElementById('stat-period-sub').innerText = subLabel;
+
+    const startStr = formatDateKey(startDate);
+    const endStr = formatDateKey(endDate);
+
+    // 1) 연차 집계 (승인된 연차만 집계)
+    const leaves = getStoredLeaves();
+    const grants = getStoredLeaveGrants(year);
+    const periodLeaves = leaves.filter(l => l.status !== 'pending' && l.date >= startStr && l.date <= endStr);
+    let totalLeaveDays = 0;
+    const memberLeaveDays = {};
+    ALL_MEMBERS.forEach(m => { memberLeaveDays[m] = 0; });
+
+    periodLeaves.forEach(l => {
+      const d = l.type === '전일' ? 1.0 : 0.5;
+      totalLeaveDays += d;
+      if (memberLeaveDays[l.person] !== undefined) {
+        memberLeaveDays[l.person] += d;
+      }
+    });
+
+    document.getElementById('stat-total-leave-days').innerHTML = `${totalLeaveDays}<span style="font-size: 16px; font-weight: normal; margin-left: 4px;">일</span>`;
+    document.getElementById('stat-total-leave-count').innerText = `승인 건수: ${periodLeaves.length}건`;
+
+    // 2) 연장근무 집계 (형태별 분 및 갯수 집계)
+    const overtimes = getStoredOvertimes();
+    const periodOts = overtimes.filter(o => o.date >= startStr && o.date <= endStr);
+    let totalWorkMinutes = 0;
+    let totalParttimeCount = 0;
+    let totalRemainMinutes = 0;
+    const memberOtStats = {};
+    ALL_MEMBERS.forEach(m => { 
+      memberOtStats[m] = { totalMinutes: 0, workMinutes: 0, parttimeCount: 0, remainMinutes: 0 }; 
+    });
+
+    periodOts.forEach(o => {
+      const type = o.type || '출근일 연장';
+      if (type === '휴무일 알바') {
+        const cnt = o.count !== undefined ? Number(o.count) : (Number(o.hours) || 0);
+        totalParttimeCount += cnt;
+        if (memberOtStats[o.person]) memberOtStats[o.person].parttimeCount += cnt;
+      } else if (type === '휴무일 잔여업무') {
+        const min = o.minutes !== undefined ? Number(o.minutes) : Math.round((Number(o.hours) || 0) * 60);
+        totalRemainMinutes += min;
+        if (memberOtStats[o.person]) {
+          memberOtStats[o.person].remainMinutes += min;
+          memberOtStats[o.person].totalMinutes += min;
+        }
+      } else {
+        const min = o.minutes !== undefined ? Number(o.minutes) : Math.round((Number(o.hours) || 0) * 60);
+        totalWorkMinutes += min;
+        if (memberOtStats[o.person]) {
+          memberOtStats[o.person].workMinutes += min;
+          memberOtStats[o.person].totalMinutes += min;
+        }
+      }
+    });
+
+    document.getElementById('stat-total-ot-hours').innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; background: #fbfbfe; padding: 4px 8px; border-radius: 6px; border: 1px solid #ede9fe;">
+          <span style="font-size: 13.5px; font-weight: 700; color: #5b21b6;">⏰ 퇴근후</span>
+          <span style="font-size: 18px; font-weight: 800; color: #5b21b6;">${totalWorkMinutes}<span style="font-size: 12.5px; font-weight: normal; margin-left: 2px;">분</span></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; background: #f0fdfa; padding: 4px 8px; border-radius: 6px; border: 1px solid #ccfbf1;">
+          <span style="font-size: 13.5px; font-weight: 700; color: #0f766e;">💼 알바</span>
+          <span style="font-size: 18px; font-weight: 800; color: #0f766e;">${totalParttimeCount}<span style="font-size: 12.5px; font-weight: normal; margin-left: 2px;">개</span></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; background: #fff7ed; padding: 4px 8px; border-radius: 6px; border: 1px solid #ffedd5;">
+          <span style="font-size: 13.5px; font-weight: 700; color: #c2410c;">📑 잔여</span>
+          <span style="font-size: 18px; font-weight: 800; color: #c2410c;">${totalRemainMinutes}<span style="font-size: 12.5px; font-weight: normal; margin-left: 2px;">분</span></span>
+        </div>
+      </div>
+    `;
+    document.getElementById('stat-total-ot-count').innerText = `총 기록: ${periodOts.length}건`;
+
+    // 3) 근무표 시뮬레이션 집계 (연차 사용일 차감)
+    const is2027OrLater = (year >= 2027);
+
+    // 테이블 헤더 동적 업데이트 (2026년까지는 당직(일), 2027년부터는 당직(토,일))
+    const thDuty = document.getElementById('stats-th-duty-days');
+    if (thDuty) {
+      thDuty.innerText = is2027OrLater ? '당직(토,일)' : '당직(일)';
+    }
+    const thWork = document.getElementById('stats-th-work-days');
+    if (thWork) {
+      thWork.innerText = is2027OrLater ? '근무배정일수(평일)' : '근무배정일수(평일·토)';
+    }
+
+    const workStats = calculateWorkRosterForPeriod(startDate, endDate);
+    let sumWorkDays = 0;
+    let sumWeekdayDays = 0;
+    let sumDutyDays = 0;
+    ALL_MEMBERS.forEach(m => {
+      sumWorkDays += workStats[m].workDays;
+      sumWeekdayDays += (workStats[m].weekdayWorkDays || 0);
+      sumDutyDays += (workStats[m].dutyCount || 0);
+    });
+    document.getElementById('stat-total-work-days').innerHTML = `${sumWorkDays}<span style="font-size: 16px; font-weight: normal; margin-left: 4px;">일</span>`;
+    const totalWorkSubEl = document.querySelector('#stat-total-work-days + .stat-card-sub');
+    if (totalWorkSubEl) {
+      const regName = is2027OrLater ? '평일' : '평일·토';
+      const dutyName = is2027OrLater ? '당직(토,일)' : '당직(일)';
+      totalWorkSubEl.innerHTML = `${regName} <b>${sumWeekdayDays}일</b> + ${dutyName} <b>${sumDutyDays}일</b>`;
+    }
+
+    // 4) 상세 테이블 구성
+    const tbody = document.getElementById('stats-table-tbody');
+    tbody.innerHTML = ALL_MEMBERS.map(m => {
+      const group = (m === '용희') ? '고정(월·화·목·금)' : (personGroup[m] ? `${personGroup[m]}조` : '-');
+      const wDays = workStats[m].workDays;
+      const dutyCount = workStats[m].dutyCount || 0;
+      const weekdayDays = workStats[m].weekdayWorkDays !== undefined ? workStats[m].weekdayWorkDays : Math.max(0, wDays - dutyCount);
+      const lDays = memberLeaveDays[m] || 0;
+      const ot = memberOtStats[m] || { totalMinutes: 0, workMinutes: 0, parttimeCount: 0, remainMinutes: 0 };
+      const userGrant = grants[m] ?? ANNUAL_DEFAULT_LEAVE;
+
+      // 당직 일수 포맷 (실제 당직 날짜 목록 없이 일수만 깔끔하게 표시)
+      const dutyHtml = dutyCount > 0 
+        ? `<b style="color: #4f46e5; font-size: 14.5px;">${dutyCount}일</b>` 
+        : '<span style="color: #94a3b8;">0일</span>';
+
+      return `
+        <tr>
+          <td><b style="font-size: 14.5px;">${m}</b></td>
+          <td><span style="background: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-weight: 600;">${group}</span></td>
+          <td>
+            <b style="color: #047857; font-size: 15px;">${weekdayDays}일</b>
+            <div style="font-size: 11px; color: #64748b; margin-top: 1px;">(당직포함 총 ${wDays}일)</div>
+          </td>
+          <td>${dutyHtml}</td>
+          <td>${lDays > 0 ? `<b style="color: #b45309; font-size: 14px;">${lDays}일</b>` : '<span style="color: #94a3b8;">0일</span>'}</td>
+          <td>
+            <div style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 1.3;">
+              <span style="color: #5b21b6; font-weight: 700;">⏰ 퇴근후: <b style="font-size: 14px;">${ot.workMinutes}분</b></span>
+              <span style="color: #0f766e; font-weight: 700;">💼 알바: <b style="font-size: 14px;">${ot.parttimeCount}개</b></span>
+              <span style="color: #c2410c; font-weight: 700;">📑 잔여: <b style="font-size: 14px;">${ot.remainMinutes}분</b></span>
+            </div>
+          </td>
+          <td style="color: #64748b; font-size: 12px;">
+            ${statsMode === 'year' ? `연간 잔여 연차: ${userGrant - lDays}일 (부여 ${userGrant}일)` : '-'}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  /* =========================================================================
+     8-1. 근무 맞바꿈(Shift Swap) 모달 및 데이터 처리
+     ========================================================================= */
+  let swapListFilter = 'current'; // 'current' | 'all'
+
+  function toggleSwapListFilter() {
+    swapListFilter = (swapListFilter === 'current') ? 'all' : 'current';
+    renderSwapList();
+  }
+
+  function openSwapModal(defaultDate1 = null) {
+    swapListFilter = 'current'; // 열릴 때 항상 현재 달력 월 기준으로 우선 표시
+    const curMonthStr = String(currentMonth + 1).padStart(2, '0');
+    const curMonthFirstDay = `${currentYear}-${curMonthStr}-01`;
+    const today = new Date();
+    const isThisMonth = (today.getFullYear() === currentYear && today.getMonth() === currentMonth);
+    const defaultDate = defaultDate1 || (isThisMonth ? formatDateKey(today) : curMonthFirstDay);
+
+    const dateInput1 = document.getElementById('swap-date-1');
+    const dateInput2 = document.getElementById('swap-date-2');
+    const reasonInput = document.getElementById('swap-reason');
+
+    if (defaultDate1 || !dateInput1.value) {
+      dateInput1.value = defaultDate;
+    }
+    if (!dateInput2.value) {
+      dateInput2.value = dateInput1.value;
+    }
+    if (reasonInput) reasonInput.value = '';
+
+    onSwapDateChange(1);
+    onSwapDateChange(2);
+    renderSwapList();
+
+    document.getElementById('swap-modal').classList.add('active');
+  }
+
+  function closeSwapModal() {
+    document.getElementById('swap-modal').classList.remove('active');
+  }
+
+  function onSwapDateChange(targetNum) {
+    const dateVal = document.getElementById(`swap-date-${targetNum}`).value;
+    const selectEl = document.getElementById(`swap-person-${targetNum}`);
+    if (!dateVal || !selectEl) return;
+
+    // 해당 날짜의 기본 근무자 목록 조회
+    const workPersons = getBaseWorkListForDate(dateVal);
+
+    let html = '';
+    ALL_MEMBERS.forEach(m => {
+      const isWorking = workPersons.includes(m);
+      const label = isWorking ? `[근무] ${m}` : `[휴무] ${m}`;
+      html += `<option value="${m}">${label}</option>`;
+    });
+    selectEl.innerHTML = html;
+
+    // 1번의 경우 기본 근무자 우선 선택, 2번의 경우 다른 인원 선택
+    if (targetNum === 1) {
+      if (workPersons.length > 0) {
+        selectEl.value = workPersons[0];
+      }
+    } else {
+      const p1 = document.getElementById('swap-person-1')?.value;
+      const candidate = ALL_MEMBERS.find(m => m !== p1);
+      if (candidate) selectEl.value = candidate;
+    }
+  }
+
+  function handleSwapSubmit(e) {
+    e.preventDefault();
+    const date1 = document.getElementById('swap-date-1').value;
+    const person1 = document.getElementById('swap-person-1').value;
+    const date2 = document.getElementById('swap-date-2').value;
+    const person2 = document.getElementById('swap-person-2').value;
+    const reason = (document.getElementById('swap-reason').value || '').trim();
+
+    if (!date1 || !date2 || !person1 || !person2) {
+      alert('근무 날짜와 직원을 모두 선택해 주세요.');
+      return;
+    }
+
+    if (date1 === date2 && person1 === person2) {
+      alert('동일한 날짜에 동일한 직원은 맞바꿀 수 없습니다. 서로 다른 직원을 선택해 주세요.');
+      return;
+    }
+
+    const swaps = getStoredSwaps();
+    const newSwap = {
+      id: 'swap_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+      date1,
+      person1,
+      date2,
+      person2,
+      reason,
+      createdAt: new Date().toLocaleString('ko-KR')
+    };
+
+    swaps.unshift(newSwap);
+    saveStoredSwaps(swaps);
+
+    // 맞바꾼 날짜가 현재 보고 있는 달력 월에 포함되지 않는 경우 해당 날짜의 달력으로 자동 이동
+    const curPrefix = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+    if (!date1.startsWith(curPrefix) && !date2.startsWith(curPrefix)) {
+      const parts = date1.split('-');
+      if (parts.length === 3) {
+        currentYear = parseInt(parts[0], 10);
+        currentMonth = parseInt(parts[1], 10) - 1;
+      }
+    }
+
+    renderSwapList();
+    renderCalendar();
+    if (document.getElementById('tab-stats').classList.contains('active')) {
+      renderStats();
+    }
+
+    document.getElementById('swap-reason').value = '';
+    alert(`[${person1}] 님과 [${person2}] 님의 근무 맞바꿈이 안전하게 적용되었습니다.`);
+  }
+
+  function deleteSwapItem(swapId) {
+    if (!confirm('이 맞바꿈 설정을 삭제하고 원래 순번 근무로 되돌리시겠습니까?')) {
+      return;
+    }
+
+    let swaps = getStoredSwaps();
+    swaps = swaps.filter(s => s.id !== swapId);
+    saveStoredSwaps(swaps);
+
+    renderSwapList();
+    renderCalendar();
+    if (document.getElementById('tab-stats').classList.contains('active')) {
+      renderStats();
+    }
+  }
+
+  function renderSwapList() {
+    const allSwaps = getStoredSwaps();
+    const listEl = document.getElementById('swap-items-list');
+    const badgeEl = document.getElementById('swap-count-badge');
+    const headerTitleEl = document.getElementById('swap-list-header-title');
+    const toggleBtnEl = document.getElementById('swap-filter-toggle-btn');
+    if (!listEl) return;
+
+    const curMonthStr = String(currentMonth + 1).padStart(2, '0');
+    const curMonthPrefix = `${currentYear}-${curMonthStr}`;
+
+    // ★ 현재 캘린더 월에 대한 맞바꿈: date1이 현재 월이거나, date2가 현재 월인 건 모두 포함!
+    // (예: 8월과 9월을 맞바꿨다면 8월을 볼 때도 뜨고, 9월을 볼 때도 뜸)
+    const monthlySwaps = allSwaps.filter(s => 
+      (s.date1 && s.date1.startsWith(curMonthPrefix)) || 
+      (s.date2 && s.date2.startsWith(curMonthPrefix))
+    );
+
+    const isCurrentMode = (swapListFilter === 'current');
+    const displayList = isCurrentMode ? monthlySwaps : allSwaps;
+
+    if (badgeEl) badgeEl.innerText = displayList.length;
+
+    if (headerTitleEl) {
+      if (isCurrentMode) {
+        headerTitleEl.innerHTML = `📋 <b>${currentYear}년 ${currentMonth + 1}월</b> 맞바꿈 적용 목록 (<span id="swap-count-badge" style="color: #4f46e5;">${monthlySwaps.length}</span>건)`;
+      } else {
+        headerTitleEl.innerHTML = `📋 <b>전체 기간</b> 맞바꿈 적용 목록 (<span id="swap-count-badge" style="color: #4f46e5;">${allSwaps.length}</span>건)`;
+      }
+    }
+
+    if (toggleBtnEl) {
+      toggleBtnEl.innerText = isCurrentMode ? `전체 보기 (${allSwaps.length}건)` : `${currentMonth + 1}월만 보기 (${monthlySwaps.length}건)`;
+    }
+
+    if (displayList.length === 0) {
+      const emptyMsg = isCurrentMode
+        ? `${currentYear}년 ${currentMonth + 1}월에 적용된 근무 맞바꿈 내역이 없습니다.`
+        : `현재 적용된 근무 맞바꿈 내역이 없습니다.`;
+      listEl.innerHTML = `
+        <div style="text-align: center; padding: 24px 10px; color: #94a3b8; font-size: 13px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
+          ${emptyMsg}
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = displayList.map(s => {
+      const day1 = getDayOfWeekStr(s.date1);
+      const day2 = getDayOfWeekStr(s.date2);
+      const isSameDate = (s.date1 === s.date2);
+      
+      let routeHtml = '';
+      if (isSameDate) {
+        routeHtml = `
+          <div style="font-weight: 700; font-size: 13px; color: #0f172a;">
+            📅 ${s.date1}(${day1}) 당일 맞교환:
+            <span style="color: #2563eb; background: #eff6ff; padding: 1px 6px; border-radius: 4px;">${s.person1}</span>
+            ⇄
+            <span style="color: #059669; background: #ecfdf5; padding: 1px 6px; border-radius: 4px;">${s.person2}</span>
+          </div>
+        `;
+      } else {
+        // 교차 월 맞바꿈인 경우 안내 배지 표시 (예: 8월 ⇄ 9월 교환)
+        const d1Month = s.date1 ? s.date1.substring(0, 7) : '';
+        const d2Month = s.date2 ? s.date2.substring(0, 7) : '';
+        const isCrossMonth = (d1Month && d2Month && d1Month !== d2Month);
+        const crossBadge = isCrossMonth ? `<span style="background: #fef3c7; color: #b45309; font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 4px;">월 교차 맞바꿈</span>` : '';
+
+        routeHtml = `
+          <div style="font-weight: 700; font-size: 13px; color: #0f172a; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <span>📅 ${s.date1}(${day1}) <b style="color: #2563eb;">${s.person1}</b></span>
+            <span style="color: #6366f1; font-weight: 800;">⇄</span>
+            <span>📅 ${s.date2}(${day2}) <b style="color: #059669;">${s.person2}</b></span>
+            ${crossBadge}
+          </div>
+        `;
+      }
+
+      return `
+        <div class="swap-card-item">
+          <div style="display: flex; flex-direction: column; gap: 4px; overflow: hidden;">
+            ${routeHtml}
+            <div style="font-size: 11.5px; color: #64748b; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              ${s.reason ? `<span style="background: #e2e8f0; color: #334155; padding: 1px 5px; border-radius: 3px;">사유: ${s.reason}</span>` : ''}
+              <span>등록: ${s.createdAt || ''}</span>
+            </div>
+          </div>
+          <button type="button" class="btn-danger" onclick="deleteSwapItem('${s.id}')" style="padding: 4px 10px; font-size: 12px; white-space: nowrap;">
+            🗑️ 삭제 (되돌리기)
+          </button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  /* =========================================================================
+     9. 관리자 인증 및 조 설정 모달 처리
+     ========================================================================= */
+  const ADMIN_PASSWORD = '7424';
+  let pendingAdminCallback = null;
+
+  function requestAdminAuth(onSuccess) {
+    pendingAdminCallback = onSuccess;
+    const modal = document.getElementById('admin-auth-modal');
+    const input = document.getElementById('admin-auth-password-input');
+    const errMsg = document.getElementById('admin-auth-error-msg');
+    if (input) input.value = '';
+    if (errMsg) errMsg.style.display = 'none';
+    if (modal) modal.classList.add('active');
+    setTimeout(() => {
+      if (input) input.focus();
+    }, 120);
+  }
+
+  function closeAdminAuthModal() {
+    pendingAdminCallback = null;
+    const modal = document.getElementById('admin-auth-modal');
+    if (modal) modal.classList.remove('active');
+  }
+
+  function submitAdminAuth() {
+    const input = document.getElementById('admin-auth-password-input');
+    const errMsg = document.getElementById('admin-auth-error-msg');
+    const entered = input ? input.value.trim() : '';
+
+    if (entered === ADMIN_PASSWORD) {
+      const cb = pendingAdminCallback;
+      closeAdminAuthModal();
+      if (cb && typeof cb === 'function') {
+        cb();
+      }
+    } else {
+      if (errMsg) errMsg.style.display = 'block';
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+    }
+  }
+
+  function openSettingsModal() {
+    requestAdminAuth(() => {
+      const listContainer = document.getElementById('modal-settings-list');
+      listContainer.innerHTML = DUTY_ROSTER.map(name => `
+        <div class="setting-item">
+          <span>${name}</span>
+          <select id="group-select-${name}">
+            <option value="A" ${personGroup[name] === 'A' ? 'selected' : ''}>A조 (화수목금)</option>
+            <option value="B" ${personGroup[name] === 'B' ? 'selected' : ''}>B조 (월화수목)</option>
+          </select>
+        </div>
+      `).join('');
+
+      document.getElementById('settings-modal').classList.add('active');
+    });
+  }
+
+  function closeSettingsModal() {
+    document.getElementById('settings-modal').classList.remove('active');
+  }
+
+  function saveSettings() {
+    DUTY_ROSTER.forEach(name => {
+      const select = document.getElementById(`group-select-${name}`);
+      if (select) {
+        personGroup[name] = select.value;
+      }
+    });
+    localStorage.setItem('duty_personGroup', JSON.stringify(personGroup));
+    closeSettingsModal();
+    renderCalendar();
+    alert('조 배정 설정이 저장되었습니다.');
+  }
+
+  /* =========================================================================
+     10. 데이터 백업 / 복원 (JSON)
+     ========================================================================= */
+  function exportDataToJson() {
+    const data = {
+      leaves: getStoredLeaves(),
+      overtimes: getStoredOvertimes(),
+      leaveGrants: getAllStoredLeaveGrants(),
+      swaps: getStoredSwaps(),
+      personGroup: personGroup,
+      exportedAt: new Date().toISOString()
+    };
+    const jsonStr = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `근무_연차_연장근무_데이터_${formatDateKey(new Date())}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function importDataFromJson() {
+    document.getElementById('json-file-input').click();
+  }
+
+  function handleFileChosen(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const parsed = JSON.parse(e.target.result);
+        if (parsed.leaves) saveStoredLeaves(parsed.leaves);
+        if (parsed.overtimes) saveStoredOvertimes(parsed.overtimes);
+        if (parsed.leaveGrants) {
+          if (parsed.leaveGrants['2025'] || parsed.leaveGrants['2026'] || parsed.leaveGrants['2027']) {
+            localStorage.setItem('duty_leave_grants_by_year', JSON.stringify(parsed.leaveGrants));
+            localStorage.setItem('duty_leave_grants', JSON.stringify(parsed.leaveGrants));
+          } else {
+            saveStoredLeaveGrants(2026, parsed.leaveGrants);
+          }
+        }
+        if (parsed.swaps) saveStoredSwaps(parsed.swaps);
+        if (parsed.personGroup) {
+          personGroup = parsed.personGroup;
+          localStorage.setItem('duty_personGroup', JSON.stringify(personGroup));
+        }
+        alert('데이터가 성공적으로 복원되었습니다.');
+        renderCalendar();
+        renderLeaveTab();
+        renderOvertimeTab();
+        renderStats();
+      } catch (err) {
+        alert('올바른 JSON 백업 파일이 아닙니다: ' + err.message);
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+    event.target.value = '';
+  }
+
+  // 초기 로드 실행
+  renderCalendar();
+</script>
+</body>
+</html>
