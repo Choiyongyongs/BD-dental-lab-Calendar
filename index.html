@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>근무표 & 근태 관리 시스템</title>
+  <!-- Firebase App & Cloud Firestore SDK (Compat v10) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <style>
     :root {
       --primary: #2563eb;
@@ -517,6 +521,57 @@
     .modal-footer { margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px; }
     .modal-footer button { justify-content: center; text-align: center; }
 
+    /* Cloud Status Badge */
+    .cloud-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid #cbd5e1;
+      background: #f1f5f9;
+      color: #475569;
+    }
+    .cloud-status:hover {
+      box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+      transform: translateY(-1px);
+    }
+    .cloud-status.connected {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+      color: #065f46;
+    }
+    .cloud-status.connected .status-dot {
+      background: #10b981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+    }
+    .cloud-status.disconnected {
+      background: #fefce8;
+      border-color: #fef08a;
+      color: #854d0e;
+    }
+    .cloud-status.disconnected .status-dot {
+      background: #eab308;
+    }
+    .cloud-status.error {
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: #991b1b;
+    }
+    .cloud-status.error .status-dot {
+      background: #ef4444;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
     /* Pill Badges */
     .pill {
       display: inline-block;
@@ -567,11 +622,17 @@
       <h1 class="app-title">근무·근태 관리 시스템</h1>
       <span class="app-badge">통합 v2.0</span>
     </div>
-    <div class="nav-tabs">
-      <button class="tab-btn active" onclick="switchTab('calendar')">📅 근무표</button>
-      <button class="tab-btn" onclick="switchTab('leave')">🌴 연차관리</button>
-      <button class="tab-btn" onclick="switchTab('overtime')">⏰ 연장근무</button>
-      <button class="tab-btn" onclick="switchTab('stats')">📊 통계</button>
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+      <div id="cloud-status-badge" class="cloud-status disconnected" onclick="openFirebaseConfigModal()" title="클릭하여 파이어베이스 클라우드 동기화 설정">
+        <span class="status-dot"></span>
+        <span id="cloud-status-text">로컬 모드</span>
+      </div>
+      <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('calendar')">📅 근무표</button>
+        <button class="tab-btn" onclick="switchTab('leave')">🌴 연차관리</button>
+        <button class="tab-btn" onclick="switchTab('overtime')">⏰ 연장근무</button>
+        <button class="tab-btn" onclick="switchTab('stats')">📊 통계</button>
+      </div>
     </div>
   </div>
 
@@ -800,13 +861,71 @@
     </div>
 
     <!-- 데이터 관리 (백업/내보내기) -->
-    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; flex-wrap: wrap;">
+      <button onclick="openFirebaseConfigModal()" style="font-weight: 700; color: #4338ca; border-color: #c7d2fe; background: #eef2ff;">🔥 Firebase 설정</button>
       <button onclick="exportDataToJson()">📥 데이터 백업 (JSON)</button>
       <button onclick="importDataFromJson()">📤 데이터 복원</button>
       <input type="file" id="json-file-input" accept=".json" style="display: none;" onchange="handleFileChosen(event)">
     </div>
   </div>
 
+</div>
+
+<!-- 파이어베이스 클라우드 설정 모달 -->
+<div class="modal-overlay" id="firebase-config-modal" style="z-index: 1600 !important;">
+  <div class="modal-card" style="width: 500px; max-width: 95%;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">🔥 Firebase 클라우드 연동 설정</h3>
+      <button type="button" onclick="closeFirebaseConfigModal()" style="border: none; background: #f1f5f9; border-radius: 6px; font-size: 14px; cursor: pointer; color: #64748b; padding: 4px 10px; font-weight: 700;">✕</button>
+    </div>
+
+    <div id="fb-modal-status-box" style="padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+      <!-- JS로 상태 메시지 표시 -->
+    </div>
+
+    <p style="font-size: 12.5px; color: #64748b; margin-top: 0; margin-bottom: 12px; line-height: 1.5;">
+      Google Firebase(Cloud Firestore)와 연동하면 모든 직원이 스마트폰과 PC에서 실시간으로 일정을 공유할 수 있습니다. <code>firebase-config.js</code> 파일에 입력하거나 아래에 직접 입력하세요.
+    </p>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
+      <div>
+        <label style="font-weight: 700; color: #334155; font-size: 12px;">API Key</label>
+        <input type="text" id="fb-input-apiKey" placeholder="AIzaSy..." style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div>
+          <label style="font-weight: 700; color: #334155; font-size: 12px;">Project ID</label>
+          <input type="text" id="fb-input-projectId" placeholder="my-project-id" style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
+        </div>
+        <div>
+          <label style="font-weight: 700; color: #334155; font-size: 12px;">Auth Domain</label>
+          <input type="text" id="fb-input-authDomain" placeholder="my-project.firebaseapp.com" style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div>
+          <label style="font-weight: 700; color: #334155; font-size: 12px;">Storage Bucket</label>
+          <input type="text" id="fb-input-storageBucket" placeholder="my-project.appspot.com" style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
+        </div>
+        <div>
+          <label style="font-weight: 700; color: #334155; font-size: 12px;">App ID</label>
+          <input type="text" id="fb-input-appId" placeholder="1:123456:web:abcdef" style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 14px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 11.5px; color: #64748b; line-height: 1.5;">
+      💡 <b>설정 팁</b>: Firebase 콘솔(console.firebase.google.com) ➔ 프로젝트 설정 ➔ '내 앱(웹)'에서 발급된 값을 복사해 넣으시면 됩니다.
+    </div>
+
+    <div class="modal-footer" style="margin-top: 18px; justify-content: space-between;">
+      <button type="button" class="btn-danger" onclick="disconnectFirebaseConfig()" id="fb-disconnect-btn" style="padding: 7px 14px; font-size: 12.5px; display: none;">연동 해제</button>
+      <div style="display: flex; gap: 8px; margin-left: auto;">
+        <button type="button" onclick="closeFirebaseConfigModal()">취소</button>
+        <button type="button" class="btn-primary" onclick="saveAndConnectFirebase()" style="background: #4f46e5; border-color: #4338ca;">저장 및 연결</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- 관리자 비밀번호 확인 모달 -->
@@ -1203,6 +1322,316 @@
 
 <script>
   /* =========================================================================
+     0. Firebase Cloud Firestore 실시간 클라우드 데이터베이스 모듈
+     ========================================================================= */
+  let firebaseApp = null;
+  let firebaseDb = null;
+  let isFirebaseReady = false;
+  let isSyncingToCloud = false;
+
+  function getActiveFirebaseConfig() {
+    if (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey && window.FIREBASE_CONFIG.projectId) {
+      return window.FIREBASE_CONFIG;
+    }
+    try {
+      const saved = localStorage.getItem('duty_firebase_config');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.apiKey && parsed.projectId) {
+          return parsed;
+        }
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  function updateCloudStatusBadge(status, text) {
+    const badge = document.getElementById('cloud-status-badge');
+    const label = document.getElementById('cloud-status-text');
+    if (!badge || !label) return;
+    badge.className = 'cloud-status ' + status;
+    label.innerText = text;
+  }
+
+  function initFirebase() {
+    const config = getActiveFirebaseConfig();
+    if (!config) {
+      updateCloudStatusBadge('disconnected', '로컬 모드');
+      return;
+    }
+
+    try {
+      if (typeof firebase === 'undefined') {
+        console.warn('Firebase SDK not loaded.');
+        updateCloudStatusBadge('error', 'SDK 로드 오류');
+        return;
+      }
+
+      if (!firebaseApp) {
+        firebaseApp = (firebase.apps && firebase.apps.length) ? firebase.app() : firebase.initializeApp(config);
+        firebaseDb = firebase.firestore();
+      }
+
+      isFirebaseReady = true;
+      updateCloudStatusBadge('connected', '실시간 클라우드 연동 중');
+      console.log('Firebase Cloud Firestore initialized successfully.');
+
+      setupFirestoreListeners();
+      checkAndMigrateLocalDataToFirestore();
+    } catch (err) {
+      console.error('Firebase init error:', err);
+      updateCloudStatusBadge('error', '연결 오류');
+    }
+  }
+
+  function renderCurrentActiveTab() {
+    const activeTab = document.querySelector('.tab-content.active');
+    if (!activeTab) return;
+    const id = activeTab.id;
+    if (id === 'tab-calendar') renderCalendar();
+    else if (id === 'tab-leave') renderLeaveTab();
+    else if (id === 'tab-overtime') renderOvertimeTab();
+    else if (id === 'tab-stats') renderStats();
+  }
+
+  function setupFirestoreListeners() {
+    if (!firebaseDb) return;
+
+    // 1. Leaves collection
+    firebaseDb.collection('leaves').onSnapshot(snapshot => {
+      if (isSyncingToCloud) return;
+      if (snapshot.metadata && snapshot.metadata.hasPendingWrites) return;
+      const list = [];
+      snapshot.forEach(doc => {
+        list.push({ id: doc.id, ...doc.data() });
+      });
+      list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      localStorage.setItem('duty_leaves_list', JSON.stringify(list));
+      renderCurrentActiveTab();
+    }, err => console.warn('Firestore leaves listener error:', err));
+
+    // 2. Overtimes collection
+    firebaseDb.collection('overtimes').onSnapshot(snapshot => {
+      if (isSyncingToCloud) return;
+      if (snapshot.metadata && snapshot.metadata.hasPendingWrites) return;
+      const list = [];
+      snapshot.forEach(doc => {
+        list.push({ id: doc.id, ...doc.data() });
+      });
+      list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      localStorage.setItem('duty_overtime_list', JSON.stringify(list));
+      renderCurrentActiveTab();
+    }, err => console.warn('Firestore overtimes listener error:', err));
+
+    // 3. Swaps collection
+    firebaseDb.collection('swaps').onSnapshot(snapshot => {
+      if (isSyncingToCloud) return;
+      if (snapshot.metadata && snapshot.metadata.hasPendingWrites) return;
+      const list = [];
+      snapshot.forEach(doc => {
+        list.push({ id: doc.id, ...doc.data() });
+      });
+      list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      localStorage.setItem('duty_swaps_list', JSON.stringify(list));
+      renderCurrentActiveTab();
+    }, err => console.warn('Firestore swaps listener error:', err));
+
+    // 4. Group settings
+    firebaseDb.collection('config').doc('group_settings').onSnapshot(doc => {
+      if (isSyncingToCloud) return;
+      if (doc.metadata && doc.metadata.hasPendingWrites) return;
+      if (doc.exists) {
+        const data = doc.data();
+        if (data && data.personGroup) {
+          personGroup = data.personGroup;
+          localStorage.setItem('duty_personGroup', JSON.stringify(personGroup));
+          renderCurrentActiveTab();
+        }
+      }
+    }, err => console.warn('Firestore group settings listener error:', err));
+
+    // 5. Leave grants
+    firebaseDb.collection('config').doc('leave_grants').onSnapshot(doc => {
+      if (isSyncingToCloud) return;
+      if (doc.metadata && doc.metadata.hasPendingWrites) return;
+      if (doc.exists) {
+        const data = doc.data();
+        if (data && data.grants) {
+          localStorage.setItem('duty_leave_grants_by_year', JSON.stringify(data.grants));
+          localStorage.setItem('duty_leave_grants', JSON.stringify(data.grants));
+          renderCurrentActiveTab();
+        }
+      }
+    }, err => console.warn('Firestore leave grants listener error:', err));
+  }
+
+  async function checkAndMigrateLocalDataToFirestore() {
+    if (!firebaseDb) return;
+    try {
+      const leavesSnap = await firebaseDb.collection('leaves').limit(1).get();
+      if (leavesSnap.empty) {
+        const localLeaves = getStoredLeaves();
+        if (localLeaves.length > 0) {
+          const batch = firebaseDb.batch();
+          localLeaves.forEach(l => {
+            const ref = firebaseDb.collection('leaves').doc(String(l.id));
+            batch.set(ref, l);
+          });
+          await batch.commit();
+        }
+      }
+
+      const otSnap = await firebaseDb.collection('overtimes').limit(1).get();
+      if (otSnap.empty) {
+        const localOt = getStoredOvertimes();
+        if (localOt.length > 0) {
+          const batch = firebaseDb.batch();
+          localOt.forEach(o => {
+            const ref = firebaseDb.collection('overtimes').doc(String(o.id));
+            batch.set(ref, o);
+          });
+          await batch.commit();
+        }
+      }
+
+      const swapsSnap = await firebaseDb.collection('swaps').limit(1).get();
+      if (swapsSnap.empty) {
+        const localSwaps = getStoredSwaps();
+        if (localSwaps.length > 0) {
+          const batch = firebaseDb.batch();
+          localSwaps.forEach(s => {
+            const ref = firebaseDb.collection('swaps').doc(String(s.id));
+            batch.set(ref, s);
+          });
+          await batch.commit();
+        }
+      }
+
+      const groupDoc = await firebaseDb.collection('config').doc('group_settings').get();
+      if (!groupDoc.exists) {
+        await firebaseDb.collection('config').doc('group_settings').set({ personGroup });
+      }
+
+      const grantDoc = await firebaseDb.collection('config').doc('leave_grants').get();
+      if (!grantDoc.exists) {
+        const allGrants = getAllStoredLeaveGrants();
+        await firebaseDb.collection('config').doc('leave_grants').set({ grants: allGrants });
+      }
+    } catch(err) {
+      console.warn('Migration check note:', err);
+    }
+  }
+
+  async function syncListToFirestore(collectionName, currentList) {
+    if (!firebaseDb || !isFirebaseReady) return;
+    try {
+      isSyncingToCloud = true;
+      const snap = await firebaseDb.collection(collectionName).get();
+      const currentIds = new Set(currentList.map(item => String(item.id)));
+      const batch = firebaseDb.batch();
+
+      snap.forEach(doc => {
+        if (!currentIds.has(doc.id)) {
+          batch.delete(doc.ref);
+        }
+      });
+
+      currentList.forEach(item => {
+        const docRef = firebaseDb.collection(collectionName).doc(String(item.id));
+        batch.set(docRef, item);
+      });
+
+      await batch.commit();
+    } catch (err) {
+      console.error(`Firestore ${collectionName} sync error:`, err);
+    } finally {
+      setTimeout(() => { isSyncingToCloud = false; }, 300);
+    }
+  }
+
+  function cloudSaveLeaveGrants(grants) {
+    if (firebaseDb && isFirebaseReady) {
+      firebaseDb.collection('config').doc('leave_grants').set({ grants }).catch(e => console.error(e));
+    }
+  }
+
+  function cloudSaveGroupSettings(pg) {
+    if (firebaseDb && isFirebaseReady) {
+      firebaseDb.collection('config').doc('group_settings').set({ personGroup: pg }).catch(e => console.error(e));
+    }
+  }
+
+  function openFirebaseConfigModal() {
+    const modal = document.getElementById('firebase-config-modal');
+    const statusBox = document.getElementById('fb-modal-status-box');
+    const disconnectBtn = document.getElementById('fb-disconnect-btn');
+
+    const config = getActiveFirebaseConfig() || {};
+    document.getElementById('fb-input-apiKey').value = config.apiKey || '';
+    document.getElementById('fb-input-projectId').value = config.projectId || '';
+    document.getElementById('fb-input-authDomain').value = config.authDomain || '';
+    document.getElementById('fb-input-storageBucket').value = config.storageBucket || '';
+    document.getElementById('fb-input-appId').value = config.appId || '';
+
+    if (isFirebaseReady) {
+      statusBox.style.background = '#ecfdf5';
+      statusBox.style.border = '1px solid #a7f3d0';
+      statusBox.style.color = '#065f46';
+      statusBox.innerHTML = '🟢 <b>Cloud Firestore 실시간 연동 중</b> (모든 데이터가 클라우드에 자동 동기화됩니다)';
+      disconnectBtn.style.display = 'inline-block';
+    } else {
+      statusBox.style.background = '#fefce8';
+      statusBox.style.border = '1px solid #fde047';
+      statusBox.style.color = '#854d0e';
+      statusBox.innerHTML = '🟡 <b>로컬 모드</b> (Firebase 키를 입력하면 전 직원 실시간 클라우드 연동이 활성화됩니다)';
+      disconnectBtn.style.display = 'none';
+    }
+
+    modal.classList.add('active');
+  }
+
+  function closeFirebaseConfigModal() {
+    document.getElementById('firebase-config-modal').classList.remove('active');
+  }
+
+  function saveAndConnectFirebase() {
+    const apiKey = document.getElementById('fb-input-apiKey').value.trim();
+    const projectId = document.getElementById('fb-input-projectId').value.trim();
+    const authDomain = document.getElementById('fb-input-authDomain').value.trim();
+    const storageBucket = document.getElementById('fb-input-storageBucket').value.trim();
+    const appId = document.getElementById('fb-input-appId').value.trim();
+
+    if (!apiKey || !projectId) {
+      alert('최소한 API Key와 Project ID는 반드시 입력해야 합니다.');
+      return;
+    }
+
+    const newConfig = {
+      apiKey,
+      projectId,
+      authDomain: authDomain || `${projectId}.firebaseapp.com`,
+      storageBucket: storageBucket || `${projectId}.appspot.com`,
+      appId: appId || ''
+    };
+
+    localStorage.setItem('duty_firebase_config', JSON.stringify(newConfig));
+    closeFirebaseConfigModal();
+    alert('Firebase 설정이 저장되었습니다. 클라우드에 연결합니다.');
+    initFirebase();
+  }
+
+  function disconnectFirebaseConfig() {
+    if (!confirm('Firebase 클라우드 연동을 해제하고 로컬 모드로 전환하시겠습니까?')) return;
+    localStorage.removeItem('duty_firebase_config');
+    isFirebaseReady = false;
+    firebaseDb = null;
+    firebaseApp = null;
+    updateCloudStatusBadge('disconnected', '로컬 모드');
+    closeFirebaseConfigModal();
+    alert('연동이 해제되었습니다.');
+  }
+
+  /* =========================================================================
      1. 기본 데이터 및 상태 관리
      ========================================================================= */
   const ALL_MEMBERS = ['용희', '세진', '소영', '이슬', '서영', '찬유'];
@@ -1259,6 +1688,9 @@
     allGrants[yKey] = grants;
     localStorage.setItem('duty_leave_grants_by_year', JSON.stringify(allGrants));
     localStorage.setItem('duty_leave_grants', JSON.stringify(allGrants));
+    if (firebaseDb && isFirebaseReady) {
+      cloudSaveLeaveGrants(allGrants);
+    }
   }
 
   let personGroup = {
@@ -1521,6 +1953,9 @@
 
   function saveStoredLeaves(list) {
     localStorage.setItem('duty_leaves_list', JSON.stringify(list));
+    if (firebaseDb && isFirebaseReady) {
+      syncListToFirestore('leaves', list);
+    }
   }
 
   function getStoredOvertimes() {
@@ -1532,6 +1967,9 @@
 
   function saveStoredOvertimes(list) {
     localStorage.setItem('duty_overtime_list', JSON.stringify(list));
+    if (firebaseDb && isFirebaseReady) {
+      syncListToFirestore('overtimes', list);
+    }
   }
 
   /* =========================================================================
@@ -1546,6 +1984,9 @@
 
   function saveStoredSwaps(list) {
     localStorage.setItem('duty_swaps_list', JSON.stringify(list));
+    if (firebaseDb && isFirebaseReady) {
+      syncListToFirestore('swaps', list);
+    }
   }
 
   /* =========================================================================
@@ -4163,6 +4604,9 @@
       }
     });
     localStorage.setItem('duty_personGroup', JSON.stringify(personGroup));
+    if (firebaseDb && isFirebaseReady) {
+      cloudSaveGroupSettings(personGroup);
+    }
     closeSettingsModal();
     renderCalendar();
     alert('조 배정 설정이 저장되었습니다.');
@@ -4231,6 +4675,7 @@
 
   // 초기 로드 실행
   renderCalendar();
+  initFirebase();
 </script>
 </body>
 </html>

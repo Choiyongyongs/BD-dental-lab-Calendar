@@ -1,0 +1,10 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 근무표, 연차, 연장근무, 맞바꿈 및 설정 데이터에 대해 읽기/쓰기 허용
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
