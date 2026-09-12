@@ -1506,7 +1506,8 @@
 
       currentList.forEach(item => {
         const docRef = firebaseDb.collection(collectionName).doc(String(item.id));
-        batch.set(docRef, item);
+        const cleanItem = JSON.parse(JSON.stringify(item));
+        batch.set(docRef, cleanItem);
       });
 
       await batch.commit();
@@ -1519,13 +1520,15 @@
 
   function cloudSaveLeaveGrants(grants) {
     if (firebaseDb && isFirebaseReady) {
-      firebaseDb.collection('config').doc('leave_grants').set({ grants }).catch(e => console.error(e));
+      const cleanGrants = JSON.parse(JSON.stringify(grants || {}));
+      firebaseDb.collection('config').doc('leave_grants').set({ grants: cleanGrants }).catch(e => console.error(e));
     }
   }
 
   function cloudSaveGroupSettings(pg) {
     if (firebaseDb && isFirebaseReady) {
-      firebaseDb.collection('config').doc('group_settings').set({ personGroup: pg }).catch(e => console.error(e));
+      const cleanPg = JSON.parse(JSON.stringify(pg || {}));
+      firebaseDb.collection('config').doc('group_settings').set({ personGroup: cleanPg }).catch(e => console.error(e));
     }
   }
 
