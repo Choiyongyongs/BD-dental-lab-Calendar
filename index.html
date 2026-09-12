@@ -530,15 +530,12 @@
       border-radius: 20px;
       font-size: 12.5px;
       font-weight: 700;
-      cursor: pointer;
+      cursor: default;
       transition: all 0.2s ease;
       border: 1px solid #cbd5e1;
       background: #f1f5f9;
       color: #475569;
-    }
-    .cloud-status:hover {
-      box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-      transform: translateY(-1px);
+      user-select: none;
     }
     .cloud-status.connected {
       background: #ecfdf5;
@@ -623,9 +620,9 @@
       <span class="app-badge">통합 v2.0</span>
     </div>
     <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-      <div id="cloud-status-badge" class="cloud-status disconnected" onclick="openFirebaseConfigModal()" title="클릭하여 파이어베이스 클라우드 동기화 설정">
+      <div id="cloud-status-badge" class="cloud-status disconnected" title="Firebase 데이터베이스 연결 상태">
         <span class="status-dot"></span>
-        <span id="cloud-status-text">로컬 모드</span>
+        <span id="cloud-status-text">DB 연결 확인 중...</span>
       </div>
       <div class="nav-tabs">
         <button class="tab-btn active" onclick="switchTab('calendar')">📅 근무표</button>
@@ -862,70 +859,12 @@
 
     <!-- 데이터 관리 (백업/내보내기) -->
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; flex-wrap: wrap;">
-      <button onclick="openFirebaseConfigModal()" style="font-weight: 700; color: #4338ca; border-color: #c7d2fe; background: #eef2ff;">🔥 Firebase 설정</button>
       <button onclick="exportDataToJson()">📥 데이터 백업 (JSON)</button>
       <button onclick="importDataFromJson()">📤 데이터 복원</button>
       <input type="file" id="json-file-input" accept=".json" style="display: none;" onchange="handleFileChosen(event)">
     </div>
   </div>
 
-</div>
-
-<!-- 파이어베이스 클라우드 설정 모달 -->
-<div class="modal-overlay" id="firebase-config-modal" style="z-index: 1600 !important;">
-  <div class="modal-card" style="width: 500px; max-width: 95%;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-      <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">🔥 Firebase 클라우드 연동 설정</h3>
-      <button type="button" onclick="closeFirebaseConfigModal()" style="border: none; background: #f1f5f9; border-radius: 6px; font-size: 14px; cursor: pointer; color: #64748b; padding: 4px 10px; font-weight: 700;">✕</button>
-    </div>
-
-    <div id="fb-modal-status-box" style="padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-      <!-- JS로 상태 메시지 표시 -->
-    </div>
-
-    <p style="font-size: 12.5px; color: #64748b; margin-top: 0; margin-bottom: 12px; line-height: 1.5;">
-      Google Firebase(Cloud Firestore)와 연동하면 모든 직원이 스마트폰과 PC에서 실시간으로 일정을 공유할 수 있습니다. <code>firebase-config.js</code> 파일에 입력하거나 아래에 직접 입력하세요.
-    </p>
-
-    <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
-      <div>
-        <label style="font-weight: 700; color: #334155; font-size: 12px;">API Key</label>
-        <input type="text" id="fb-input-apiKey" placeholder="AIzaSy..." style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
-      </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div>
-          <label style="font-weight: 700; color: #334155; font-size: 12px;">Project ID</label>
-          <input type="text" id="fb-input-projectId" placeholder="my-project-id" style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
-        </div>
-        <div>
-          <label style="font-weight: 700; color: #334155; font-size: 12px;">Auth Domain</label>
-          <input type="text" id="fb-input-authDomain" placeholder="my-project.firebaseapp.com" style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
-        </div>
-      </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div>
-          <label style="font-weight: 700; color: #334155; font-size: 12px;">Storage Bucket</label>
-          <input type="text" id="fb-input-storageBucket" placeholder="my-project.appspot.com" style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
-        </div>
-        <div>
-          <label style="font-weight: 700; color: #334155; font-size: 12px;">App ID</label>
-          <input type="text" id="fb-input-appId" placeholder="1:123456:web:abcdef" style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
-        </div>
-      </div>
-    </div>
-
-    <div style="margin-top: 14px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 11.5px; color: #64748b; line-height: 1.5;">
-      💡 <b>설정 팁</b>: Firebase 콘솔(console.firebase.google.com) ➔ 프로젝트 설정 ➔ '내 앱(웹)'에서 발급된 값을 복사해 넣으시면 됩니다.
-    </div>
-
-    <div class="modal-footer" style="margin-top: 18px; justify-content: space-between;">
-      <button type="button" class="btn-danger" onclick="disconnectFirebaseConfig()" id="fb-disconnect-btn" style="padding: 7px 14px; font-size: 12.5px; display: none;">연동 해제</button>
-      <div style="display: flex; gap: 8px; margin-left: auto;">
-        <button type="button" onclick="closeFirebaseConfigModal()">취소</button>
-        <button type="button" class="btn-primary" onclick="saveAndConnectFirebase()" style="background: #4f46e5; border-color: #4338ca;">저장 및 연결</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- 관리자 비밀번호 확인 모달 -->
@@ -1356,14 +1295,16 @@
   function initFirebase() {
     const config = getActiveFirebaseConfig();
     if (!config) {
-      updateCloudStatusBadge('disconnected', '로컬 모드');
+      updateCloudStatusBadge('error', 'DB 연결 안됨');
       return;
     }
+
+    updateCloudStatusBadge('disconnected', 'DB 연결 확인 중...');
 
     try {
       if (typeof firebase === 'undefined') {
         console.warn('Firebase SDK not loaded.');
-        updateCloudStatusBadge('error', 'SDK 로드 오류');
+        updateCloudStatusBadge('error', 'DB 연결 안됨');
         return;
       }
 
@@ -1372,15 +1313,12 @@
         firebaseDb = firebase.firestore();
       }
 
-      isFirebaseReady = true;
-      updateCloudStatusBadge('connected', '실시간 클라우드 연동 중');
-      console.log('Firebase Cloud Firestore initialized successfully.');
-
       setupFirestoreListeners();
       checkAndMigrateLocalDataToFirestore();
     } catch (err) {
       console.error('Firebase init error:', err);
-      updateCloudStatusBadge('error', '연결 오류');
+      isFirebaseReady = false;
+      updateCloudStatusBadge('error', 'DB 연결 안됨');
     }
   }
 
@@ -1399,6 +1337,8 @@
 
     // 1. Leaves collection
     firebaseDb.collection('leaves').onSnapshot(snapshot => {
+      isFirebaseReady = true;
+      updateCloudStatusBadge('connected', 'DB 연결됨');
       if (isSyncingToCloud) return;
       if (snapshot.metadata && snapshot.metadata.hasPendingWrites) return;
       const list = [];
@@ -1408,10 +1348,16 @@
       list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       localStorage.setItem('duty_leaves_list', JSON.stringify(list));
       renderCurrentActiveTab();
-    }, err => console.warn('Firestore leaves listener error:', err));
+    }, err => {
+      console.error('Firestore leaves listener error:', err);
+      isFirebaseReady = false;
+      updateCloudStatusBadge('error', 'DB 연결 안됨');
+    });
 
     // 2. Overtimes collection
     firebaseDb.collection('overtimes').onSnapshot(snapshot => {
+      isFirebaseReady = true;
+      updateCloudStatusBadge('connected', 'DB 연결됨');
       if (isSyncingToCloud) return;
       if (snapshot.metadata && snapshot.metadata.hasPendingWrites) return;
       const list = [];
@@ -1421,10 +1367,16 @@
       list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       localStorage.setItem('duty_overtime_list', JSON.stringify(list));
       renderCurrentActiveTab();
-    }, err => console.warn('Firestore overtimes listener error:', err));
+    }, err => {
+      console.error('Firestore overtimes listener error:', err);
+      isFirebaseReady = false;
+      updateCloudStatusBadge('error', 'DB 연결 안됨');
+    });
 
     // 3. Swaps collection
     firebaseDb.collection('swaps').onSnapshot(snapshot => {
+      isFirebaseReady = true;
+      updateCloudStatusBadge('connected', 'DB 연결됨');
       if (isSyncingToCloud) return;
       if (snapshot.metadata && snapshot.metadata.hasPendingWrites) return;
       const list = [];
@@ -1434,10 +1386,16 @@
       list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       localStorage.setItem('duty_swaps_list', JSON.stringify(list));
       renderCurrentActiveTab();
-    }, err => console.warn('Firestore swaps listener error:', err));
+    }, err => {
+      console.error('Firestore swaps listener error:', err);
+      isFirebaseReady = false;
+      updateCloudStatusBadge('error', 'DB 연결 안됨');
+    });
 
     // 4. Group settings
     firebaseDb.collection('config').doc('group_settings').onSnapshot(doc => {
+      isFirebaseReady = true;
+      updateCloudStatusBadge('connected', 'DB 연결됨');
       if (isSyncingToCloud) return;
       if (doc.metadata && doc.metadata.hasPendingWrites) return;
       if (doc.exists) {
@@ -1448,10 +1406,16 @@
           renderCurrentActiveTab();
         }
       }
-    }, err => console.warn('Firestore group settings listener error:', err));
+    }, err => {
+      console.error('Firestore group settings error:', err);
+      isFirebaseReady = false;
+      updateCloudStatusBadge('error', 'DB 연결 안됨');
+    });
 
     // 5. Leave grants
     firebaseDb.collection('config').doc('leave_grants').onSnapshot(doc => {
+      isFirebaseReady = true;
+      updateCloudStatusBadge('connected', 'DB 연결됨');
       if (isSyncingToCloud) return;
       if (doc.metadata && doc.metadata.hasPendingWrites) return;
       if (doc.exists) {
@@ -1462,7 +1426,11 @@
           renderCurrentActiveTab();
         }
       }
-    }, err => console.warn('Firestore leave grants listener error:', err));
+    }, err => {
+      console.error('Firestore leave grants error:', err);
+      isFirebaseReady = false;
+      updateCloudStatusBadge('error', 'DB 연결 안됨');
+    });
   }
 
   async function checkAndMigrateLocalDataToFirestore() {
@@ -1561,75 +1529,7 @@
     }
   }
 
-  function openFirebaseConfigModal() {
-    const modal = document.getElementById('firebase-config-modal');
-    const statusBox = document.getElementById('fb-modal-status-box');
-    const disconnectBtn = document.getElementById('fb-disconnect-btn');
 
-    const config = getActiveFirebaseConfig() || {};
-    document.getElementById('fb-input-apiKey').value = config.apiKey || '';
-    document.getElementById('fb-input-projectId').value = config.projectId || '';
-    document.getElementById('fb-input-authDomain').value = config.authDomain || '';
-    document.getElementById('fb-input-storageBucket').value = config.storageBucket || '';
-    document.getElementById('fb-input-appId').value = config.appId || '';
-
-    if (isFirebaseReady) {
-      statusBox.style.background = '#ecfdf5';
-      statusBox.style.border = '1px solid #a7f3d0';
-      statusBox.style.color = '#065f46';
-      statusBox.innerHTML = '🟢 <b>Cloud Firestore 실시간 연동 중</b> (모든 데이터가 클라우드에 자동 동기화됩니다)';
-      disconnectBtn.style.display = 'inline-block';
-    } else {
-      statusBox.style.background = '#fefce8';
-      statusBox.style.border = '1px solid #fde047';
-      statusBox.style.color = '#854d0e';
-      statusBox.innerHTML = '🟡 <b>로컬 모드</b> (Firebase 키를 입력하면 전 직원 실시간 클라우드 연동이 활성화됩니다)';
-      disconnectBtn.style.display = 'none';
-    }
-
-    modal.classList.add('active');
-  }
-
-  function closeFirebaseConfigModal() {
-    document.getElementById('firebase-config-modal').classList.remove('active');
-  }
-
-  function saveAndConnectFirebase() {
-    const apiKey = document.getElementById('fb-input-apiKey').value.trim();
-    const projectId = document.getElementById('fb-input-projectId').value.trim();
-    const authDomain = document.getElementById('fb-input-authDomain').value.trim();
-    const storageBucket = document.getElementById('fb-input-storageBucket').value.trim();
-    const appId = document.getElementById('fb-input-appId').value.trim();
-
-    if (!apiKey || !projectId) {
-      alert('최소한 API Key와 Project ID는 반드시 입력해야 합니다.');
-      return;
-    }
-
-    const newConfig = {
-      apiKey,
-      projectId,
-      authDomain: authDomain || `${projectId}.firebaseapp.com`,
-      storageBucket: storageBucket || `${projectId}.appspot.com`,
-      appId: appId || ''
-    };
-
-    localStorage.setItem('duty_firebase_config', JSON.stringify(newConfig));
-    closeFirebaseConfigModal();
-    alert('Firebase 설정이 저장되었습니다. 클라우드에 연결합니다.');
-    initFirebase();
-  }
-
-  function disconnectFirebaseConfig() {
-    if (!confirm('Firebase 클라우드 연동을 해제하고 로컬 모드로 전환하시겠습니까?')) return;
-    localStorage.removeItem('duty_firebase_config');
-    isFirebaseReady = false;
-    firebaseDb = null;
-    firebaseApp = null;
-    updateCloudStatusBadge('disconnected', '로컬 모드');
-    closeFirebaseConfigModal();
-    alert('연동이 해제되었습니다.');
-  }
 
   /* =========================================================================
      1. 기본 데이터 및 상태 관리
