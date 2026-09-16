@@ -191,14 +191,15 @@
       border: 1px dashed #f97316;
       font-weight: 700;
     }
-    .leave-calendar td {
-      height: 96px;
-      min-height: 96px;
+    .leave-calendar td,
+    .ot-calendar td {
+      height: 145px;
+      min-height: 145px;
     }
     .leave-calendar .badge-box,
     .ot-calendar .badge-box {
-      min-height: 55px;
-      height: auto;
+      min-height: 106px;
+      height: calc(100% - 24px);
     }
     .badge-ot {
       background-color: var(--ot-bg);
@@ -441,7 +442,7 @@
     /* Summary Stat Cards */
     .stat-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(265px, 1fr));
       gap: 16px;
       margin-bottom: 24px;
     }
@@ -484,10 +485,25 @@
     .leave-history-list {
       max-height: 195px;
       overflow-y: auto;
+      overflow-x: hidden;
       display: flex;
       flex-direction: column;
       gap: 4px;
-      padding-right: 2px;
+      padding-right: 4px;
+      scrollbar-width: thin;
+    }
+    .leave-history-list::-webkit-scrollbar {
+      width: 5px;
+    }
+    .leave-history-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .leave-history-list::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .leave-history-list::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
     }
     .leave-history-item {
       display: flex;
@@ -498,10 +514,14 @@
       background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: 6px;
-      padding: 4px 8px;
+      padding: 5px 8px;
       color: #1e293b;
       cursor: pointer;
       transition: all 0.15s ease;
+      box-sizing: border-box;
+      min-width: 0;
+      width: 100%;
+      max-width: 100%;
     }
     .leave-history-item:hover {
       border-color: #6366f1;
@@ -581,6 +601,7 @@
     .pill-leave { background: #fef3c7; color: #92400e; }
     .pill-am { background: #e0e7ff; color: #3730a3; }
     .pill-pm { background: #ede9fe; color: #5b21b6; }
+    .pill-congrat { background: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8; }
     .pill-ot { background: #f3e8ff; color: #6b21a8; }
     .pill-ot-work { background: #ede9fe; color: #5b21b6; }
     .pill-ot-parttime { background: #ccfbf1; color: #0f766e; }
@@ -608,6 +629,187 @@
       color: #0f172a;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
+
+    /* 탭 아이콘 및 텍스트 구조 */
+    .tab-btn .tab-icon {
+      font-size: 16px;
+      line-height: 1;
+    }
+    .tab-btn .tab-text {
+      line-height: 1.2;
+    }
+
+    /* 근무 바꿈 버튼 스타일 (2줄 형태) */
+    .btn-swap {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      line-height: 1.15;
+      text-align: center;
+    }
+    .btn-swap .swap-icon {
+      font-size: 15px;
+      line-height: 1;
+    }
+    .btn-swap .swap-text {
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.15;
+      text-align: center;
+      display: inline-block;
+    }
+
+    /* 달력 내 직원 이름 1줄씩 표시 (콤마 제거 대응) */
+    .badge-person-line {
+      display: block;
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* 연차/연장 전용 달력 세부 텍스트 (모바일에서는 숨김 처리) */
+    .badge-sub-info {
+      font-size: 11px;
+      font-weight: normal;
+      opacity: 0.88;
+      margin-left: 2px;
+    }
+
+    /* 모바일 반응형 스타일 최적화 (768px 이하) */
+    @media (max-width: 768px) {
+      body {
+        padding: 8px 4px;
+      }
+      .container {
+        padding: 14px 8px;
+        border-radius: 12px;
+      }
+      .top-nav {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding-bottom: 12px;
+        margin-bottom: 16px;
+      }
+      .app-title-area {
+        justify-content: space-between;
+      }
+      .app-title {
+        font-size: 18px;
+      }
+      .nav-tabs {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+        padding: 4px;
+      }
+      .tab-btn {
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 2px;
+        gap: 4px;
+        font-size: 12px;
+        border-radius: 8px;
+        min-width: 0;
+      }
+      .tab-btn .tab-icon {
+        font-size: 18px;
+      }
+      .tab-btn .tab-text {
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      /* 헤더 컨트롤 및 버튼 정렬 */
+      .header {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 12px;
+        min-height: auto !important;
+      }
+      .header > div {
+        align-items: stretch !important;
+        width: 100%;
+      }
+      .controls {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 5px;
+      }
+      .controls button {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      .member-filter-bar {
+        justify-content: flex-start !important;
+        gap: 4px !important;
+      }
+      .member-filter-chip {
+        padding: 3px 8px;
+        font-size: 11.5px;
+      }
+
+      /* 달력 셀 및 날짜 번호 축소 */
+      .calendar th {
+        padding: 6px 0;
+        font-size: 12px;
+      }
+      .calendar td,
+      .leave-calendar td,
+      .ot-calendar td {
+        height: 130px;
+        min-height: 130px;
+        padding: 3px 2px;
+      }
+      .date-header {
+        margin-bottom: 2px;
+      }
+      .date-num {
+        font-size: 12px;
+      }
+      .badge-today {
+        font-size: 9px;
+        padding: 1px 3px;
+      }
+      .holiday-label {
+        font-size: 8.5px;
+        padding: 1px 2px;
+      }
+
+      /* 배지 폰트 및 모바일 표시 최적화 */
+      .badge {
+        font-size: 10.5px;
+        padding: 2px 3px;
+        border-radius: 4px;
+      }
+      .badge-person-line {
+        font-size: 10.5px;
+        line-height: 1.25;
+      }
+      .badge-swapped {
+        font-size: 9.5px;
+        padding: 0 1px;
+      }
+
+      /* 연차/연장 전용 캘린더 모바일에서는 상세 텍스트 숨기고 이름만 표시 */
+      .leave-calendar .badge-sub-info,
+      .ot-calendar .badge-sub-info {
+        display: none !important;
+      }
+      .leave-calendar .badge,
+      .ot-calendar .badge {
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 2px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -625,10 +827,10 @@
         <span id="cloud-status-text">DB 연결 확인 중...</span>
       </div>
       <div class="nav-tabs">
-        <button class="tab-btn active" onclick="switchTab('calendar')">📅 근무표</button>
-        <button class="tab-btn" onclick="switchTab('leave')">🌴 연차관리</button>
-        <button class="tab-btn" onclick="switchTab('overtime')">⏰ 연장근무</button>
-        <button class="tab-btn" onclick="switchTab('stats')">📊 통계</button>
+        <button class="tab-btn active" onclick="switchTab('calendar')"><span class="tab-icon">📅</span><span class="tab-text">근무표</span></button>
+        <button class="tab-btn" onclick="switchTab('leave')"><span class="tab-icon">🌴</span><span class="tab-text">연차</span></button>
+        <button class="tab-btn" onclick="switchTab('overtime')"><span class="tab-icon">⏰</span><span class="tab-text">연장</span></button>
+        <button class="tab-btn" onclick="switchTab('stats')"><span class="tab-icon">📊</span><span class="tab-text">통계</span></button>
       </div>
     </div>
   </div>
@@ -653,7 +855,7 @@
           <button type="button" class="member-filter-chip" id="filter-btn-이슬" onclick="setMemberFilter('이슬')">이슬</button>
         </div>
         <div class="controls">
-          <button class="btn-primary" onclick="openSwapModal()" style="background:#4f46e5; border-color:#4338ca;">🔄 근무 맞바꿈</button>
+          <button class="btn-primary btn-swap" onclick="openSwapModal()" style="background:#4f46e5; border-color:#4338ca;"><span class="swap-icon">🔄</span><span class="swap-text">근무<br>바꿈</span></button>
           <button class="btn-settings" onclick="openSettingsModal()">⚙️ 조 설정</button>
           <button onclick="changeMonth(-1)">◀ 이전 달</button>
           <button onclick="goToday()" style="font-weight: 800; background: #fff7ed; color: #c2410c; border: 1.5px solid #fdba74;">📍 오늘</button>
@@ -777,13 +979,13 @@
       <!-- 범례 -->
       <div style="display:flex; gap:16px; margin-bottom:12px; font-size:12.5px; color:#475569; flex-wrap:wrap; align-items:center;">
         <span style="display:flex; align-items:center; gap:5px;">
-          <span style="width:12px; height:12px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:3px;"></span> ⏰ 퇴근후 연장 (분)
+          <span style="width:12px; height:12px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:3px;"></span> ⏰ 연장 (분)
         </span>
         <span style="display:flex; align-items:center; gap:5px;">
-          <span style="width:12px; height:12px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:3px;"></span> 💼 휴무일 알바 (갯수)
+          <span style="width:12px; height:12px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:3px;"></span> 💼 알바 (개)
         </span>
         <span style="display:flex; align-items:center; gap:5px;">
-          <span style="width:12px; height:12px; background:#fff7ed; border:1px solid #fed7aa; border-radius:3px;"></span> 📑 휴무일 잔여업무 (분)
+          <span style="width:12px; height:12px; background:#fff7ed; border:1px solid #fed7aa; border-radius:3px;"></span> 📑 잔여 (분)
         </span>
       </div>
       <!-- 연장근무 달력 테이블 -->
@@ -930,6 +1132,7 @@
             <option value="전일">전일 연차 (1.0일)</option>
             <option value="오전반차">오전 반차 (0.5일)</option>
             <option value="오후반차">오후 반차 (0.5일)</option>
+            <option value="경조사">경조사 (1.0일 - 연차 미차감)</option>
           </select>
         </div>
         <div class="form-group">
@@ -2250,8 +2453,8 @@
 
       // 당일 연차 및 연장근무 데이터 사전 조회 (승인된 연차만 달력 반영)
       const dayLeaves = leaves.filter(l => l.date === dateKey && l.status !== 'pending');
-      const fullLeavePersons = dayLeaves.filter(l => l.type === '전일').map(l => l.person);
-      const leaveDisplayItems = dayLeaves.map(l => l.type === '전일' ? l.person : `${l.person}(${l.type})`);
+      const fullLeavePersons = dayLeaves.filter(l => l.type === '전일' || l.type === '경조사').map(l => l.person);
+      const leaveDisplayItems = dayLeaves.map(l => l.type === '전일' ? l.person : (l.type === '경조사' ? `${l.person}(경조사)` : `${l.person}(${l.type})`));
 
       // A. 2026년 하반기 (엑셀 데이터)
       if (curr < ROTATION_START_DATE && EXCEL_2026_DATA[dateKey]) {
@@ -2375,7 +2578,9 @@
       if (isFiltered && curr.getMonth() === currentMonth) {
         let memberLeaveDays = 0;
         dayMemberLeaves.forEach(l => {
-          memberLeaveDays += (l.type === '전일' ? 1.0 : 0.5);
+          if (l.type !== '경조사') {
+            memberLeaveDays += (l.type === '전일' ? 1.0 : 0.5);
+          }
         });
 
         if (isMemberWork) {
@@ -2416,7 +2621,7 @@
         <div class="badge-box">
       `;
 
-      // 하이라이트 및 맞바꿈 배지 이름 포맷터
+      // 하이라이트 및 맞바꿈 배지 이름 포맷터 (한 줄에 1명씩 표시, 콤마 제거)
       const formatNames = (names, isWorkType = true) => {
         return names.map(n => {
           let displayName = n;
@@ -2434,17 +2639,17 @@
             return `<span class="name-highlight">${displayName}</span>`;
           }
           return displayName;
-        }).join(', ');
+        }).map(nameHtml => `<span class="badge-person-line">${nameHtml}</span>`).join('');
       };
 
-      // 1. 근무 배지
-      if (workList.length > 0) html += `<span class="badge badge-work">근무: ${formatNames(workList, true)}</span>`;
+      // 1. 근무 배지 (초록색 칸 - '근무' 문구 제거 및 사람 이름만 표시)
+      if (workList.length > 0) html += `<span class="badge badge-work">${formatNames(workList, true)}</span>`;
 
-      // 2. 연차 배지
-      if (leaveDisplayItems.length > 0) html += `<span class="badge badge-leave">연차: ${formatNames(leaveDisplayItems, false)}</span>`;
+      // 2. 연차 배지 (노란색 칸 - '연차' 문구 제거)
+      if (leaveDisplayItems.length > 0) html += `<span class="badge badge-leave">${formatNames(leaveDisplayItems, false)}</span>`;
 
-      // 3. 휴무 배지 (★ 항상 가장 맨 아래 & margin-top: auto로 날짜칸 바닥에 고정)
-      if (offList.length > 0) html += `<span class="badge badge-off">휴무: ${formatNames(offList, false)}</span>`;
+      // 3. 휴무 배지 (빨간색 칸 - '휴무' 문구 제거 및 항상 날짜칸 바닥에 고정)
+      if (offList.length > 0) html += `<span class="badge badge-off">${formatNames(offList, false)}</span>`;
 
       html += `</div>`;
 
@@ -2556,7 +2761,7 @@
     });
 
     yearApprovedLeaves.forEach(l => {
-      const days = l.type === '전일' ? 1.0 : 0.5;
+      const days = l.type === '전일' ? 1.0 : (l.type === '경조사' ? 0 : 0.5);
       if (memberStats[l.person]) {
         memberStats[l.person].used += days;
         memberStats[l.person].count += 1;
@@ -2581,11 +2786,12 @@
           let pillClass = 'pill-leave';
           if (l.type === '오전반차') pillClass = 'pill-am';
           if (l.type === '오후반차') pillClass = 'pill-pm';
+          if (l.type === '경조사') pillClass = 'pill-congrat';
           const typeLabel = l.type === '전일' ? '연차' : l.type;
 
           return `
             <div class="leave-history-item" onclick="openLeaveDetailModal('${l.id}')" title="클릭 시 상세 사유 확인 및 연차 삭제">
-              <span style="font-weight: 700; font-size: 11.5px; color: #0f172a; white-space: nowrap;">📅 ${l.date} (${yoil})</span>
+              <span style="font-weight: 700; font-size: 11.5px; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">📅 ${l.date} (${yoil})</span>
               <span class="pill ${pillClass}" style="font-size: 10px; padding: 1px 6px; white-space: nowrap; flex-shrink: 0;">${typeLabel}</span>
             </div>
           `;
@@ -2623,11 +2829,12 @@
       tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 24px;">승인 대기 중인 연차 신청이 없습니다.</td></tr>`;
     } else {
       tbody.innerHTML = sortedPending.map(l => {
-        const days = l.type === '전일' ? '1.0일' : '0.5일';
+        const days = l.type === '전일' ? '1.0일' : (l.type === '경조사' ? '0일 (미차감)' : '0.5일');
         const yoil = getDayOfWeekStr(l.date);
         let pillClass = 'pill-leave';
         if (l.type === '오전반차') pillClass = 'pill-am';
         if (l.type === '오후반차') pillClass = 'pill-pm';
+        if (l.type === '경조사') pillClass = 'pill-congrat';
 
         return `
           <tr>
@@ -2765,8 +2972,9 @@
     let pillClass = 'pill-leave';
     if (l.type === '오전반차') pillClass = 'pill-am';
     if (l.type === '오후반차') pillClass = 'pill-pm';
-    const typeLabel = l.type === '전일' ? '전일 연차' : l.type;
-    const days = l.type === '전일' ? '1.0일' : '0.5일';
+    if (l.type === '경조사') pillClass = 'pill-congrat';
+    const typeLabel = l.type === '전일' ? '전일 연차' : (l.type === '경조사' ? '경조사 (1.0일)' : l.type);
+    const days = l.type === '전일' ? '1.0일' : (l.type === '경조사' ? '0일 (연차 미차감)' : '0.5일');
 
     const isPending = l.status === 'pending';
     const statusBadge = isPending
@@ -3022,9 +3230,9 @@
           const typeLabel = l.type === '전일' ? '연차' : l.type;
 
           if (isPending) {
-            html += `<span class="badge badge-leave-pending" onclick="openLeaveDetailModal('${l.id}')" style="cursor: pointer;" title="클릭 시 상세 정보 및 삭제: [승인대기] ${l.person} (${l.type})${l.reason ? ' - ' + l.reason : ''}">⏳ ${l.person}(대기-${typeLabel})</span>`;
+            html += `<span class="badge badge-leave-pending" onclick="openLeaveDetailModal('${l.id}')" style="cursor: pointer;" title="클릭 시 상세 정보 및 삭제: [승인대기] ${l.person} (${l.type})${l.reason ? ' - ' + l.reason : ''}"><span class="badge-person-name">⏳ ${l.person}</span><span class="badge-sub-info">(대기-${typeLabel})</span></span>`;
           } else {
-            html += `<span class="badge badge-leave-approved" onclick="openLeaveDetailModal('${l.id}')" style="cursor: pointer;" title="클릭 시 상세 정보 및 삭제: [승인완료] ${l.person} (${l.type})${l.reason ? ' - ' + l.reason : ''}">🌴 ${l.person}(${typeLabel})</span>`;
+            html += `<span class="badge badge-leave-approved" onclick="openLeaveDetailModal('${l.id}')" style="cursor: pointer;" title="클릭 시 상세 정보 및 삭제: [승인완료] ${l.person} (${l.type})${l.reason ? ' - ' + l.reason : ''}"><span class="badge-person-name">🌴 ${l.person}</span><span class="badge-sub-info">(${typeLabel})</span></span>`;
           }
         });
       }
@@ -3265,6 +3473,7 @@
           historyHtml = memberOts.map(o => {
             const yoil = getDayOfWeekStr(o.date);
             const type = o.type || '출근일 연장';
+            let shortType = '연장';
             let typeColor = '#6d28d9';
             let typeBg = '#f5f3ff';
             let typeBorder = '#ddd6fe';
@@ -3272,18 +3481,21 @@
             let timeStr = o.startTime && o.endTime ? ` (${o.startTime}~${o.endTime})` : '';
 
             if (type === '휴무일 알바') {
+              shortType = '알바';
               typeColor = '#0f766e';
               typeBg = '#f0fdfa';
               typeBorder = '#99f6e4';
               const count = o.count !== undefined ? o.count : (o.hours || 0);
               amountStr = `<b>${count}개</b>`;
             } else if (type === '휴무일 잔여업무') {
+              shortType = '잔여';
               typeColor = '#c2410c';
               typeBg = '#fff7ed';
               typeBorder = '#fed7aa';
               const min = o.minutes !== undefined ? o.minutes : Math.round((Number(o.hours) || 0) * 60);
               amountStr = `<b>${min}분</b>`;
             } else {
+              shortType = '연장';
               const min = o.minutes !== undefined ? o.minutes : Math.round((Number(o.hours) || 0) * 60);
               amountStr = `<b>${min}분</b>`;
             }
@@ -3292,7 +3504,7 @@
               <div onclick="openOtDetailModal('${o.id}')" title="클릭 시 상세 내역 및 삭제" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 9px; font-size: 11.5px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.borderColor='#6366f1'; this.style.backgroundColor='#f8fafc';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.backgroundColor='#ffffff';">
                 <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 4px;">
                   <span style="font-weight: 700; color: #1e293b;">${Number(o.date.split('-')[1])}/${Number(o.date.split('-')[2])}(${yoil})</span>
-                  <span style="font-size: 10px; background: ${typeBg}; color: ${typeColor}; border: 1px solid ${typeBorder}; padding: 1px 4px; border-radius: 4px; font-weight: 700;">${type}</span>
+                  <span style="font-size: 10px; background: ${typeBg}; color: ${typeColor}; border: 1px solid ${typeBorder}; padding: 1px 4px; border-radius: 4px; font-weight: 700;">${shortType}</span>
                   <span style="font-size: 10px; color: #94a3b8;">${timeStr}</span>
                 </div>
                 <div style="color: ${typeColor}; font-size: 11.5px; font-weight: 800; white-space: nowrap; margin-left: 6px;">
@@ -3322,7 +3534,7 @@
                 <span style="font-weight: 800; color: #0f766e;">${s.parttimeCount}개</span>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: #64748b; font-weight: 600;">휴무잔여 :</span>
+                <span style="color: #64748b; font-weight: 600;">잔여 :</span>
                 <span style="font-weight: 800; color: #c2410c;">${s.remainMinutes}분</span>
               </div>
               <div style="text-align: right; font-size: 11px; color: #6366f1; font-weight: 700; margin-top: 3px; border-top: 1px dashed #e2e8f0; padding-top: 3px;">
@@ -3335,7 +3547,7 @@
                 <span>📋 날짜별 리스트</span>
                 <span style="color: #6366f1; font-weight: 700;">${memberOts.length}건</span>
               </div>
-              <div class="leave-history-list" style="max-height: 140px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;">
+              <div class="leave-history-list" style="max-height: 140px; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 4px;">
                 ${historyHtml}
               </div>
             </div>
@@ -3370,19 +3582,23 @@
     let typeColor = '#6d28d9';
     let amountText = '';
 
+    let shortType = '연장';
     if (type === '휴무일 알바') {
+      shortType = '알바';
       pillClass = 'pill-ot-parttime';
       typeIcon = '💼';
       typeColor = '#0f766e';
       const count = ot.count !== undefined ? ot.count : (ot.hours || 0);
       amountText = `${count}개`;
     } else if (type === '휴무일 잔여업무') {
+      shortType = '잔여';
       pillClass = 'pill-ot-remain';
       typeIcon = '📑';
       typeColor = '#c2410c';
       const min = ot.minutes !== undefined ? ot.minutes : Math.round((Number(ot.hours) || 0) * 60);
       amountText = `${min}분`;
     } else {
+      shortType = '연장';
       pillClass = 'pill-ot-work';
       typeIcon = '⏰';
       typeColor = '#6d28d9';
@@ -3406,7 +3622,7 @@
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
             <span style="color: #64748b; font-weight: 600;">형태 구분</span>
-            <span class="pill ${pillClass}">${typeIcon} ${type}</span>
+            <span class="pill ${pillClass}">${typeIcon} ${shortType}</span>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
             <span style="color: #64748b; font-weight: 600;">근무 시간대</span>
@@ -3657,7 +3873,7 @@
           <span style="color: #cbd5e1;">|</span>
           <span>💼 알바: <b style="color: #0f766e;">${parttimeCount}개</b></span>
           <span style="color: #cbd5e1;">|</span>
-          <span>📑 휴무잔여: <b style="color: #c2410c;">${remainMinutes}분</b></span>
+          <span>📑 잔여: <b style="color: #c2410c;">${remainMinutes}분</b></span>
           <span style="color: #cbd5e1;">|</span>
           <span style="color: #475569; font-weight: 700;">총 <b>${list.length}건</b></span>
         </div>
@@ -3672,21 +3888,25 @@
         tbody.innerHTML = list.map(o => {
           const yoil = getDayOfWeekStr(o.date);
           const type = o.type || '출근일 연장';
+          let shortType = '연장';
           let pillClass = 'pill-ot-work';
           let typeIcon = '⏰';
           let amountHtml = '';
 
           if (type === '휴무일 알바') {
+            shortType = '알바';
             pillClass = 'pill-ot-parttime';
             typeIcon = '💼';
             const count = o.count !== undefined ? o.count : (o.hours || 0);
             amountHtml = `<span class="pill pill-ot-parttime" style="font-weight: 700;">${count}개</span>`;
           } else if (type === '휴무일 잔여업무') {
+            shortType = '잔여';
             pillClass = 'pill-ot-remain';
             typeIcon = '📑';
             const min = o.minutes !== undefined ? o.minutes : Math.round((Number(o.hours) || 0) * 60);
             amountHtml = `<span class="pill pill-ot-remain" style="font-weight: 700;">+${min}분</span>`;
           } else {
+            shortType = '연장';
             pillClass = 'pill-ot-work';
             typeIcon = '⏰';
             const min = o.minutes !== undefined ? o.minutes : Math.round((Number(o.hours) || 0) * 60);
@@ -3698,7 +3918,7 @@
           return `
             <tr>
               <td style="font-weight: 700;">${o.date} (${yoil})</td>
-              <td><span class="pill ${pillClass}">${typeIcon} ${type}</span></td>
+              <td><span class="pill ${pillClass}">${typeIcon} ${shortType}</span></td>
               <td><b>${timeRange}</b></td>
               <td>${amountHtml}</td>
               <td style="color: #94a3b8; font-size: 12px;">${o.createdAt ? o.createdAt.substring(0, 16) : '-'}</td>
@@ -3843,15 +4063,15 @@
           const type = o.type || '출근일 연장';
           if (type === '휴무일 알바') {
             const count = o.count !== undefined ? o.count : (o.hours || 0);
-            html += `<span class="badge badge-ot-parttime" onclick="openOtDetailModal('${o.id}')" style="cursor: pointer;" title="클릭 시 상세/삭제: [알바] ${o.person} (${count}개)">💼 ${o.person}(알바 ${count}개)</span>`;
+            html += `<span class="badge badge-ot-parttime" onclick="openOtDetailModal('${o.id}')" style="cursor: pointer;" title="클릭 시 상세/삭제: [알바] ${o.person} (${count}개)"><span class="badge-person-name">💼 ${o.person}</span><span class="badge-sub-info">(알바 ${count}개)</span></span>`;
           } else if (type === '휴무일 잔여업무') {
             const minutes = o.minutes !== undefined ? o.minutes : Math.round((Number(o.hours) || 0) * 60);
             const timeDesc = o.startTime && o.endTime ? ` (${o.startTime}~${o.endTime})` : '';
-            html += `<span class="badge badge-ot-remain" onclick="openOtDetailModal('${o.id}')" style="cursor: pointer;" title="클릭 시 상세/삭제: [잔여업무] ${o.person} (${minutes}분)${timeDesc}">📑 ${o.person}(잔여 ${minutes}분)</span>`;
+            html += `<span class="badge badge-ot-remain" onclick="openOtDetailModal('${o.id}')" style="cursor: pointer;" title="클릭 시 상세/삭제: [잔여] ${o.person} (${minutes}분)${timeDesc}"><span class="badge-person-name">📑 ${o.person}</span><span class="badge-sub-info">(잔여 ${minutes}분)</span></span>`;
           } else {
             const minutes = o.minutes !== undefined ? o.minutes : Math.round((Number(o.hours) || 0) * 60);
             const timeDesc = o.startTime && o.endTime ? ` (${o.startTime}~${o.endTime})` : '';
-            html += `<span class="badge badge-ot-work" onclick="openOtDetailModal('${o.id}')" style="cursor: pointer;" title="클릭 시 상세/삭제: [퇴근후 연장] ${o.person} (${minutes}분)${timeDesc}">⏰ ${o.person}(퇴근후 ${minutes}분)</span>`;
+            html += `<span class="badge badge-ot-work" onclick="openOtDetailModal('${o.id}')" style="cursor: pointer;" title="클릭 시 상세/삭제: [연장] ${o.person} (${minutes}분)${timeDesc}"><span class="badge-person-name">⏰ ${o.person}</span><span class="badge-sub-info">(연장 ${minutes}분)</span></span>`;
           }
         });
       }
@@ -4023,7 +4243,7 @@
     const endStr = formatDateKey(endDate);
     leavesList.forEach(l => {
       if (l.status !== 'pending' && l.date >= startStr && l.date <= endStr && statsResult[l.person]) {
-        const days = l.type === '전일' ? 1.0 : 0.5;
+        const days = (l.type === '전일' || l.type === '경조사') ? 1.0 : 0.5;
         statsResult[l.person].weekdayWorkDays = Math.max(0, statsResult[l.person].weekdayWorkDays - days);
         statsResult[l.person].workDays = statsResult[l.person].weekdayWorkDays + statsResult[l.person].dutyCount;
       }
@@ -4067,7 +4287,7 @@
     ALL_MEMBERS.forEach(m => { memberLeaveDays[m] = 0; });
 
     periodLeaves.forEach(l => {
-      const d = l.type === '전일' ? 1.0 : 0.5;
+      const d = l.type === '전일' ? 1.0 : (l.type === '경조사' ? 0 : 0.5);
       totalLeaveDays += d;
       if (memberLeaveDays[l.person] !== undefined) {
         memberLeaveDays[l.person] += d;
