@@ -34,7 +34,7 @@
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif; }
     html { overflow-y: scroll; } /* 스크롤바 생성/제거로 인한 달력 가로폭 흔들림 및 크기 변화 방지 */
     body { padding: 20px; background-color: var(--bg); color: var(--text-main); margin: 0; min-height: 100vh; }
-    .container { max-width: 1320px; margin: 0 auto; background: var(--card-bg); padding: 28px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08); }
+    .container { max-width: 1380px; margin: 0 auto; background: var(--card-bg); padding: 28px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08); }
 
     /* Top Navigation Tabs */
     .top-nav {
@@ -446,36 +446,58 @@
       gap: 16px;
       margin-bottom: 24px;
     }
-    /* 직원별 현황 카드 한 줄 가로 나열 레이아웃 */
+    /* 직원별 현황 카드: PC에서 6명 전원 한눈에 들어오도록 6열 균등 배치 (가로 스크롤 제거) */
     .stat-grid-single-row {
-      display: flex;
-      flex-direction: row;
-      gap: 14px;
-      overflow-x: auto;
-      overflow-y: hidden;
-      padding-bottom: 12px;
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
       margin-bottom: 24px;
-      scrollbar-width: thin;
-      -webkit-overflow-scrolling: touch;
-    }
-    .stat-grid-single-row::-webkit-scrollbar {
-      height: 7px;
-    }
-    .stat-grid-single-row::-webkit-scrollbar-track {
-      background: #f1f5f9;
-      border-radius: 4px;
-    }
-    .stat-grid-single-row::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 4px;
-    }
-    .stat-grid-single-row::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
     }
     .stat-grid-single-row .stat-card {
-      flex: 0 0 255px;
-      min-width: 255px;
+      padding: 12px 9px;
+      min-width: 0;
       box-sizing: border-box;
+      border-radius: 10px;
+    }
+    .stat-grid-single-row .stat-card-title {
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .stat-grid-single-row .stat-card-value {
+      font-size: 20px;
+    }
+    .stat-grid-single-row .leave-history-list {
+      max-height: 175px;
+    }
+    @media (max-width: 900px) {
+      .stat-grid-single-row {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 10px;
+        scrollbar-width: thin;
+        -webkit-overflow-scrolling: touch;
+      }
+      .stat-grid-single-row::-webkit-scrollbar {
+        height: 7px;
+      }
+      .stat-grid-single-row::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+      }
+      .stat-grid-single-row::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      .stat-grid-single-row::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+      .stat-grid-single-row .stat-card {
+        flex: 0 0 190px;
+        min-width: 190px;
+      }
     }
     .stat-card {
       background: #f8fafc;
@@ -2830,29 +2852,29 @@
           const typeLabel = l.type === '전일' ? '연차' : l.type;
 
           return `
-            <div class="leave-history-item" onclick="openLeaveDetailModal('${l.id}')" title="클릭 시 상세 사유 확인 및 연차 삭제">
-              <span style="font-weight: 700; font-size: 11.5px; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">📅 ${l.date} (${yoil})</span>
-              <span class="pill ${pillClass}" style="font-size: 10px; padding: 1px 6px; white-space: nowrap; flex-shrink: 0;">${typeLabel}</span>
+            <div class="leave-history-item" onclick="openLeaveDetailModal('${l.id}')" title="클릭 시 상세 사유 확인 및 연차 삭제: ${l.date} (${yoil}) [${typeLabel}]">
+              <span style="font-weight: 700; font-size: 11px; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">📅 ${Number(l.date.split('-')[1])}/${Number(l.date.split('-')[2])}(${yoil})</span>
+              <span class="pill ${pillClass}" style="font-size: 10px; padding: 1px 5px; white-space: nowrap; flex-shrink: 0;">${typeLabel}</span>
             </div>
           `;
         }).join('');
       } else {
-        historyHtml = `<div style="font-size: 11px; color: #94a3b8; text-align: center; padding: 6px 0;">승인된 연차 내역 없음</div>`;
+        historyHtml = `<div style="font-size: 11px; color: #94a3b8; text-align: center; padding: 6px 0;">승인 내역 없음</div>`;
       }
 
       return `
         <div class="stat-card">
-          <div class="stat-card-title" style="white-space: nowrap;">${m} 님 연차 현황 <span style="font-size: 11.5px; font-weight: normal; color: #64748b;">(${targetYear}년)</span></div>
-          <div class="stat-card-value" style="font-size: 22px;">
-            ${remain}<span style="font-size: 14px; font-weight: normal; color: #64748b; margin-left: 2px;">일 남음</span>
+          <div class="stat-card-title" style="white-space: nowrap; font-size: 12px;">${m} 님 <span style="font-size: 11px; font-weight: normal; color: #64748b;">(${targetYear}년)</span></div>
+          <div class="stat-card-value" style="font-size: 20px;">
+            ${remain}<span style="font-size: 12.5px; font-weight: normal; color: #64748b; margin-left: 2px;">일 남음</span>
           </div>
-          <div class="stat-card-sub" style="display: flex; justify-content: space-between;">
-            <span>사용: <b>${used}일</b> (${memberStats[m].count}건)</span>
+          <div class="stat-card-sub" style="display: flex; justify-content: space-between; font-size: 11px;">
+            <span>사용: <b>${used}일</b></span>
             <span>부여: <b>${grant}일</b></span>
           </div>
-          <div class="leave-history-container">
-            <div class="leave-history-title">
-              <span>📅 ${targetYear}년 승인 연차 (${memberLeaves.length}건)</span>
+          <div class="leave-history-container" style="margin-top: 8px; padding-top: 6px;">
+            <div class="leave-history-title" style="font-size: 10.5px;">
+              <span>📅 승인 (${memberLeaves.length}건)</span>
             </div>
             <div class="leave-history-list">
               ${historyHtml}
@@ -3518,7 +3540,6 @@
             let typeBg = '#f5f3ff';
             let typeBorder = '#ddd6fe';
             let amountStr = '';
-            let timeStr = o.startTime && o.endTime ? ` (${o.startTime}~${o.endTime})` : '';
 
             if (type === '휴무일 알바') {
               shortType = '알바';
@@ -3540,31 +3561,32 @@
               amountStr = `<b>${min}분</b>`;
             }
 
+            const timeTooltip = o.startTime && o.endTime ? ` (${o.startTime}~${o.endTime})` : '';
+
             return `
-              <div onclick="openOtDetailModal('${o.id}')" title="클릭 시 상세 내역 및 삭제" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 9px; font-size: 11.5px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.borderColor='#6366f1'; this.style.backgroundColor='#f8fafc';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.backgroundColor='#ffffff';">
+              <div onclick="openOtDetailModal('${o.id}')" title="클릭 시 상세 내역 및 삭제: ${o.date} (${yoil}) [${shortType}] ${timeTooltip}" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 8px; font-size: 11px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.borderColor='#6366f1'; this.style.backgroundColor='#f8fafc';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.backgroundColor='#ffffff';">
                 <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 4px;">
                   <span style="font-weight: 700; color: #1e293b;">${Number(o.date.split('-')[1])}/${Number(o.date.split('-')[2])}(${yoil})</span>
                   <span style="font-size: 10px; background: ${typeBg}; color: ${typeColor}; border: 1px solid ${typeBorder}; padding: 1px 4px; border-radius: 4px; font-weight: 700;">${shortType}</span>
-                  <span style="font-size: 10px; color: #94a3b8;">${timeStr}</span>
                 </div>
-                <div style="color: ${typeColor}; font-size: 11.5px; font-weight: 800; white-space: nowrap; margin-left: 6px;">
+                <div style="color: ${typeColor}; font-size: 11px; font-weight: 800; white-space: nowrap; margin-left: 4px;">
                   ${amountStr}
                 </div>
               </div>
             `;
           }).join('');
         } else {
-          historyHtml = `<div style="font-size: 11px; color: #94a3b8; text-align: center; padding: 8px 0; background: #ffffff; border-radius: 6px; border: 1px dashed #e2e8f0;">내역 없음</div>`;
+          historyHtml = `<div style="font-size: 11px; color: #94a3b8; text-align: center; padding: 6px 0; background: #ffffff; border-radius: 6px; border: 1px dashed #e2e8f0;">내역 없음</div>`;
         }
 
         return `
           <div class="stat-card">
-            <div class="stat-card-title" style="display: flex; justify-content: space-between; align-items: baseline;">
+            <div class="stat-card-title" style="display: flex; justify-content: space-between; align-items: baseline; font-size: 12px;">
               <span><b>${m}</b> 님</span>
-              <span style="font-size: 11px; font-weight: normal; color: #64748b;">${otCalYear}년 ${otCalMonth + 1}월</span>
+              <span style="font-size: 11px; font-weight: normal; color: #64748b;">${otCalMonth + 1}월</span>
             </div>
             <!-- 월별 총합 박스: 클릭 시 해당 월 전체 목록 모달 오픈 -->
-            <div class="ot-summary-metrics" onclick="openOtMemberListModal('${m}')" title="클릭 시 ${m} 님의 ${otCalMonth + 1}월 전체 연장근무 목록 보기" style="display: flex; flex-direction: column; gap: 4px; margin: 8px 0 10px 0; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; font-size: 13px; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.borderColor='#6366f1'; this.style.backgroundColor='#f5f3ff';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.backgroundColor='#ffffff';">
+            <div class="ot-summary-metrics" onclick="openOtMemberListModal('${m}')" title="클릭 시 ${m} 님의 ${otCalMonth + 1}월 전체 연장근무 목록 보기" style="display: flex; flex-direction: column; gap: 3px; margin: 6px 0 8px 0; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px 8px; font-size: 12px; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.borderColor='#6366f1'; this.style.backgroundColor='#f5f3ff';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.backgroundColor='#ffffff';">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: #64748b; font-weight: 600;">연장 :</span>
                 <span style="font-weight: 800; color: #6d28d9;">${s.workMinutes}분</span>
@@ -3577,7 +3599,7 @@
                 <span style="color: #64748b; font-weight: 600;">잔여 :</span>
                 <span style="font-weight: 800; color: #c2410c;">${s.remainMinutes}분</span>
               </div>
-              <div style="text-align: right; font-size: 11px; color: #6366f1; font-weight: 700; margin-top: 3px; border-top: 1px dashed #e2e8f0; padding-top: 3px;">
+              <div style="text-align: right; font-size: 10.5px; color: #6366f1; font-weight: 700; margin-top: 2px; border-top: 1px dashed #e2e8f0; padding-top: 2px;">
                 월별종합 전체보기(총${memberOts.length}건)
               </div>
             </div>
