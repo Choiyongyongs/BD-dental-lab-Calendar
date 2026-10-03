@@ -1417,30 +1417,30 @@
 
 <!-- 직원별 월별 연장근무 전체 목록 모달 -->
 <div class="modal-overlay" id="ot-member-list-modal">
-  <div class="modal-card" style="width: 780px; max-width: 95%; max-height: 90vh; display: flex; flex-direction: column;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+  <div class="modal-card" style="width: 840px; max-width: 95vw; height: 86vh; max-height: 90vh; min-height: 400px; display: flex; flex-direction: column;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-shrink: 0;">
       <h3 style="margin: 0;" id="ot-member-list-title">📋 연장근무 전체 내역</h3>
       <button type="button" onclick="closeOtMemberListModal()" style="border: none; background: #f1f5f9; border-radius: 6px; font-size: 14px; cursor: pointer; color: #64748b; padding: 4px 10px; font-weight: 700;">✕</button>
     </div>
-    <div id="ot-member-list-summary" style="margin-bottom: 14px;">
+    <div id="ot-member-list-summary" style="margin-bottom: 14px; flex-shrink: 0;">
       <!-- 상단 요약 배지 -->
     </div>
-    <div class="data-table-container" style="max-height: 380px; overflow-y: auto;">
-      <table class="data-table">
-        <thead>
+    <div class="data-table-container" style="flex: 1; min-height: 0; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+      <table class="data-table" style="width: 100%;">
+        <thead style="position: sticky; top: 0; z-index: 2; background: #f8fafc; box-shadow: 0 1px 2px rgba(0,0,0,0.06);">
           <tr>
-            <th>날짜</th>
-            <th>형태 구분</th>
-            <th>근무 시간대</th>
-            <th>연장 (분 / 갯수)</th>
-            <th>등록 일시</th>
-            <th style="text-align: right;">관리</th>
+            <th style="position: sticky; top: 0; background: #f8fafc;">날짜</th>
+            <th style="position: sticky; top: 0; background: #f8fafc;">형태 구분</th>
+            <th style="position: sticky; top: 0; background: #f8fafc;">근무 시간대</th>
+            <th style="position: sticky; top: 0; background: #f8fafc;">연장 (분 / 갯수)</th>
+            <th style="position: sticky; top: 0; background: #f8fafc;">등록 일시</th>
+            <th style="text-align: right; position: sticky; top: 0; background: #f8fafc;">관리</th>
           </tr>
         </thead>
         <tbody id="ot-member-list-tbody"></tbody>
       </table>
     </div>
-    <div class="modal-footer" style="margin-top: 18px;">
+    <div class="modal-footer" style="margin-top: 16px; flex-shrink: 0;">
       <button type="button" onclick="closeOtMemberListModal()">닫기</button>
     </div>
   </div>
