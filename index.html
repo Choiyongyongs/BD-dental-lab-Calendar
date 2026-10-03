@@ -281,6 +281,29 @@
       color: #ffffff !important;
     }
 
+    /* 한눈에보기 매트릭스 테이블 그리드 스타일 */
+    #ot-overview-table th {
+      padding: 10px 8px;
+      border-right: 1px solid #e2e8f0;
+      text-align: center;
+      white-space: nowrap;
+    }
+    #ot-overview-table th:last-child {
+      border-right: none;
+    }
+    #ot-overview-table td {
+      padding: 8px 6px;
+      border-right: 1px solid #f1f5f9;
+      text-align: center;
+      vertical-align: middle;
+    }
+    #ot-overview-table td:last-child {
+      border-right: none;
+    }
+    #ot-overview-table tr:hover td {
+      background-color: #f8fafc;
+    }
+
     /* 직원 필터 적용 시 달력 셀 하이라이트 */
     .calendar td.cell-member-work {
       background-color: #eef2ff !important;
@@ -1482,7 +1505,7 @@
 
 <!-- 연장근무 전체 한눈에보기 모달 (출근일연장 / 휴무일알바 / 휴무일잔여 3가지 필터 및 종합 지원) -->
 <div class="modal-overlay" id="ot-overview-modal">
-  <div class="modal-card" style="width: 900px; max-width: 96vw; height: 86vh; max-height: 90vh; min-height: 420px; display: flex; flex-direction: column;">
+  <div class="modal-card" style="width: 1020px; max-width: 96vw; height: 86vh; max-height: 90vh; min-height: 420px; display: flex; flex-direction: column;">
     <!-- 모달 상단 헤더 -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-shrink: 0;">
       <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -1496,7 +1519,7 @@
       <button type="button" onclick="closeOtOverviewModal()" style="border: none; background: #f1f5f9; border-radius: 6px; font-size: 14px; cursor: pointer; color: #64748b; padding: 4px 10px; font-weight: 700;">✕</button>
     </div>
 
-    <!-- 3가지 필터 버튼 그룹 및 직원 필터 -->
+    <!-- 3가지 필터 버튼 그룹 -->
     <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; flex-shrink: 0;">
       <!-- 필터 세그먼트 버튼 -->
       <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="ot-overview-filter-group">
@@ -1514,33 +1537,24 @@
         </button>
       </div>
 
-      <!-- 직원 필터 드롭다운 -->
-      <div style="display: flex; align-items: center; gap: 6px;">
-        <span style="font-size: 12.5px; font-weight: 600; color: #64748b;">직원:</span>
-        <select id="ot-overview-person-select" onchange="renderOtOverviewTable()" style="padding: 5px 10px; font-size: 12.5px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 600; outline: none; background: #fff;">
-          <option value="all">전체 직원</option>
-        </select>
+      <div style="font-size: 12px; color: #64748b;">
+        *내역 클릭 시 수정/삭제가 가능합니다.
       </div>
     </div>
 
     <!-- 요약 통계 배너 -->
     <div id="ot-overview-summary-banner" style="margin-bottom: 12px; flex-shrink: 0;"></div>
 
-    <!-- 데이터 테이블 (flex: 1로 창 높이에 맞춰 확장, sticky 헤더) -->
-    <div class="data-table-container" style="flex: 1; min-height: 0; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
-      <table class="data-table" style="width: 100%;">
-        <thead style="position: sticky; top: 0; z-index: 2; background: #f8fafc; box-shadow: 0 1px 2px rgba(0,0,0,0.06);">
-          <tr>
-            <th style="position: sticky; top: 0; background: #f8fafc; width: 140px;">날짜</th>
-            <th style="position: sticky; top: 0; background: #f8fafc; width: 90px;">직원명</th>
-            <th style="position: sticky; top: 0; background: #f8fafc; width: 125px;">형태 구분</th>
-            <th style="position: sticky; top: 0; background: #f8fafc; width: 130px;">근무 시간대</th>
-            <th style="position: sticky; top: 0; background: #f8fafc; width: 120px;">연장 (분 / 갯수)</th>
-            <th style="position: sticky; top: 0; background: #f8fafc;">등록 일시</th>
-            <th style="text-align: right; position: sticky; top: 0; background: #f8fafc; width: 110px;">관리</th>
+    <!-- 데이터 테이블: 날짜별 / 직원별 매트릭스 그리드 (flex: 1로 창 높이에 맞춰 확장, sticky 헤더/푸터) -->
+    <div class="data-table-container" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+      <table class="data-table" id="ot-overview-table" style="width: 100%; border-collapse: separate; border-spacing: 0; min-width: 860px;">
+        <thead style="position: sticky; top: 0; z-index: 5; background: #f8fafc; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+          <tr id="ot-overview-thead-tr">
+            <!-- JS에서 동적으로 날짜 및 전체 직원 열 렌더링 -->
           </tr>
         </thead>
         <tbody id="ot-overview-tbody"></tbody>
+        <tfoot id="ot-overview-tfoot" style="position: sticky; bottom: 0; z-index: 4; background: #f8fafc; box-shadow: 0 -2px 4px rgba(0,0,0,0.06); font-weight: 700;"></tfoot>
       </table>
     </div>
 
@@ -4148,14 +4162,6 @@
     otOverviewMonth = otCalMonth;
     otOverviewFilter = initialFilter;
 
-    // 직원 드롭다운 목록 구성
-    const personSelect = document.getElementById('ot-overview-person-select');
-    if (personSelect) {
-      personSelect.innerHTML = `<option value="all">전체 직원 (${ALL_MEMBERS.length}명)</option>` +
-        ALL_MEMBERS.map(m => `<option value="${m}">${m}</option>`).join('');
-      personSelect.value = 'all';
-    }
-
     updateOtOverviewView();
     document.getElementById('ot-overview-modal').classList.add('active');
   }
@@ -4251,21 +4257,14 @@
     const bRemain = document.getElementById('ot-badge-remain');
     if (bRemain) bRemain.innerText = countRemain;
 
-    // 직원 필터 적용
-    const personSelect = document.getElementById('ot-overview-person-select');
-    const selectedPerson = personSelect ? personSelect.value : 'all';
-
+    // 현재 선택된 필터 조건에 따른 필터링
     let filteredList = monthAllList.filter(o => {
       const type = o.type || '출근일 연장';
       if (otOverviewFilter === 'work' && type !== '출근일 연장') return false;
       if (otOverviewFilter === 'parttime' && type !== '휴무일 알바') return false;
       if (otOverviewFilter === 'remain' && type !== '휴무일 잔여업무') return false;
-      if (selectedPerson !== 'all' && o.person !== selectedPerson) return false;
       return true;
     });
-
-    // 날짜 오름차순(1일~30일) 정렬
-    filteredList.sort((a, b) => a.date.localeCompare(b.date) || (a.startTime || '').localeCompare(b.startTime || ''));
 
     // 상단 요약 배너 렌더링
     const summaryEl = document.getElementById('ot-overview-summary-banner');
@@ -4274,20 +4273,20 @@
       if (otOverviewFilter === 'work') {
         const hours = (totalWorkMinutes / 60).toFixed(1);
         bannerHtml = `
-          <div style="display: flex; gap: 14px; flex-wrap: wrap; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 10px 14px; font-size: 13px; align-items: center;">
-            <span style="color: #6d28d9; font-weight: 700;">⏰ 출근일 연장 종합 집계</span>
+          <div style="display: flex; gap: 14px; flex-wrap: wrap; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 9px 14px; font-size: 13px; align-items: center;">
+            <span style="color: #6d28d9; font-weight: 700;">⏰ 출근일 연장 전체 현황</span>
             <span style="color: #cbd5e1;">|</span>
-            <span>총 연장시간: <b style="color: #6d28d9; font-size: 15px;">${totalWorkMinutes}분</b> <span style="color: #64748b; font-size: 12px;">(약 ${hours}시간)</span></span>
+            <span>총 연장시간: <b style="color: #6d28d9; font-size: 14.5px;">${totalWorkMinutes}분</b> <span style="color: #64748b; font-size: 12px;">(약 ${hours}시간)</span></span>
             <span style="color: #cbd5e1;">|</span>
             <span>총 등록건수: <b style="color: #0f172a;">${countWork}건</b></span>
           </div>
         `;
       } else if (otOverviewFilter === 'parttime') {
         bannerHtml = `
-          <div style="display: flex; gap: 14px; flex-wrap: wrap; background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 8px; padding: 10px 14px; font-size: 13px; align-items: center;">
-            <span style="color: #0f766e; font-weight: 700;">💼 휴무일 알바 종합 집계</span>
+          <div style="display: flex; gap: 14px; flex-wrap: wrap; background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 8px; padding: 9px 14px; font-size: 13px; align-items: center;">
+            <span style="color: #0f766e; font-weight: 700;">💼 휴무일 알바 전체 현황</span>
             <span style="color: #cbd5e1;">|</span>
-            <span>총 알바갯수: <b style="color: #0f766e; font-size: 15px;">${totalParttimeCount}개</b></span>
+            <span>총 알바갯수: <b style="color: #0f766e; font-size: 14.5px;">${totalParttimeCount}개</b></span>
             <span style="color: #cbd5e1;">|</span>
             <span>총 등록건수: <b style="color: #0f172a;">${countParttime}건</b></span>
           </div>
@@ -4295,17 +4294,17 @@
       } else if (otOverviewFilter === 'remain') {
         const hours = (totalRemainMinutes / 60).toFixed(1);
         bannerHtml = `
-          <div style="display: flex; gap: 14px; flex-wrap: wrap; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 10px 14px; font-size: 13px; align-items: center;">
-            <span style="color: #c2410c; font-weight: 700;">📑 휴무일 잔여업무 종합 집계</span>
+          <div style="display: flex; gap: 14px; flex-wrap: wrap; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 9px 14px; font-size: 13px; align-items: center;">
+            <span style="color: #c2410c; font-weight: 700;">📑 휴무일 잔여업무 전체 현황</span>
             <span style="color: #cbd5e1;">|</span>
-            <span>총 잔여시간: <b style="color: #c2410c; font-size: 15px;">${totalRemainMinutes}분</b> <span style="color: #64748b; font-size: 12px;">(약 ${hours}시간)</span></span>
+            <span>총 잔여시간: <b style="color: #c2410c; font-size: 14.5px;">${totalRemainMinutes}분</b> <span style="color: #64748b; font-size: 12px;">(약 ${hours}시간)</span></span>
             <span style="color: #cbd5e1;">|</span>
             <span>총 등록건수: <b style="color: #0f172a;">${countRemain}건</b></span>
           </div>
         `;
       } else {
         bannerHtml = `
-          <div style="display: flex; gap: 14px; flex-wrap: wrap; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 13px; align-items: center;">
+          <div style="display: flex; gap: 14px; flex-wrap: wrap; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 14px; font-size: 13px; align-items: center;">
             <span>⏰ 연장: <b style="color: #6d28d9;">${totalWorkMinutes}분</b></span>
             <span style="color: #cbd5e1;">|</span>
             <span>💼 알바: <b style="color: #0f766e;">${totalParttimeCount}개</b></span>
@@ -4319,65 +4318,177 @@
       summaryEl.innerHTML = bannerHtml;
     }
 
-    // 테이블 렌더링
+    // --- 매트릭스 테이블 헤더 렌더링 (날짜 / 용희 / 세진 / 소영 / 이슬 / 서영 / 찬유) ---
+    const theadTr = document.getElementById('ot-overview-thead-tr');
+    if (theadTr) {
+      theadTr.innerHTML = `
+        <th style="position: sticky; top: 0; background: #f8fafc; min-width: 110px; width: 125px; text-align: center; border-bottom: 1.5px solid #cbd5e1;">날짜</th>
+        ${ALL_MEMBERS.map(m => `
+          <th style="position: sticky; top: 0; background: #f8fafc; min-width: 130px; text-align: center; border-bottom: 1.5px solid #cbd5e1;">
+            <span style="color: #0f172a; font-weight: 700; font-size: 13.5px;">${m}</span>
+          </th>
+        `).join('')}
+      `;
+    }
+
+    // 날짜별 행 추출 (1일 ~ 30/31일 중 연장근무가 있는 날짜 오름차순)
+    const datesWithOt = Array.from(new Set(filteredList.map(o => o.date))).sort();
+
+    // 테이블 본문 렌더링
     const tbody = document.getElementById('ot-overview-tbody');
     if (tbody) {
-      if (filteredList.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 36px 16px;">${otOverviewYear}년 ${otOverviewMonth + 1}월에 해당하는 연장근무 기록이 없습니다.</td></tr>`;
+      if (datesWithOt.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="${ALL_MEMBERS.length + 1}" style="text-align: center; color: #94a3b8; padding: 48px 16px; font-size: 14px;">
+              ${otOverviewYear}년 ${otOverviewMonth + 1}월에 해당하는 연장근무 내역이 없습니다.
+            </td>
+          </tr>
+        `;
       } else {
-        tbody.innerHTML = filteredList.map(o => {
-          const yoil = getDayOfWeekStr(o.date);
-          const type = o.type || '출근일 연장';
-          let shortType = '연장';
-          let pillClass = 'pill-ot-work';
-          let typeIcon = '⏰';
-          let amountHtml = '';
+        tbody.innerHTML = datesWithOt.map(dateKey => {
+          const yoil = getDayOfWeekStr(dateKey);
+          let yoilColor = '#475569';
+          if (yoil === '토') yoilColor = '#2563eb';
+          if (yoil === '일') yoilColor = '#dc2626';
 
-          if (type === '휴무일 알바') {
-            shortType = '알바';
-            pillClass = 'pill-ot-parttime';
-            typeIcon = '💼';
-            const count = o.count !== undefined ? o.count : (o.hours || 0);
-            amountHtml = `<span class="pill pill-ot-parttime" style="font-weight: 800;">${count}개</span>`;
-          } else if (type === '휴무일 잔여업무') {
-            shortType = '잔여';
-            pillClass = 'pill-ot-remain';
-            typeIcon = '📑';
-            const min = o.minutes !== undefined ? o.minutes : Math.round((Number(o.hours) || 0) * 60);
-            amountHtml = `<span class="pill pill-ot-remain" style="font-weight: 800;">+${min}분</span>`;
-          } else {
-            shortType = '연장';
-            pillClass = 'pill-ot-work';
-            typeIcon = '⏰';
-            const min = o.minutes !== undefined ? o.minutes : Math.round((Number(o.hours) || 0) * 60);
-            amountHtml = `<span class="pill pill-ot-work" style="font-weight: 800;">+${min}분</span>`;
-          }
+          const dateParts = dateKey.split('-');
+          const displayDate = `${dateParts[1]}/${dateParts[2]} <span style="color: ${yoilColor}; font-weight: 800;">(${yoil})</span>`;
 
-          const timeRange = o.startTime && o.endTime ? `${o.startTime} ~ ${o.endTime}` : '-';
+          const cellsHtml = ALL_MEMBERS.map(m => {
+            const memberOts = filteredList
+              .filter(o => o.date === dateKey && o.person === m)
+              .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+
+            if (memberOts.length === 0) {
+              return `<td style="text-align: center; color: #cbd5e1; font-weight: 500; font-size: 13px;">-</td>`;
+            }
+
+            const itemsHtml = memberOts.map(o => {
+              const type = o.type || '출근일 연장';
+              const timeRange = (o.startTime && o.endTime) ? `${o.startTime}~${o.endTime}` : '';
+              
+              let amountText = '';
+              let badgeBg = '#f5f3ff';
+              let badgeBorder = '#ddd6fe';
+              let badgeColor = '#6d28d9';
+
+              if (type === '휴무일 알바') {
+                const count = o.count !== undefined ? o.count : (o.hours || 0);
+                amountText = `${count}개`;
+                badgeBg = '#f0fdfa';
+                badgeBorder = '#99f6e4';
+                badgeColor = '#0f766e';
+              } else if (type === '휴무일 잔여업무') {
+                const min = o.minutes !== undefined ? o.minutes : Math.round((Number(o.hours) || 0) * 60);
+                amountText = `${min}분`;
+                badgeBg = '#fff7ed';
+                badgeBorder = '#fed7aa';
+                badgeColor = '#c2410c';
+              } else {
+                const min = o.minutes !== undefined ? o.minutes : Math.round((Number(o.hours) || 0) * 60);
+                amountText = `${min}분`;
+                badgeBg = '#f5f3ff';
+                badgeBorder = '#ddd6fe';
+                badgeColor = '#6d28d9';
+              }
+
+              const mainText = timeRange ? `${timeRange} ${amountText}` : amountText;
+
+              return `
+                <div onclick="openOtDetailModal('${o.id}', true)" title="클릭 시 수정/삭제 가능 (${type})" style="background: ${badgeBg}; border: 1px solid ${badgeBorder}; color: ${badgeColor}; border-radius: 6px; padding: 4px 7px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s ease; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" onmouseover="this.style.filter='brightness(0.95)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)';" onmouseout="this.style.filter='none'; this.style.boxShadow='none';">
+                  <span>${mainText}</span>
+                </div>
+              `;
+            }).join('');
+
+            return `
+              <td style="text-align: center; padding: 8px 6px;">
+                <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+                  ${itemsHtml}
+                </div>
+              </td>
+            `;
+          }).join('');
 
           return `
             <tr>
-              <td style="font-weight: 700; white-space: nowrap;">${o.date} (${yoil})</td>
-              <td><b style="color: #4338ca; background: #eef2ff; border: 1px solid #c7d2fe; padding: 2px 7px; border-radius: 5px; font-size: 13px;">${o.person}</b></td>
-              <td><span class="pill ${pillClass}">${typeIcon} ${shortType}</span></td>
-              <td><span style="font-size: 13px; font-weight: 600;">${timeRange}</span></td>
-              <td>${amountHtml}</td>
-              <td style="color: #94a3b8; font-size: 12px; white-space: nowrap;">${o.createdAt ? o.createdAt.substring(0, 16) : '-'}</td>
-              <td style="text-align: right; white-space: nowrap;">
-                <button class="btn-settings" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="openOtDetailModal('${o.id}', true)">수정</button>
-                <button class="btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteOvertimeFromOverview('${o.id}')">삭제</button>
+              <td style="font-weight: 700; text-align: center; white-space: nowrap; font-size: 13px; background: #fbfcfe;">
+                ${displayDate}
               </td>
+              ${cellsHtml}
             </tr>
           `;
         }).join('');
       }
     }
 
+    // --- 매트릭스 하단 월별 총계 행 (tfoot) ---
+    const tfoot = document.getElementById('ot-overview-tfoot');
+    if (tfoot) {
+      if (datesWithOt.length === 0) {
+        tfoot.innerHTML = '';
+      } else {
+        const memberTotalsHtml = ALL_MEMBERS.map(m => {
+          const mList = filteredList.filter(o => o.person === m);
+          if (mList.length === 0) {
+            return `<td style="text-align: center; color: #94a3b8; font-size: 12px;">-</td>`;
+          }
+
+          let mWork = 0;
+          let mPart = 0;
+          let mRemain = 0;
+
+          mList.forEach(o => {
+            const type = o.type || '출근일 연장';
+            if (type === '휴무일 알바') {
+              mPart += (o.count !== undefined ? Number(o.count) : (Number(o.hours) || 0));
+            } else if (type === '휴무일 잔여업무') {
+              mRemain += (o.minutes !== undefined ? Number(o.minutes) : Math.round((Number(o.hours) || 0) * 60));
+            } else {
+              mWork += (o.minutes !== undefined ? Number(o.minutes) : Math.round((Number(o.hours) || 0) * 60));
+            }
+          });
+
+          let summaryLines = [];
+          if (otOverviewFilter === 'work' || otOverviewFilter === 'all') {
+            if (mWork > 0) summaryLines.push(`<span style="color: #6d28d9;">${mWork}분</span>`);
+          }
+          if (otOverviewFilter === 'parttime' || otOverviewFilter === 'all') {
+            if (mPart > 0) summaryLines.push(`<span style="color: #0f766e;">${mPart}개</span>`);
+          }
+          if (otOverviewFilter === 'remain' || otOverviewFilter === 'all') {
+            if (mRemain > 0) summaryLines.push(`<span style="color: #c2410c;">${mRemain}분</span>`);
+          }
+
+          if (summaryLines.length === 0) {
+            return `<td style="text-align: center; color: #94a3b8; font-size: 12px;">-</td>`;
+          }
+
+          return `
+            <td style="text-align: center; font-size: 12.5px; padding: 10px 6px;">
+              <div style="display: flex; flex-direction: column; gap: 2px; align-items: center; font-weight: 800;">
+                ${summaryLines.join('')}
+              </div>
+            </td>
+          `;
+        }).join('');
+
+        tfoot.innerHTML = `
+          <tr>
+            <td style="text-align: center; font-weight: 800; color: #1e293b; font-size: 13px; padding: 10px 8px; background: #eef2ff;">
+              월별 총계
+            </td>
+            ${memberTotalsHtml}
+          </tr>
+        `;
+      }
+    }
+
     // 푸터 건수
     const footerCount = document.getElementById('ot-overview-footer-count');
     if (footerCount) {
-      const personLabel = selectedPerson === 'all' ? '모든 직원' : `${selectedPerson} 님`;
-      footerCount.innerText = `현재 표시: ${personLabel} 총 ${filteredList.length}건`;
+      footerCount.innerText = `총 ${datesWithOt.length}일 (${filteredList.length}건) 연장근무 기록`;
     }
   }
 
