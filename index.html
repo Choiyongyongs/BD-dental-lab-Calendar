@@ -2221,13 +2221,14 @@
   const ROTATION_START_DATE = new Date(2027, 0, 1); // 2027-01-01
   const NEW_DUTY_ANCHOR = new Date(2027, 0, 2);       // 2027-01-02 (토)
 
-  let currentYear = 2026;
-  let currentMonth = 8; // 9월
+  const _initDate = new Date();
+  let currentYear = _initDate.getFullYear();
+  let currentMonth = _initDate.getMonth();
 
   // 통계 탭 상태
   let statsMode = 'month'; // 'month' or 'year'
-  let statsYear = 2026;
-  let statsMonth = 8;
+  let statsYear = _initDate.getFullYear();
+  let statsMonth = _initDate.getMonth();
 
   /* =========================================================================
      2. 연차(Leave) 및 연장근무(OT) 스토리지 관리
@@ -2290,13 +2291,32 @@
     const target = document.getElementById(`tab-${tabId}`);
     if (target) target.classList.add('active');
 
+    const today = new Date();
+    const curY = today.getFullYear();
+    const curM = today.getMonth();
+
     if (tabId === 'calendar') {
+      currentYear = curY;
+      currentMonth = curM;
       renderCalendar();
     } else if (tabId === 'leave') {
+      leaveCalYear = curY;
+      leaveCalMonth = curM;
       renderLeaveTab();
     } else if (tabId === 'overtime') {
+      otCalYear = curY;
+      otCalMonth = curM;
       renderOvertimeTab();
     } else if (tabId === 'stats') {
+      statsYear = curY;
+      statsMonth = curM;
+      statsMode = 'month';
+      const btnMonth = document.getElementById('btn-stats-month');
+      const btnYear = document.getElementById('btn-stats-year');
+      const monthSel = document.getElementById('stats-month-select');
+      if (btnMonth) btnMonth.classList.add('active');
+      if (btnYear) btnYear.classList.remove('active');
+      if (monthSel) monthSel.style.display = 'inline-block';
       initStatsControls();
       renderStats();
     }
@@ -2917,8 +2937,8 @@
   /* =========================================================================
      6. 연차관리 탭 구현 (모달 신청, 직원별 연차 부여, 승인 워크플로우)
      ========================================================================= */
-  let leaveCalYear = 2026;
-  let leaveCalMonth = 8; // 9월
+  let leaveCalYear = new Date().getFullYear();
+  let leaveCalMonth = new Date().getMonth();
 
   function renderLeaveTab() {
     // 하단 연차 전용 캘린더의 현재 연도(leaveCalYear)에 맞춰 상단 현황표 자동 연동
@@ -4655,7 +4675,13 @@
 
     if (yearSelect.children.length === 0) {
       const years = [2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035];
+      if (!years.includes(statsYear)) {
+        years.push(statsYear);
+        years.sort((a, b) => a - b);
+      }
       yearSelect.innerHTML = years.map(y => `<option value="${y}" ${y === statsYear ? 'selected' : ''}>${y}년</option>`).join('');
+    } else {
+      yearSelect.value = statsYear;
     }
 
     if (monthSelect.children.length === 0) {
@@ -4664,6 +4690,8 @@
         mHtml += `<option value="${m}" ${m === statsMonth ? 'selected' : ''}>${m + 1}월</option>`;
       }
       monthSelect.innerHTML = mHtml;
+    } else {
+      monthSelect.value = statsMonth;
     }
   }
 
