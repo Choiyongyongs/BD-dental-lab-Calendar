@@ -1683,11 +1683,11 @@ function renderLunchOrdersTable() {
         </td>
         <td style="font-weight: 700; color: #0f172a;">${escapeHtml(ord.menuName)}</td>
         <td style="text-align: right; color: #64748b; font-size: 12.5px; width: 80px;">${ord.price.toLocaleString()}원</td>
-        <td style="text-align: center; width: 105px;">
-          <div style="display: flex; align-items: center; justify-content: center; gap: 3px;">
-            <button type="button" onclick="changeLunchOrderQty('${ord.id}', -1)" style="padding: 2px 7px; font-size: 12px; font-weight: 800;">-</button>
-            <input type="number" min="1" value="${ord.quantity || 1}" style="width: 40px; text-align: center; padding: 3px; font-size: 13px; font-weight: 800; border: 1px solid #cbd5e1; border-radius: 4px;" onchange="updateLunchOrderQtyDirect('${ord.id}', this.value)" />
-            <button type="button" onclick="changeLunchOrderQty('${ord.id}', 1)" style="padding: 2px 7px; font-size: 12px; font-weight: 800;">+</button>
+        <td style="text-align: center; width: 110px;">
+          <div class="qty-controller" style="margin: 0 auto;">
+            <button type="button" class="qty-btn" onclick="changeLunchOrderQty('${ord.id}', -1)" title="1개 감소">-</button>
+            <input type="number" class="qty-input" min="1" value="${ord.quantity || 1}" onclick="this.select()" onfocus="this.select()" onchange="updateLunchOrderQtyDirect('${ord.id}', this.value)" title="클릭하여 수량 직접 입력" />
+            <button type="button" class="qty-btn" onclick="changeLunchOrderQty('${ord.id}', 1)" title="1개 증가">+</button>
           </div>
         </td>
         <td style="text-align: right; font-weight: 800; color: #2563eb; width: 90px;">${itemTotal.toLocaleString()}원</td>

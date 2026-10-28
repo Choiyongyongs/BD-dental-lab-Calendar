@@ -31,6 +31,16 @@
       --ot-border: #ddd6fe;
     }
 
+    /* 숫자 input 위아래 스피너 화살표 제거 */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none !important;
+      margin: 0 !important;
+    }
+    input[type="number"] {
+      -moz-appearance: textfield !important;
+      appearance: textfield !important;
+    }
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif; }
     html { overflow-y: scroll; } /* 스크롤바 생성/제거로 인한 달력 가로폭 흔들림 및 크기 변화 방지 */
     body { padding: 20px; background-color: var(--bg); color: var(--text-main); margin: 0; min-height: 100vh; }
@@ -1305,7 +1315,7 @@
         <span style="font-size: 15px; font-weight: 800; color: #0f172a;">🍚 오늘 식사 인원:</span>
         <div class="lunch-count-controller">
           <button type="button" class="lunch-count-btn" onclick="changeEatingCount(-1)" title="1명 감소">-</button>
-          <input type="number" id="lunch-eating-count-input" min="0" max="99" value="5" style="width: 44px; text-align: center; border: none; background: transparent; font-size: 16px; font-weight: 900; color: #1e3a8a; outline: none;" onchange="updateEatingCountDirect(this.value)" />
+          <input type="number" id="lunch-eating-count-input" min="0" max="99" value="5" style="width: 44px; text-align: center; border: none; background: transparent; font-size: 16px; font-weight: 900; color: #1e3a8a; outline: none; cursor: pointer;" onclick="this.select()" onfocus="this.select()" onchange="updateEatingCountDirect(this.value)" title="클릭하여 인원수 직접 입력" />
           <span style="font-weight: 700; font-size: 13.5px; color: #475569; margin-right: 2px;">명</span>
           <button type="button" class="lunch-count-btn" onclick="changeEatingCount(1)" title="1명 증가">+</button>
         </div>

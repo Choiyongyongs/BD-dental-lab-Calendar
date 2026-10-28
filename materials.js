@@ -216,12 +216,14 @@ function renderMaterialOrderList() {
         <td style="width: 100px;">
           <span class="supplier-chip">${escapeHtml(ord.supplier || '기본')}</span>
         </td>
-        <td style="width: 110px;">
+        <td style="width: 120px;">
           <div style="display: flex; align-items: center; gap: 4px;">
-            <button type="button" onclick="changeOrderQty('${ord.id}', -1)" style="padding: 2px 7px; font-size: 11px;">-</button>
-            <input type="number" min="1" value="${ord.quantity}" style="width: 44px; text-align: center; padding: 3px; font-size: 12.5px; font-weight: 700; border: 1px solid #cbd5e1; border-radius: 4px;" onchange="updateOrderQtyDirect('${ord.id}', this.value)" />
-            <span style="font-size: 11.5px; color: #64748b;">${escapeHtml(ord.unit || 'ea')}</span>
-            <button type="button" onclick="changeOrderQty('${ord.id}', 1)" style="padding: 2px 7px; font-size: 11px;">+</button>
+            <div class="qty-controller">
+              <button type="button" class="qty-btn" onclick="changeOrderQty('${ord.id}', -1)" title="1개 감소">-</button>
+              <input type="number" class="qty-input" min="1" value="${ord.quantity}" onclick="this.select()" onfocus="this.select()" onchange="updateOrderQtyDirect('${ord.id}', this.value)" title="클릭하여 수량 직접 입력" />
+              <button type="button" class="qty-btn" onclick="changeOrderQty('${ord.id}', 1)" title="1개 증가">+</button>
+            </div>
+            <span style="font-size: 11.5px; color: #64748b; font-weight: 600;">${escapeHtml(ord.unit || 'ea')}</span>
           </div>
         </td>
         <td style="width: 90px;">
