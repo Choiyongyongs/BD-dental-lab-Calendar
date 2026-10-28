@@ -1302,6 +1302,7 @@
         <div style="font-size: 13px; color: #64748b; margin-top: 4px;">출근/식사인원 체크, 실시간 예산 계산 및 식당 랜덤 추첨기</div>
       </div>
       <div class="controls">
+        <button type="button" class="btn-primary" onclick="openLunchRouletteModal()" style="background: #9333ea; border-color: #7e22ce; font-weight: 700;">🎲 오늘 뭐먹지?</button>
         <button type="button" class="btn-primary" onclick="copyLunchOrderText()" style="background: #10b981; border-color: #059669;">📋 주문서 카톡 복사</button>
         <button type="button" onclick="openBudgetModal()" style="font-weight: 700; background: #f0fdf4; border: 1.5px solid #86efac; color: #166534;">💵 식대 설정 (<span id="lunch-header-per-budget">10,000</span>원)</button>
         <button type="button" class="btn-danger" onclick="clearAllLunchOrders()">🔄 주문 초기화</button>
@@ -1336,32 +1337,7 @@
       </div>
     </div>
 
-    <!-- 2. 식당 랜덤 룰렛 / 추첨 영역 (10개 식당 항상 전체 다 노출) -->
-    <div class="roulette-container">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-        <div>
-          <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: #6b21a8;">🎲 오늘 점심 뭐 먹지?</h3>
-          <div style="font-size: 12.5px; color: #7e22ce; margin-top: 2px;">가고 싶은 후보 식당들을 클릭하여 선택한 후 [랜덤 식당 추첨] 버튼을 눌러보세요!</div>
-        </div>
-        <div style="display: flex; gap: 6px;">
-          <button type="button" style="padding: 5px 10px; font-size: 12px;" onclick="selectAllCandidateRestaurants(true)">전체 선택</button>
-          <button type="button" style="padding: 5px 10px; font-size: 12px;" onclick="selectAllCandidateRestaurants(false)">전체 해제</button>
-          <button type="button" id="btn-run-roulette" class="btn-primary" style="background: #9333ea; border-color: #7e22ce; font-weight: 800; font-size: 13.5px; padding: 6px 16px;" onclick="runLunchRoulette()">
-            🎰 랜덤 식당 추첨!
-          </button>
-        </div>
-      </div>
 
-      <!-- 10개 식당 선택 칩 그리드 -->
-      <div id="restaurant-candidate-grid" class="restaurant-select-grid"></div>
-
-      <!-- 추첨 결과 디스플레이 박스 -->
-      <div id="roulette-result-display" class="roulette-display-box">
-        <div style="color: #a855f7; font-size: 13.5px; font-weight: 600;">
-          💡 위 후보 식당 중 가고 싶은 곳들을 고른 뒤 <strong>[🎰 랜덤 식당 추첨!]</strong> 버튼을 누르세요.
-        </div>
-      </div>
-    </div>
 
     <!-- 3. 식당별 메뉴판 & 주문서 그리드 (2분할) -->
     <div class="order-layout-grid">
@@ -1536,6 +1512,41 @@
 </div>
 
 <!-- 1인당 식대 설정 모달 -->
+<!-- 오늘 점심 뭐먹지? 팝업 모달 -->
+<div class="modal-overlay" id="lunch-roulette-modal">
+  <div class="modal-card" style="max-width: 680px; width: 95%; max-height: 90vh; overflow-y: auto;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1.5px solid #f3e8ff; padding-bottom: 10px;">
+      <div>
+        <h3 style="margin: 0; font-size: 18px; font-weight: 800; color: #6b21a8;">🎲 오늘 점심 뭐 먹지?</h3>
+        <div style="font-size: 12.5px; color: #7e22ce; margin-top: 3px;">가고 싶은 후보 식당들을 선택한 후 [랜덤 식당 추첨] 버튼을 눌러보세요!</div>
+      </div>
+      <button type="button" class="btn-danger" style="padding: 4px 10px; font-size: 13px;" onclick="closeLunchRouletteModal()">✕</button>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;">
+      <button type="button" style="padding: 5px 10px; font-size: 12px;" onclick="selectAllCandidateRestaurants(true)">전체 선택</button>
+      <button type="button" style="padding: 5px 10px; font-size: 12px;" onclick="selectAllCandidateRestaurants(false)">전체 해제</button>
+      <button type="button" id="btn-run-roulette" class="btn-primary" style="background: #9333ea; border-color: #7e22ce; font-weight: 800; font-size: 13px; padding: 6px 16px;" onclick="runLunchRoulette()">
+        🎰 랜덤 식당 추첨!
+      </button>
+    </div>
+
+    <!-- 10개 식당 선택 칩 그리드 -->
+    <div id="restaurant-candidate-grid" class="restaurant-select-grid" style="margin-bottom: 14px;"></div>
+
+    <!-- 추첨 결과 디스플레이 박스 -->
+    <div id="roulette-result-display" class="roulette-display-box" style="margin-bottom: 16px;">
+      <div style="color: #a855f7; font-size: 13.5px; font-weight: 600;">
+        💡 위 후보 식당 중 가고 싶은 곳들을 고른 뒤 <strong>[🎰 랜덤 식당 추첨!]</strong> 버튼을 누르세요.
+      </div>
+    </div>
+
+    <div class="modal-footer" style="margin-top: 10px; justify-content: flex-end;">
+      <button type="button" onclick="closeLunchRouletteModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="lunch-budget-modal">
   <div class="modal-card" style="max-width: 380px;">
     <h3>💵 1인당 식대 설정</h3>
@@ -1570,10 +1581,7 @@
           <label>수량</label>
           <input type="number" id="order-modal-qty" value="1" min="1" max="20" style="width: 100%;" />
         </div>
-        <div class="form-group">
-          <label>비고 (옵션/요청사항)</label>
-          <input type="text" id="order-modal-note" placeholder="예: 맵게, 오이 빼주세요, 소스 따로 등" style="width: 100%;" />
-        </div>
+
       </div>
       <div class="modal-footer" style="margin-top: 20px;">
         <button type="button" onclick="closeAddOrderModal()">취소</button>
@@ -1769,9 +1777,9 @@
               </button>
             </div>
             <div style="display: flex; align-items: center; gap: 4px;">
-              <select id="ot-start-hour" onfocus="onTimeFieldClick('ot-start')" onchange="on24hSelectChange('ot-start')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
+              <select id="ot-start-hour" onchange="on24hSelectChange('ot-start')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
               <span style="font-weight: 900; color: #64748b;">:</span>
-              <select id="ot-start-min" onfocus="onTimeFieldClick('ot-start')" onchange="on24hSelectChange('ot-start')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
+              <select id="ot-start-min" onchange="on24hSelectChange('ot-start')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
             </div>
             <input type="hidden" id="ot-start-time" value="20:00" />
           </div>
@@ -1784,9 +1792,9 @@
               </button>
             </div>
             <div style="display: flex; align-items: center; gap: 4px;">
-              <select id="ot-end-hour" onfocus="onTimeFieldClick('ot-end')" onchange="on24hSelectChange('ot-end')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
+              <select id="ot-end-hour" onchange="on24hSelectChange('ot-end')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
               <span style="font-weight: 900; color: #64748b;">:</span>
-              <select id="ot-end-min" onfocus="onTimeFieldClick('ot-end')" onchange="on24hSelectChange('ot-end')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
+              <select id="ot-end-min" onchange="on24hSelectChange('ot-end')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
             </div>
             <input type="hidden" id="ot-end-time" value="" />
           </div>
@@ -1873,9 +1881,9 @@
                 </button>
               </div>
               <div style="display: flex; align-items: center; gap: 4px;">
-                <select id="ot-edit-start-hour" onfocus="onTimeFieldClick('ot-edit-start')" onchange="on24hSelectChange('ot-edit-start')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
+                <select id="ot-edit-start-hour" onchange="on24hSelectChange('ot-edit-start')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
                 <span style="font-weight: 900; color: #64748b;">:</span>
-                <select id="ot-edit-start-min" onfocus="onTimeFieldClick('ot-edit-start')" onchange="on24hSelectChange('ot-edit-start')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
+                <select id="ot-edit-start-min" onchange="on24hSelectChange('ot-edit-start')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
               </div>
               <input type="hidden" id="ot-edit-start-time" value="" />
             </div>
@@ -1888,9 +1896,9 @@
                 </button>
               </div>
               <div style="display: flex; align-items: center; gap: 4px;">
-                <select id="ot-edit-end-hour" onfocus="onTimeFieldClick('ot-edit-end')" onchange="on24hSelectChange('ot-edit-end')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
+                <select id="ot-edit-end-hour" onchange="on24hSelectChange('ot-edit-end')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
                 <span style="font-weight: 900; color: #64748b;">:</span>
-                <select id="ot-edit-end-min" onfocus="onTimeFieldClick('ot-edit-end')" onchange="on24hSelectChange('ot-edit-end')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
+                <select id="ot-edit-end-min" onchange="on24hSelectChange('ot-edit-end')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
               </div>
               <input type="hidden" id="ot-edit-end-time" value="" />
             </div>
@@ -3983,22 +3991,23 @@
   }
 
   /* =========================================================================
-     7-0. 24시간 시간 선택기 헬퍼 (오전/오후 없이 00시~23시 선택, 클릭 시 현재시간 자동 세팅)
+     7-0. 24시간 시간 선택기 헬퍼 (24시간 및 1분 단위 선택, 00:00 기본 표시, 현재시간 버튼 전용)
      ========================================================================= */
-  function populate24hOptions(hourSelectId, minSelectId, defaultHour = '', defaultMin = '') {
+  function populate24hOptions(hourSelectId, minSelectId, defaultHour = '00', defaultMin = '00') {
     const hSel = document.getElementById(hourSelectId);
     const mSel = document.getElementById(minSelectId);
     if (!hSel || !mSel) return;
 
-    let hHtml = '<option value="">시 선택</option>';
+    let hHtml = '';
     for (let h = 0; h < 24; h++) {
       const hStr = String(h).padStart(2, '0');
       hHtml += `<option value="${hStr}">${hStr}시</option>`;
     }
     hSel.innerHTML = hHtml;
 
-    let mHtml = '<option value="">분 선택</option>';
-    for (let m = 0; m < 60; m += 5) {
+    // 1분 단위 (00분 ~ 59분)
+    let mHtml = '';
+    for (let m = 0; m < 60; m++) {
       const mStr = String(m).padStart(2, '0');
       mHtml += `<option value="${mStr}">${mStr}분</option>`;
     }
@@ -4014,25 +4023,17 @@
     const hidden = document.getElementById(`${prefix}-time`);
     if (!hidden) return;
 
-    if (!timeStr) {
-      if (hSel) hSel.value = '';
-      if (mSel) mSel.value = '';
-      hidden.value = '';
-    } else {
+    let h = '00';
+    let m = '00';
+    if (timeStr) {
       const parts = timeStr.split(':');
-      const h = parts[0] || '';
-      let m = parts[1] || '00';
-      
-      let mNum = parseInt(m, 10);
-      if (isNaN(mNum)) mNum = 0;
-      let roundedM = Math.round(mNum / 5) * 5;
-      if (roundedM >= 60) roundedM = 55;
-      const mRoundedStr = String(roundedM).padStart(2, '0');
-
-      if (hSel) hSel.value = h;
-      if (mSel) mSel.value = mRoundedStr;
-      hidden.value = `${h}:${mRoundedStr}`;
+      h = (parts[0] || '00').padStart(2, '0');
+      m = (parts[1] || '00').padStart(2, '0');
     }
+
+    if (hSel) hSel.value = h;
+    if (mSel) mSel.value = m;
+    hidden.value = `${h}:${m}`;
 
     if (triggerCalc) {
       if (prefix.includes('edit')) calculateOtEditMinutes();
@@ -4046,39 +4047,20 @@
     const hidden = document.getElementById(`${prefix}-time`);
     if (!hSel || !mSel || !hidden) return;
 
-    if (hSel.value && mSel.value) {
-      hidden.value = `${hSel.value}:${mSel.value}`;
-    } else if (hSel.value && !mSel.value) {
-      mSel.value = '00';
-      hidden.value = `${hSel.value}:00`;
-    } else if (!hSel.value && mSel.value) {
-      const curH = String(new Date().getHours()).padStart(2, '0');
-      hSel.value = curH;
-      hidden.value = `${curH}:${mSel.value}`;
-    } else {
-      hidden.value = '';
-    }
+    const h = (hSel.value || '00').padStart(2, '0');
+    const m = (mSel.value || '00').padStart(2, '0');
+    hidden.value = `${h}:${m}`;
 
     if (prefix.includes('edit')) calculateOtEditMinutes();
     else calculateOtMinutes();
   }
 
+  // [⏱ 현재시간] 버튼을 누를 때만 현재시간(시:분, 1분 단위)으로 설정
   function setCurrentTime24h(prefix) {
     const now = new Date();
     const h = String(now.getHours()).padStart(2, '0');
-    let m = now.getMinutes();
-    let roundedM = Math.round(m / 5) * 5;
-    if (roundedM >= 60) roundedM = 55;
-    const mStr = String(roundedM).padStart(2, '0');
-    set24hTime(prefix, `${h}:${mStr}`, true);
-  }
-
-  // 시작 시간이든 끝나는 시간이든 클릭 시 비어있으면 현재시간 자동 선택
-  function onTimeFieldClick(prefix) {
-    const hidden = document.getElementById(`${prefix}-time`);
-    if (!hidden || !hidden.value) {
-      setCurrentTime24h(prefix);
-    }
+    const m = String(now.getMinutes()).padStart(2, '0');
+    set24hTime(prefix, `${h}:${m}`, true);
   }
 
   /* =========================================================================
@@ -4093,14 +4075,14 @@
       document.getElementById('ot-date').value = todayStr;
     }
 
-    // 24시간 선택기 옵션 채우기
-    populate24hOptions('ot-start-hour', 'ot-start-min');
-    populate24hOptions('ot-end-hour', 'ot-end-min');
+    // 24시간 선택기 옵션 채우기 (출근일 연장 기본: 20시 00분, 끝시간 기본: 00시 00분)
+    populate24hOptions('ot-start-hour', 'ot-start-min', '20', '00');
+    populate24hOptions('ot-end-hour', 'ot-end-min', '00', '00');
 
-    // 기본값: 출근일 연장 (20:00 기본)
+    // 기본값: 출근일 연장
     document.getElementById('ot-type').value = '출근일 연장';
     set24hTime('ot-start', '20:00', false);
-    set24hTime('ot-end', '', false);
+    set24hTime('ot-end', '00:00', false);
     document.getElementById('ot-minutes').value = '';
     const countInput = document.getElementById('ot-count');
     if (countInput) countInput.value = '';
@@ -4121,19 +4103,20 @@
     if (type === '휴무일 알바') {
       if (minutesSection) minutesSection.style.display = 'none';
       if (countSection) countSection.style.display = 'block';
-      // 휴무일 알바 선택 시 시작시간을 현재시간으로 자동 선택!
-      setCurrentTime24h('ot-start');
+      // 휴무일 알바: 기본 00시 00분 표시 (버튼 누를 때만 현재시간)
+      set24hTime('ot-start', '00:00', false);
+      set24hTime('ot-end', '00:00', false);
     } else {
       if (minutesSection) minutesSection.style.display = 'block';
       if (countSection) countSection.style.display = 'none';
       if (type === '휴무일 잔여업무') {
-        // 휴무일 잔여업무 선택 시 시작시간을 현재시간으로 자동 선택!
-        setCurrentTime24h('ot-start');
+        // 휴무일 잔여업무: 기본 00시 00분 표시
+        set24hTime('ot-start', '00:00', false);
+        set24hTime('ot-end', '00:00', false);
       } else if (type === '출근일 연장') {
-        const hidden = document.getElementById('ot-start-time');
-        if (!hidden || !hidden.value) {
-          set24hTime('ot-start', '20:00', true);
-        }
+        // 출근일 연장: 시작 20:00, 끝 00:00
+        set24hTime('ot-start', '20:00', false);
+        set24hTime('ot-end', '00:00', false);
       }
       calculateOtMinutes();
     }
@@ -4519,10 +4502,10 @@
     document.getElementById('ot-edit-id').value = ot.id;
     document.getElementById('ot-edit-date').value = ot.date || '';
     document.getElementById('ot-edit-type').value = ot.type || '출근일 연장';
-    populate24hOptions('ot-edit-start-hour', 'ot-edit-start-min');
-    populate24hOptions('ot-edit-end-hour', 'ot-edit-end-min');
-    set24hTime('ot-edit-start', ot.startTime || '', false);
-    set24hTime('ot-edit-end', ot.endTime || '', false);
+    populate24hOptions('ot-edit-start-hour', 'ot-edit-start-min', '00', '00');
+    populate24hOptions('ot-edit-end-hour', 'ot-edit-end-min', '00', '00');
+    set24hTime('ot-edit-start', ot.startTime || '00:00', false);
+    set24hTime('ot-edit-end', ot.endTime || '00:00', false);
 
     const type = ot.type || '출근일 연장';
     if (type === '휴무일 알바') {
@@ -4566,14 +4549,14 @@
       if (minutesSection) minutesSection.style.display = 'none';
       if (countSection) countSection.style.display = 'block';
       if (!startTimeHidden || !startTimeHidden.value) {
-        setCurrentTime24h('ot-edit-start');
+        set24hTime('ot-edit-start', '00:00', false);
       }
     } else {
       if (minutesSection) minutesSection.style.display = 'block';
       if (countSection) countSection.style.display = 'none';
       if (type === '휴무일 잔여업무') {
         if (!startTimeHidden || !startTimeHidden.value) {
-          setCurrentTime24h('ot-edit-start');
+          set24hTime('ot-edit-start', '00:00', false);
         }
       } else if (type === '출근일 연장' && (!startTimeHidden || !startTimeHidden.value)) {
         set24hTime('ot-edit-start', '20:00', true);

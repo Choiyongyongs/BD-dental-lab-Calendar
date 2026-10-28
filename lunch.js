@@ -1317,6 +1317,23 @@ function submitBudgetModal(e) {
 }
 
 // 2. 희망 식당 선택 & 랜덤 룰렛 기능 (10개 식당 항상 전체 다 표시)
+
+// 오늘 뭐먹지? 룰렛 모달 열기/닫기
+function openLunchRouletteModal() {
+  const modal = document.getElementById('lunch-roulette-modal');
+  if (modal) {
+    modal.classList.add('active');
+    renderLunchRouletteCandidates();
+  }
+}
+
+function closeLunchRouletteModal() {
+  const modal = document.getElementById('lunch-roulette-modal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+}
+
 function renderLunchRouletteCandidates() {
   const container = document.getElementById('restaurant-candidate-grid');
   if (!container) return;
@@ -1396,7 +1413,7 @@ function runLunchRoulette() {
           <div class="roulette-winner-text" style="font-size: 28px; color: #7e22ce;">🍱 ${escapeHtml(winner.name)}</div>
           <div style="font-size: 12.5px; color: #64748b; margin-top: 6px;">
             [${escapeHtml(winner.category)}] 맛있는 점심식사 되세요! 
-            <button type="button" class="btn-primary" style="margin-left: 8px; padding: 4px 10px; font-size: 12px;" onclick="selectRestaurantTab('${winner.id}')">
+            <button type="button" class="btn-primary" style="margin-left: 8px; padding: 4px 10px; font-size: 12px;" onclick="selectRestaurantTab('${winner.id}'); closeLunchRouletteModal();">
               👉 이 식당 메뉴 보러가기
             </button>
           </div>
@@ -1776,7 +1793,7 @@ function clearAllLunchOrders() {
   renderLunchOrdersTable();
 }
 
-// 카카오톡 단톡방 공유용 텍스트 복사
+// 카카오톡 단톡방 공유용 텍스트 복사 (사용자 지정 양식)
 function copyLunchOrderText() {
   const orders = lunchDailyState.orders || [];
   if (orders.length === 0) {
@@ -1792,33 +1809,26 @@ function copyLunchOrderText() {
   const totalBudget = eatingCount * perBudget;
   const totalOrderPrice = orders.reduce((sum, ord) => sum + (ord.price * (ord.quantity || 1)), 0);
   const diff = totalOrderPrice - totalBudget;
+  const overAmount = diff > 0 ? diff : 0;
 
-  let txt = `🍱 [BD DENTAL LAB 점심 주문서]\n`;
-  txt += `📅 일자: ${todayStr}\n`;
-  txt += `👥 식사 인원: ${eatingCount}명 (1인 식대: ${perBudget.toLocaleString()}원)\n`;
-  txt += `💰 총 예산: ${totalBudget.toLocaleString()}원 / 총 주문액: ${totalOrderPrice.toLocaleString()}원\n`;
-  if (diff > 0) txt += `🚨 초과(오바) 금액: +${diff.toLocaleString()}원\n`;
-  else if (diff < 0) txt += `✅ 잔여 예산: -${Math.abs(diff).toLocaleString()}원 남음\n`;
-  else txt += `✨ 예산 100% 딱 맞춤!\n`;
-  txt += `------------------------------------\n`;
-
-  txt += `[식당별 메뉴 주문 취합]\n`;
-  const aggByRest = {};
+  // 전체 메뉴별 주문 수량 취합
+  const menuMap = {};
   orders.forEach(o => {
-    if (!aggByRest[o.restaurantName]) aggByRest[o.restaurantName] = {};
-    const rMap = aggByRest[o.restaurantName];
-    rMap[o.menuName] = (rMap[o.menuName] || 0) + (o.quantity || 1);
+    menuMap[o.menuName] = (menuMap[o.menuName] || 0) + (o.quantity || 1);
   });
-  for (const [rName, mMap] of Object.entries(aggByRest)) {
-    txt += `▶ ${rName}: `;
-    const items = Object.entries(mMap).map(([mName, q]) => `${mName} × ${q}개`).join(', ');
-    txt += items + `\n`;
+
+  let txt = `[서울비디치과 점심주문]\n`;
+  txt += `${todayStr} , 식사인원 총 ${eatingCount}명\n`;
+  txt += `총주문액 : ${totalOrderPrice.toLocaleString()}원 초과금액${overAmount.toLocaleString()}원\n`;
+  txt += `--주문취합--\n`;
+  for (const [mName, qty] of Object.entries(menuMap)) {
+    txt += `${mName} * ${qty}개\n`;
   }
-  txt += `------------------------------------\n`;
-  txt += `맛있게 드세요! 😋`;
+  txt += `---------------\n`;
+  txt += `감사합니다.`;
 
   navigator.clipboard.writeText(txt).then(() => {
-    alert('✅ 오늘 점심 주문서 텍스트가 복사되었습니다!\n단톡방이나 배달 주문 창에 붙여넣어 공유하세요.');
+    alert('✅ 주문서 텍스트가 복사되었습니다!\n단톡방 등에 붙여넣어 전송하세요.');
   }).catch(() => {
     prompt('아래 텍스트를 복사하세요:', txt);
   });

@@ -119,14 +119,14 @@ input[type="number"] {
   }
 }
 
-/* 재료 탭 전용 그리드: 좌측(재료목록 0.95fr), 우측(이번주 발주목록 1.05fr) */
+/* 재료 탭 전용 그리드: 좌측(재료목록 3), 우측(이번주 발주목록 2) */
 .material-layout-grid {
   display: grid;
-  grid-template-columns: 0.92fr 1.08fr;
-  gap: 24px;
+  grid-template-columns: 3fr 2fr;
+  gap: 20px;
   align-items: start;
 }
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .material-layout-grid {
     grid-template-columns: 1fr;
   }
@@ -206,11 +206,21 @@ input[type="number"] {
 /* 재료 마스터 목록 카드 그리드 */
 .material-master-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 12px;
-  max-height: 480px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  max-height: 520px;
   overflow-y: auto;
   padding-right: 4px;
+}
+@media (max-width: 1350px) {
+  .material-master-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 700px) {
+  .material-master-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .material-item-card {
   border: 1px solid #e2e8f0;
