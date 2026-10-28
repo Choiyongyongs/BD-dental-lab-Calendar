@@ -1,0 +1,484 @@
+/* =========================================================================
+   BD Dental Lab - 재료 주문 & 점심 주문서 전용 스타일시트 (materials-lunch.css)
+   ========================================================================= */
+
+/* 공통 서브 헤더 & 배너 */
+.feature-banner {
+  background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.feature-banner-text {
+  font-size: 13.5px;
+  color: #1e3a8a;
+  line-height: 1.5;
+}
+.feature-banner-badge {
+  background: #3b82f6;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-right: 6px;
+}
+
+/* 탭 내부 카드 그리드 */
+.order-layout-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 1024px) {
+  .order-layout-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 재료 탭 전용 스타일 */
+.urgency-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.urgency-urgent {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
+}
+.urgency-urgent:hover {
+  background: #fecaca;
+}
+.urgency-regular {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+.urgency-regular:hover {
+  background: #bae6fd;
+}
+
+.supplier-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  display: inline-block;
+}
+
+/* 필터 버튼 바 */
+.filter-chip-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.filter-chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.filter-chip:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+.filter-chip.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #1d4ed8;
+}
+
+/* 재료 마스터 목록 카드 그리드 */
+.material-master-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.material-item-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+}
+.material-item-card:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+  transform: translateY(-2px);
+}
+.material-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px;
+}
+.material-card-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+}
+.material-card-spec {
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 2px;
+}
+.material-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 6px;
+  border-top: 1px dashed #f1f5f9;
+}
+
+/* 체크박스 커스텀 */
+.custom-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #2563eb;
+}
+
+/* 점심 탭 전용 스타일 */
+.lunch-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.lunch-stat-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lunch-stat-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.lunch-stat-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+}
+.lunch-stat-sub {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* 인원수 토글 칩 */
+.member-attendance-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.attendance-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.attendance-chip:hover {
+  background: #f1f5f9;
+}
+.attendance-chip.is-working {
+  border-color: #10b981;
+  background: #ecfdf5;
+  color: #065f46;
+}
+.attendance-chip.is-eating {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
+}
+.attendance-chip.is-off {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+
+/* 식당 선택 및 랜덤 룰렛 영역 */
+.roulette-container {
+  background: linear-gradient(135deg, #faf5ff 0%, #fdf2f8 100%);
+  border: 1.5px solid #f3e8ff;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+.restaurant-select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  margin: 14px 0;
+}
+.restaurant-chip {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1.5px solid #e9d5ff;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  color: #6b21a8;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+.restaurant-chip:hover {
+  border-color: #c084fc;
+  background: #faf5ff;
+  transform: translateY(-1px);
+}
+.restaurant-chip.selected {
+  background: #9333ea;
+  color: #ffffff;
+  border-color: #7e22ce;
+  box-shadow: 0 4px 10px rgba(147, 51, 234, 0.25);
+}
+
+.roulette-display-box {
+  background: #ffffff;
+  border: 2px dashed #c084fc;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  margin-top: 12px;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.roulette-winner-text {
+  font-size: 26px;
+  font-weight: 900;
+  color: #7e22ce;
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes popIn {
+  from { transform: scale(0.7); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* 식당 메뉴판 탭 및 카드 */
+.restaurant-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+}
+.restaurant-tab-btn {
+  white-space: nowrap;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+}
+.restaurant-tab-btn.active {
+  background: #3b82f6;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+.menu-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.menu-item-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  background: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+.menu-item-card:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.menu-item-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.menu-item-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: #2563eb;
+  margin-top: 2px;
+}
+
+/* 주문서 요약 테이블 & 박스 */
+.budget-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.budget-status-ok {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+.budget-status-over {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  animation: pulseOver 1.5s infinite;
+}
+@keyframes pulseOver {
+  0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
+
+/* 발주서/주문서 캡쳐용 템플릿 (인쇄/이미지 생성용 스타일) */
+#capture-preview-area {
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  color: #0f172a;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+.capture-header {
+  border-bottom: 2px solid #0f172a;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.capture-title {
+  font-size: 22px;
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+  margin: 0;
+}
+.capture-meta {
+  font-size: 12px;
+  color: #64748b;
+  text-align: right;
+  line-height: 1.5;
+}
+.capture-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.capture-table th {
+  background: #f1f5f9;
+  border-top: 1.5px solid #0f172a;
+  border-bottom: 1.5px solid #cbd5e1;
+  padding: 9px 8px;
+  font-weight: 700;
+  text-align: left;
+}
+.capture-table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px;
+  vertical-align: middle;
+}
+.capture-footer {
+  border-top: 1px dashed #cbd5e1;
+  padding-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* 모바일 전용 미디어 쿼리 */
+@media (max-width: 768px) {
+  .feature-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .restaurant-select-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .material-master-grid,
+  .menu-list-grid {
+    grid-template-columns: 1fr;
+  }
+  #capture-preview-area {
+    padding: 14px;
+  }
+  .capture-title {
+    font-size: 18px;
+  }
+}
