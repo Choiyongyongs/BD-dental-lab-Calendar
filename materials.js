@@ -185,7 +185,7 @@ function renderMaterialOrderList() {
         <td colspan="8" style="text-align: center; padding: 40px 10px; color: #94a3b8; font-size: 13.5px;">
           🛒 이번 주 주문할 재료가 아직 없습니다.<br>
           <span style="font-size: 12px; color: #cbd5e1; margin-top: 6px; display: inline-block;">
-            우측 '재료 도감'에서 품목을 선택하거나 '새 재료 직접 등록'을 클릭해 담아주세요!
+            우측 '재료목록'에서 품목을 선택하거나 '재료등록'을 클릭해 담아주세요!
           </span>
         </td>
       </tr>
@@ -264,7 +264,7 @@ function renderMaterialMasterGrid() {
   if (list.length === 0) {
     container.innerHTML = `
       <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: #94a3b8; font-size: 13px;">
-        🔍 검색된 재료가 없습니다. 상단 '새 재료 직접 등록'을 통해 바로 추가해보세요!
+        🔍 검색된 재료가 없습니다. 상단 '재료등록'을 통해 바로 추가해보세요!
       </div>
     `;
     return;
@@ -279,9 +279,8 @@ function renderMaterialMasterGrid() {
           <div class="material-card-spec">${escapeHtml(item.spec || '-')}</div>
         </div>
       </div>
-      <div class="material-card-footer">
-        <span class="supplier-chip" style="font-size: 10.5px;">${escapeHtml(item.defaultSupplier || '일반')}</span>
-        <div style="display: flex; gap: 4px;">
+      <div class="material-card-footer" style="justify-content: flex-end;">
+        <div style="display: flex; gap: 4px; justify-content: flex-end; width: 100%;">
           <button type="button" class="urgency-badge urgency-regular" style="padding: 3px 8px; font-size: 11px;" onclick="quickAddMaterialToOrder('${item.id}', 'regular')">📦 정기 담기</button>
           <button type="button" class="urgency-badge urgency-urgent" style="padding: 3px 8px; font-size: 11px;" onclick="quickAddMaterialToOrder('${item.id}', 'urgent')">🚨 긴급 담기</button>
         </div>
@@ -452,13 +451,13 @@ function clearAllMaterialOrders() {
   renderMaterialTab();
 }
 
-// 사용자가 새로운 재료 마스터 등록 모달 열기/저장
+// 사용자가 새로운 재료 등록 모달 열기/저장
 function openAddCustomMaterialModal() {
   document.getElementById('modal-new-mat-name').value = '';
   document.getElementById('modal-new-mat-cat').value = '소모품';
   document.getElementById('modal-new-mat-supplier').value = '신흥';
   document.getElementById('modal-new-mat-spec').value = '';
-  document.getElementById('modal-new-mat-unit').value = 'ea';
+  document.getElementById('modal-new-mat-unit').value = '개';
   document.getElementById('custom-material-modal').classList.add('active');
 }
 
@@ -472,7 +471,7 @@ function submitCustomMaterial(e) {
   const category = document.getElementById('modal-new-mat-cat').value;
   const supplier = document.getElementById('modal-new-mat-supplier').value.trim() || '신흥';
   const spec = document.getElementById('modal-new-mat-spec').value.trim();
-  const unit = document.getElementById('modal-new-mat-unit').value.trim() || 'ea';
+  const unit = document.getElementById('modal-new-mat-unit').value.trim() || '개';
 
   if (!name) {
     alert('재료명을 입력해주세요.');

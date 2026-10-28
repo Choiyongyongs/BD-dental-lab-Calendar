@@ -1201,7 +1201,7 @@
         <div style="font-size: 13px; color: #64748b; margin-top: 4px;">주 1회 정기 발주 및 긴급 재료 신청 시스템 (선택 품목 캡쳐 전송)</div>
       </div>
       <div class="controls">
-        <button type="button" class="btn-primary" onclick="openAddCustomMaterialModal()" style="background: #2563eb;">➕ 새 재료 직접 등록</button>
+        <button type="button" class="btn-primary" onclick="openAddCustomMaterialModal()" style="background: #2563eb;">➕ 재료등록</button>
         <button type="button" class="btn-primary" onclick="openMaterialCaptureModal()" style="background: #4f46e5; border-color: #4338ca;">📸 선택 항목 캡쳐 (발주용)</button>
         <button type="button" class="btn-danger" onclick="clearAllMaterialOrders()">🗑️ 주문 초기화</button>
       </div>
@@ -1262,10 +1262,10 @@
         </div>
       </div>
 
-      <!-- 우측: 재료 도감 (기본 목록 & 검색 & 추가) -->
+      <!-- 우측: 재료목록 -->
       <div class="card">
         <div class="card-title" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-          <span>📚 재료 도감 (빠른 담기)</span>
+          <span>📚 재료목록</span>
           <span style="font-size: 12px; color: #64748b;">원하는 항목의 [담기]를 누르세요</span>
         </div>
 
@@ -1441,10 +1441,10 @@
 </div>
 
 
-<!-- 새 재료 마스터 등록 모달 -->
+<!-- 재료등록 모달 -->
 <div class="modal-overlay" id="custom-material-modal">
   <div class="modal-card" style="max-width: 460px;">
-    <h3>➕ 새 재료 마스터 등록</h3>
+    <h3>➕ 재료등록</h3>
     <form onsubmit="submitCustomMaterial(event)">
       <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 12px;">
         <div class="form-group">
@@ -1466,14 +1466,19 @@
           <label>기본 거래처 / 재료상</label>
           <input type="text" id="modal-new-mat-supplier" placeholder="예: 신흥, 한일치재, 오스템, 덴티움 등" style="width: 100%;" />
         </div>
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+        <div style="display: grid; grid-template-columns: 1.6fr 1.4fr; gap: 10px;">
           <div class="form-group">
             <label>규격 / 세부사항</label>
             <input type="text" id="modal-new-mat-spec" placeholder="예: A2 쉐이드, 50g 등" style="width: 100%;" />
           </div>
           <div class="form-group">
             <label>기본 단위</label>
-            <input type="text" id="modal-new-mat-unit" placeholder="ea, box" value="ea" style="width: 100%;" />
+            <select id="modal-new-mat-unit" style="width: 100%;">
+              <option value="개" selected>개</option>
+              <option value="ML">ML</option>
+              <option value="세트">세트</option>
+              <option value="박스">박스</option>
+            </select>
           </div>
         </div>
       </div>
