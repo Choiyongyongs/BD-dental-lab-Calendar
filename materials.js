@@ -182,10 +182,10 @@ function renderMaterialOrderList() {
   if (filteredOrders.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="8" style="text-align: center; padding: 40px 10px; color: #94a3b8; font-size: 13.5px;">
+        <td colspan="7" style="text-align: center; padding: 40px 10px; color: #94a3b8; font-size: 13.5px;">
           🛒 이번 주 주문할 재료가 아직 없습니다.<br>
           <span style="font-size: 12px; color: #cbd5e1; margin-top: 6px; display: inline-block;">
-            우측 '재료목록'에서 품목을 선택하거나 '재료등록'을 클릭해 담아주세요!
+            좌측 '재료목록'에서 품목을 선택하거나 '재료등록'을 클릭해 담아주세요!
           </span>
         </td>
       </tr>
@@ -198,10 +198,6 @@ function renderMaterialOrderList() {
     const urgencyBadge = isUrgent
       ? `<span class="urgency-badge urgency-urgent" onclick="toggleOrderUrgency('${ord.id}')" title="클릭시 정기 주문으로 변경">🚨 긴급</span>`
       : `<span class="urgency-badge urgency-regular" onclick="toggleOrderUrgency('${ord.id}')" title="클릭시 긴급 주문으로 변경">📦 정기</span>`;
-
-    const memberSelectOptions = ['용희', '세진', '소영', '이슬', '서영', '찬유'].map(m => `
-      <option value="${m}" ${ord.applicant === m ? 'selected' : ''}>${m}</option>
-    `).join('') + `<option value="기타" ${!['용희', '세진', '소영', '이슬', '서영', '찬유'].includes(ord.applicant) ? 'selected' : ''}>기타</option>`;
 
     return `
       <tr style="${isUrgent ? 'background-color: #fffaf0;' : ''}">
@@ -225,11 +221,6 @@ function renderMaterialOrderList() {
             </div>
             <span style="font-size: 11.5px; color: #64748b; font-weight: 600;">${escapeHtml(ord.unit || 'ea')}</span>
           </div>
-        </td>
-        <td style="width: 90px;">
-          <select style="padding: 4px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 12px; font-weight: 600;" onchange="updateOrderApplicant('${ord.id}', this.value)">
-            ${memberSelectOptions}
-          </select>
         </td>
         <td>
           <input type="text" value="${escapeHtml(ord.note || '')}" placeholder="비고 (예: A2 쉐이드, 빠른 배송 등)" style="width: 100%; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 12px;" onchange="updateOrderNote('${ord.id}', this.value)" />
@@ -548,7 +539,6 @@ function renderCapturePreviewContent() {
       <td style="font-weight: 700; color: #0f172a;">${escapeHtml(ord.name)}</td>
       <td style="color: #475569; font-size: 12px;">${escapeHtml(ord.spec || '-')}</td>
       <td style="text-align: center; font-weight: 800; color: #1e3a8a;">${ord.quantity} ${escapeHtml(ord.unit || 'ea')}</td>
-      <td style="text-align: center; color: #475569; font-size: 12px;">${escapeHtml(ord.applicant || '-')}</td>
       <td style="color: #64748b; font-size: 12px;">${escapeHtml(ord.note || '-')}</td>
     </tr>
   `).join('');
@@ -576,9 +566,8 @@ function renderCapturePreviewContent() {
           <th style="width: 65px; text-align: center;">구분</th>
           <th>품목명</th>
           <th style="width: 140px;">규격 / 세부사항</th>
-          <th style="width: 75px; text-align: center;">수량</th>
-          <th style="width: 65px; text-align: center;">신청자</th>
-          <th style="width: 120px;">비고</th>
+          <th style="width: 80px; text-align: center;">수량</th>
+          <th style="width: 130px;">비고</th>
         </tr>
       </thead>
       <tbody>

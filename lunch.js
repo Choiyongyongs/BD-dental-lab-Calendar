@@ -1334,10 +1334,6 @@ function renderLunchRouletteCandidates() {
 
 function toggleCandidateRestaurant(restId) {
   if (candidateRestaurantIds.includes(restId)) {
-    if (candidateRestaurantIds.length <= 1) {
-      alert('최소 1개 이상의 식당을 선택해야 룰렛을 돌릴 수 있습니다!');
-      return;
-    }
     candidateRestaurantIds = candidateRestaurantIds.filter(id => id !== restId);
   } else {
     candidateRestaurantIds.push(restId);
@@ -1349,7 +1345,7 @@ function selectAllCandidateRestaurants(selectAll) {
   if (selectAll) {
     candidateRestaurantIds = lunchRestaurants.map(r => r.id);
   } else {
-    candidateRestaurantIds = [lunchRestaurants[0].id];
+    candidateRestaurantIds = [];
   }
   renderLunchRouletteCandidates();
 }
@@ -1691,9 +1687,6 @@ function renderLunchOrdersTable() {
           </div>
         </td>
         <td style="text-align: right; font-weight: 800; color: #2563eb; width: 90px;">${itemTotal.toLocaleString()}원</td>
-        <td>
-          <input type="text" value="${escapeHtml(ord.note || '')}" placeholder="비고(요청사항)" style="width: 100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px;" onchange="updateLunchOrderNote('${ord.id}', this.value)" />
-        </td>
         <td style="text-align: center; width: 44px;">
           <button type="button" class="btn-danger" style="padding: 3px 7px; font-size: 11px;" onclick="deleteLunchOrder('${ord.id}')">✕</button>
         </td>

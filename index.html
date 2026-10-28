@@ -1224,9 +1224,36 @@
       </div>
     </div>
 
-    <!-- 좌우 2분할 레이아웃 -->
-    <div class="order-layout-grid">
-      <!-- 좌측: 이번 주 발주 대기 목록 (체크박스로 캡쳐 대상 선택) -->
+    <!-- 좌우 2분할 레이아웃 (좌측: 재료목록, 우측: 이번 주 발주 목록) -->
+    <div class="material-layout-grid">
+      <!-- 좌측: 재료목록 -->
+      <div class="card">
+        <div class="card-title" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <span>📚 재료목록</span>
+          <span style="font-size: 12px; color: #64748b;">원하는 항목의 [담기]를 누르세요</span>
+        </div>
+
+        <!-- 검색창 -->
+        <div style="margin-bottom: 12px;">
+          <input type="text" id="mat-search-input" placeholder="🔍 재료명, 규격, 제조사 검색..." style="width: 100%; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px;" oninput="handleMaterialSearch(this.value)" />
+        </div>
+
+        <!-- 카테고리 칩 -->
+        <div class="filter-chip-bar">
+          <button type="button" class="filter-chip active mat-cat-btn" data-cat="ALL" onclick="setMaterialCategoryFilter('ALL')">전체</button>
+          <button type="button" class="filter-chip mat-cat-btn" data-cat="CAD/CAM" onclick="setMaterialCategoryFilter('CAD/CAM')">CAD/CAM</button>
+          <button type="button" class="filter-chip mat-cat-btn" data-cat="포세린" onclick="setMaterialCategoryFilter('포세린')">포세린</button>
+          <button type="button" class="filter-chip mat-cat-btn" data-cat="레진" onclick="setMaterialCategoryFilter('레진')">레진</button>
+          <button type="button" class="filter-chip mat-cat-btn" data-cat="석고" onclick="setMaterialCategoryFilter('석고')">석고</button>
+          <button type="button" class="filter-chip mat-cat-btn" data-cat="메탈" onclick="setMaterialCategoryFilter('메탈')">메탈</button>
+          <button type="button" class="filter-chip mat-cat-btn" data-cat="소모품" onclick="setMaterialCategoryFilter('소모품')">소모품</button>
+        </div>
+
+        <!-- 재료 마스터 그리드 -->
+        <div id="material-master-grid" class="material-master-grid"></div>
+      </div>
+
+      <!-- 우측: 이번 주 발주 목록 (체크박스로 캡쳐 대상 선택) -->
       <div class="card">
         <div class="card-title" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
           <div style="display: flex; align-items: center; gap: 10px;">
@@ -1255,8 +1282,7 @@
                 <th style="width: 75px; text-align: center;">구분</th>
                 <th>품목명 / 규격</th>
                 <th style="width: 95px;">재료상</th>
-                <th style="width: 110px; text-align: center;">수량</th>
-                <th style="width: 85px;">신청자</th>
+                <th style="width: 120px; text-align: center;">수량</th>
                 <th>비고</th>
                 <th style="width: 44px; text-align: center;">삭제</th>
               </tr>
@@ -1264,33 +1290,6 @@
             <tbody id="material-order-tbody"></tbody>
           </table>
         </div>
-      </div>
-
-      <!-- 우측: 재료목록 -->
-      <div class="card">
-        <div class="card-title" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-          <span>📚 재료목록</span>
-          <span style="font-size: 12px; color: #64748b;">원하는 항목의 [담기]를 누르세요</span>
-        </div>
-
-        <!-- 검색창 -->
-        <div style="margin-bottom: 12px;">
-          <input type="text" id="mat-search-input" placeholder="🔍 재료명, 규격, 카테고리 검색..." style="width: 100%; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px;" oninput="handleMaterialSearch(this.value)" />
-        </div>
-
-        <!-- 카테고리 칩 -->
-        <div class="filter-chip-bar">
-          <button type="button" class="filter-chip active mat-cat-btn" data-cat="ALL" onclick="setMaterialCategoryFilter('ALL')">전체</button>
-          <button type="button" class="filter-chip mat-cat-btn" data-cat="CAD/CAM" onclick="setMaterialCategoryFilter('CAD/CAM')">CAD/CAM</button>
-          <button type="button" class="filter-chip mat-cat-btn" data-cat="포세린" onclick="setMaterialCategoryFilter('포세린')">포세린</button>
-          <button type="button" class="filter-chip mat-cat-btn" data-cat="레진" onclick="setMaterialCategoryFilter('레진')">레진</button>
-          <button type="button" class="filter-chip mat-cat-btn" data-cat="석고" onclick="setMaterialCategoryFilter('석고')">석고</button>
-          <button type="button" class="filter-chip mat-cat-btn" data-cat="메탈" onclick="setMaterialCategoryFilter('메탈')">메탈</button>
-          <button type="button" class="filter-chip mat-cat-btn" data-cat="소모품" onclick="setMaterialCategoryFilter('소모품')">소모품</button>
-        </div>
-
-        <!-- 재료 마스터 그리드 -->
-        <div id="material-master-grid" class="material-master-grid"></div>
       </div>
     </div>
   </div>
@@ -1346,7 +1345,7 @@
         </div>
         <div style="display: flex; gap: 6px;">
           <button type="button" style="padding: 5px 10px; font-size: 12px;" onclick="selectAllCandidateRestaurants(true)">전체 선택</button>
-          <button type="button" style="padding: 5px 10px; font-size: 12px;" onclick="selectAllCandidateRestaurants(false)">1개만 남기기</button>
+          <button type="button" style="padding: 5px 10px; font-size: 12px;" onclick="selectAllCandidateRestaurants(false)">전체 해제</button>
           <button type="button" id="btn-run-roulette" class="btn-primary" style="background: #9333ea; border-color: #7e22ce; font-weight: 800; font-size: 13.5px; padding: 6px 16px;" onclick="runLunchRoulette()">
             🎰 랜덤 식당 추첨!
           </button>
@@ -1400,11 +1399,10 @@
                 <th style="width: 40px; text-align: center;">No</th>
                 <th style="width: 95px;">식당</th>
                 <th>메뉴명</th>
-                <th style="text-align: right; width: 75px;">단가</th>
-                <th style="text-align: center; width: 105px;">수량</th>
-                <th style="text-align: right; width: 85px;">금액</th>
-                <th>비고</th>
-                <th style="width: 40px; text-align: center;">삭제</th>
+                <th style="text-align: right; width: 80px;">단가</th>
+                <th style="text-align: center; width: 110px;">수량</th>
+                <th style="text-align: right; width: 90px;">금액</th>
+                <th style="width: 44px; text-align: center;">삭제</th>
               </tr>
             </thead>
             <tbody id="lunch-orders-tbody"></tbody>
@@ -1761,15 +1759,36 @@
           </select>
         </div>
 
-        <!-- 시작 시간 & 끝 시간 (알바 포함 모든 형태 입력 가능) -->
+        <!-- 시작 시간 & 끝 시간 (24시간 선택 & 클릭시 현재시간 자동 선택) -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="form-group">
-            <label for="ot-start-time">시작 시간</label>
-            <input type="time" id="ot-start-time" style="width: 100%;" onchange="calculateOtMinutes()" oninput="calculateOtMinutes()" />
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label style="margin: 0; font-size: 13.5px; font-weight: 700;">시작 시간 (24시)</label>
+              <button type="button" onclick="setCurrentTime24h('ot-start')" style="font-size: 11px; padding: 2px 7px; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; border-radius: 4px; cursor: pointer; font-weight: 700;">
+                ⏱ 현재시간
+              </button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <select id="ot-start-hour" onfocus="onTimeFieldClick('ot-start')" onchange="on24hSelectChange('ot-start')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
+              <span style="font-weight: 900; color: #64748b;">:</span>
+              <select id="ot-start-min" onfocus="onTimeFieldClick('ot-start')" onchange="on24hSelectChange('ot-start')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
+            </div>
+            <input type="hidden" id="ot-start-time" value="20:00" />
           </div>
+
           <div class="form-group">
-            <label for="ot-end-time">끝 시간</label>
-            <input type="time" id="ot-end-time" style="width: 100%;" onchange="calculateOtMinutes()" oninput="calculateOtMinutes()" />
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label style="margin: 0; font-size: 13.5px; font-weight: 700;">끝 시간 (24시)</label>
+              <button type="button" onclick="setCurrentTime24h('ot-end')" style="font-size: 11px; padding: 2px 7px; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; border-radius: 4px; cursor: pointer; font-weight: 700;">
+                ⏱ 현재시간
+              </button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <select id="ot-end-hour" onfocus="onTimeFieldClick('ot-end')" onchange="on24hSelectChange('ot-end')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
+              <span style="font-weight: 900; color: #64748b;">:</span>
+              <select id="ot-end-min" onfocus="onTimeFieldClick('ot-end')" onchange="on24hSelectChange('ot-end')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
+            </div>
+            <input type="hidden" id="ot-end-time" value="" />
           </div>
         </div>
 
@@ -1844,15 +1863,36 @@
             </select>
           </div>
 
-          <!-- 시작 시간 & 끝 시간 -->
+          <!-- 시작 시간 & 끝 시간 (24시간 선택 & 클릭시 현재시간 자동 선택) -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div class="form-group">
-              <label for="ot-edit-start-time">시작 시간</label>
-              <input type="time" id="ot-edit-start-time" style="width: 100%;" onchange="calculateOtEditMinutes()" oninput="calculateOtEditMinutes()" />
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label style="margin: 0; font-size: 13.5px; font-weight: 700;">시작 시간 (24시)</label>
+                <button type="button" onclick="setCurrentTime24h('ot-edit-start')" style="font-size: 11px; padding: 2px 7px; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; border-radius: 4px; cursor: pointer; font-weight: 700;">
+                  ⏱ 현재시간
+                </button>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <select id="ot-edit-start-hour" onfocus="onTimeFieldClick('ot-edit-start')" onchange="on24hSelectChange('ot-edit-start')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
+                <span style="font-weight: 900; color: #64748b;">:</span>
+                <select id="ot-edit-start-min" onfocus="onTimeFieldClick('ot-edit-start')" onchange="on24hSelectChange('ot-edit-start')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
+              </div>
+              <input type="hidden" id="ot-edit-start-time" value="" />
             </div>
+
             <div class="form-group">
-              <label for="ot-edit-end-time">끝 시간</label>
-              <input type="time" id="ot-edit-end-time" style="width: 100%;" onchange="calculateOtEditMinutes()" oninput="calculateOtEditMinutes()" />
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label style="margin: 0; font-size: 13.5px; font-weight: 700;">끝 시간 (24시)</label>
+                <button type="button" onclick="setCurrentTime24h('ot-edit-end')" style="font-size: 11px; padding: 2px 7px; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; border-radius: 4px; cursor: pointer; font-weight: 700;">
+                  ⏱ 현재시간
+                </button>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <select id="ot-edit-end-hour" onfocus="onTimeFieldClick('ot-edit-end')" onchange="on24hSelectChange('ot-edit-end')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
+                <span style="font-weight: 900; color: #64748b;">:</span>
+                <select id="ot-edit-end-min" onfocus="onTimeFieldClick('ot-edit-end')" onchange="on24hSelectChange('ot-edit-end')" style="flex: 1; padding: 8px 4px; font-size: 13.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; text-align: center; cursor: pointer;"></select>
+              </div>
+              <input type="hidden" id="ot-edit-end-time" value="" />
             </div>
           </div>
 
@@ -3943,6 +3983,105 @@
   }
 
   /* =========================================================================
+     7-0. 24시간 시간 선택기 헬퍼 (오전/오후 없이 00시~23시 선택, 클릭 시 현재시간 자동 세팅)
+     ========================================================================= */
+  function populate24hOptions(hourSelectId, minSelectId, defaultHour = '', defaultMin = '') {
+    const hSel = document.getElementById(hourSelectId);
+    const mSel = document.getElementById(minSelectId);
+    if (!hSel || !mSel) return;
+
+    let hHtml = '<option value="">시 선택</option>';
+    for (let h = 0; h < 24; h++) {
+      const hStr = String(h).padStart(2, '0');
+      hHtml += `<option value="${hStr}">${hStr}시</option>`;
+    }
+    hSel.innerHTML = hHtml;
+
+    let mHtml = '<option value="">분 선택</option>';
+    for (let m = 0; m < 60; m += 5) {
+      const mStr = String(m).padStart(2, '0');
+      mHtml += `<option value="${mStr}">${mStr}분</option>`;
+    }
+    mSel.innerHTML = mHtml;
+
+    if (defaultHour !== undefined && defaultHour !== '') hSel.value = defaultHour;
+    if (defaultMin !== undefined && defaultMin !== '') mSel.value = defaultMin;
+  }
+
+  function set24hTime(prefix, timeStr, triggerCalc = true) {
+    const hSel = document.getElementById(`${prefix}-hour`);
+    const mSel = document.getElementById(`${prefix}-min`);
+    const hidden = document.getElementById(`${prefix}-time`);
+    if (!hidden) return;
+
+    if (!timeStr) {
+      if (hSel) hSel.value = '';
+      if (mSel) mSel.value = '';
+      hidden.value = '';
+    } else {
+      const parts = timeStr.split(':');
+      const h = parts[0] || '';
+      let m = parts[1] || '00';
+      
+      let mNum = parseInt(m, 10);
+      if (isNaN(mNum)) mNum = 0;
+      let roundedM = Math.round(mNum / 5) * 5;
+      if (roundedM >= 60) roundedM = 55;
+      const mRoundedStr = String(roundedM).padStart(2, '0');
+
+      if (hSel) hSel.value = h;
+      if (mSel) mSel.value = mRoundedStr;
+      hidden.value = `${h}:${mRoundedStr}`;
+    }
+
+    if (triggerCalc) {
+      if (prefix.includes('edit')) calculateOtEditMinutes();
+      else calculateOtMinutes();
+    }
+  }
+
+  function on24hSelectChange(prefix) {
+    const hSel = document.getElementById(`${prefix}-hour`);
+    const mSel = document.getElementById(`${prefix}-min`);
+    const hidden = document.getElementById(`${prefix}-time`);
+    if (!hSel || !mSel || !hidden) return;
+
+    if (hSel.value && mSel.value) {
+      hidden.value = `${hSel.value}:${mSel.value}`;
+    } else if (hSel.value && !mSel.value) {
+      mSel.value = '00';
+      hidden.value = `${hSel.value}:00`;
+    } else if (!hSel.value && mSel.value) {
+      const curH = String(new Date().getHours()).padStart(2, '0');
+      hSel.value = curH;
+      hidden.value = `${curH}:${mSel.value}`;
+    } else {
+      hidden.value = '';
+    }
+
+    if (prefix.includes('edit')) calculateOtEditMinutes();
+    else calculateOtMinutes();
+  }
+
+  function setCurrentTime24h(prefix) {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    let m = now.getMinutes();
+    let roundedM = Math.round(m / 5) * 5;
+    if (roundedM >= 60) roundedM = 55;
+    const mStr = String(roundedM).padStart(2, '0');
+    set24hTime(prefix, `${h}:${mStr}`, true);
+  }
+
+  // 시작 시간이든 끝나는 시간이든 클릭 시 비어있으면 현재시간 자동 선택
+  function onTimeFieldClick(prefix) {
+    const hidden = document.getElementById(`${prefix}-time`);
+    if (!hidden || !hidden.value) {
+      setCurrentTime24h(prefix);
+    }
+  }
+
+  /* =========================================================================
      7. 연장근무 탭 구현 (모달 등록, 시작·끝시간 분 자동계산, 알바 갯수, 연장 전용 캘린더)
      ========================================================================= */
   function openOtModal() {
@@ -3954,10 +4093,14 @@
       document.getElementById('ot-date').value = todayStr;
     }
 
-    // 기본값: 출근일 연장
+    // 24시간 선택기 옵션 채우기
+    populate24hOptions('ot-start-hour', 'ot-start-min');
+    populate24hOptions('ot-end-hour', 'ot-end-min');
+
+    // 기본값: 출근일 연장 (20:00 기본)
     document.getElementById('ot-type').value = '출근일 연장';
-    document.getElementById('ot-start-time').value = '20:00';
-    document.getElementById('ot-end-time').value = '';
+    set24hTime('ot-start', '20:00', false);
+    set24hTime('ot-end', '', false);
     document.getElementById('ot-minutes').value = '';
     const countInput = document.getElementById('ot-count');
     if (countInput) countInput.value = '';
@@ -3974,16 +4117,23 @@
     const type = document.getElementById('ot-type').value;
     const minutesSection = document.getElementById('ot-minutes-section');
     const countSection = document.getElementById('ot-count-section');
-    const startTimeInput = document.getElementById('ot-start-time');
 
     if (type === '휴무일 알바') {
       if (minutesSection) minutesSection.style.display = 'none';
       if (countSection) countSection.style.display = 'block';
+      // 휴무일 알바 선택 시 시작시간을 현재시간으로 자동 선택!
+      setCurrentTime24h('ot-start');
     } else {
       if (minutesSection) minutesSection.style.display = 'block';
       if (countSection) countSection.style.display = 'none';
-      if (type === '출근일 연장') {
-        if (!startTimeInput.value) startTimeInput.value = '20:00';
+      if (type === '휴무일 잔여업무') {
+        // 휴무일 잔여업무 선택 시 시작시간을 현재시간으로 자동 선택!
+        setCurrentTime24h('ot-start');
+      } else if (type === '출근일 연장') {
+        const hidden = document.getElementById('ot-start-time');
+        if (!hidden || !hidden.value) {
+          set24hTime('ot-start', '20:00', true);
+        }
       }
       calculateOtMinutes();
     }
@@ -4369,8 +4519,10 @@
     document.getElementById('ot-edit-id').value = ot.id;
     document.getElementById('ot-edit-date').value = ot.date || '';
     document.getElementById('ot-edit-type').value = ot.type || '출근일 연장';
-    document.getElementById('ot-edit-start-time').value = ot.startTime || '';
-    document.getElementById('ot-edit-end-time').value = ot.endTime || '';
+    populate24hOptions('ot-edit-start-hour', 'ot-edit-start-min');
+    populate24hOptions('ot-edit-end-hour', 'ot-edit-end-min');
+    set24hTime('ot-edit-start', ot.startTime || '', false);
+    set24hTime('ot-edit-end', ot.endTime || '', false);
 
     const type = ot.type || '출근일 연장';
     if (type === '휴무일 알바') {
@@ -4408,16 +4560,23 @@
     const type = document.getElementById('ot-edit-type').value;
     const minutesSection = document.getElementById('ot-edit-minutes-section');
     const countSection = document.getElementById('ot-edit-count-section');
-    const startTimeInput = document.getElementById('ot-edit-start-time');
+    const startTimeHidden = document.getElementById('ot-edit-start-time');
 
     if (type === '휴무일 알바') {
       if (minutesSection) minutesSection.style.display = 'none';
       if (countSection) countSection.style.display = 'block';
+      if (!startTimeHidden || !startTimeHidden.value) {
+        setCurrentTime24h('ot-edit-start');
+      }
     } else {
       if (minutesSection) minutesSection.style.display = 'block';
       if (countSection) countSection.style.display = 'none';
-      if (type === '출근일 연장' && !startTimeInput.value) {
-        startTimeInput.value = '20:00';
+      if (type === '휴무일 잔여업무') {
+        if (!startTimeHidden || !startTimeHidden.value) {
+          setCurrentTime24h('ot-edit-start');
+        }
+      } else if (type === '출근일 연장' && (!startTimeHidden || !startTimeHidden.value)) {
+        set24hTime('ot-edit-start', '20:00', true);
       }
       calculateOtEditMinutes();
     }

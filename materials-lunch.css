@@ -119,6 +119,19 @@ input[type="number"] {
   }
 }
 
+/* 재료 탭 전용 그리드: 좌측(재료목록 0.95fr), 우측(이번주 발주목록 1.05fr) */
+.material-layout-grid {
+  display: grid;
+  grid-template-columns: 0.92fr 1.08fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 1024px) {
+  .material-layout-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* 재료 탭 전용 스타일 */
 .urgency-badge {
   display: inline-flex;
