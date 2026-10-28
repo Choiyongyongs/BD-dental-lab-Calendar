@@ -966,16 +966,10 @@
         <div id="filter-status-banner" style="font-size: 13px; font-weight: 700; color: #4338ca; display: none; background: #eef2ff; border: 1px solid #c7d2fe; padding: 3px 10px; border-radius: 20px;"></div>
       </div>
       <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
-        <!-- 조 설정 바로 위: 직원 필터 바 (용희, 찬유, 소영, 세진, 서영, 이슬) -->
-        <div class="member-filter-bar" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
+        <!-- 조 설정 바로 위: 직원 필터 바 (동적 렌더링) -->
+        <div class="member-filter-bar" id="member-filter-container" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
           <span style="font-size: 12.5px; font-weight: 700; color: #64748b; margin-right: 2px;">👤 직원 필터:</span>
           <button type="button" class="member-filter-chip active" id="filter-btn-ALL" onclick="setMemberFilter('ALL')">전체</button>
-          <button type="button" class="member-filter-chip" id="filter-btn-용희" onclick="setMemberFilter('용희')">용희</button>
-          <button type="button" class="member-filter-chip" id="filter-btn-찬유" onclick="setMemberFilter('찬유')">찬유</button>
-          <button type="button" class="member-filter-chip" id="filter-btn-소영" onclick="setMemberFilter('소영')">소영</button>
-          <button type="button" class="member-filter-chip" id="filter-btn-세진" onclick="setMemberFilter('세진')">세진</button>
-          <button type="button" class="member-filter-chip" id="filter-btn-서영" onclick="setMemberFilter('서영')">서영</button>
-          <button type="button" class="member-filter-chip" id="filter-btn-이슬" onclick="setMemberFilter('이슬')">이슬</button>
         </div>
         <div class="controls">
           <button class="btn-primary btn-swap" onclick="openSwapModal()" style="background:#4f46e5; border-color:#4338ca;"><span class="swap-icon">🔄</span><span class="swap-text">근무<br>바꿈</span></button>
@@ -1606,18 +1600,33 @@
   </div>
 </div>
 
-<!-- 조 배정 모달 -->
+<!-- 조 배정 및 직원 설정 모달 -->
 <div class="modal-overlay" id="settings-modal">
-  <div class="modal-card">
-    <h3>조 배정 설정</h3>
-    <div id="modal-settings-list"></div>
-    <div style="font-size: 12px; color: #64748b; margin-top: 8px; border-top: 1px solid #f1f5f9; padding-top: 8px; line-height: 1.6;">
-      * <strong>용희</strong>: 월·화·목·금 고정 근무<br>
+  <div class="modal-card" style="max-width: 520px; width: 95%;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+      <h3 style="margin: 0; font-size: 19px; color: #1e293b;">⚙️ 조 배정 및 직원 관리</h3>
+      <span style="font-size: 11px; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 12px; font-weight: 700;">관리자 모드</span>
+    </div>
+    <p style="font-size: 13px; color: #64748b; margin: 0 0 12px 0; line-height: 1.5;">
+      직원 이름을 텍스트창에서 직접 수정하거나 조를 변경할 수 있습니다.<br>
+      <strong>[➕ 새 직원 추가]</strong> 버튼으로 직원을 추가할 수 있습니다.
+    </p>
+
+    <!-- 직원 목록 리스트 -->
+    <div id="modal-settings-list" style="max-height: 340px; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 8px;"></div>
+    
+    <!-- 직원 추가 버튼 -->
+    <button type="button" onclick="addNewMemberSettingRow()" style="display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 9px 12px; margin-top: 10px; background: #f0fdf4; border: 1.5px dashed #86efac; color: #15803d; font-weight: 700; border-radius: 8px; cursor: pointer; font-size: 13.5px; transition: all 0.2s ease;">
+      ➕ 새 직원 추가
+    </button>
+
+    <div style="font-size: 12px; color: #64748b; margin-top: 12px; border-top: 1px solid #f1f5f9; padding-top: 10px; line-height: 1.6;">
+      * <strong>고정근무</strong>: 월·화·목·금 고정 근무 (주말 당직 순번 제외)<br>
       * <strong>A조 (화수목금)</strong>: 당번 시 <strong>당번 주 화요일</strong> 대체휴무 (예: 1/9~10 당번 ➔ 1/5 휴무)<br>
       * <strong>B조 (월화수목)</strong>: 당번 시 <strong>다음 주 목요일</strong> 대체휴무 (예: 1/16~17 당번 ➔ 1/21 휴무)<br>
-      * 2027년 1월 2일(토) 당번 시작 (당번 순서: 세진 ➔ 소영 ➔ 이슬 ➔ 서영 ➔ 찬유)
+      * <strong>당직 순번</strong>: A조/B조 직원이 목록 순서대로 주말 당직을 순환합니다.
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="margin-top: 16px;">
       <button type="button" onclick="closeSettingsModal()">닫기</button>
       <button type="button" class="btn-primary" onclick="saveSettings()">저장 및 적용</button>
     </div>
@@ -2104,8 +2113,10 @@
     const activeTab = document.querySelector('.tab-content.active');
     if (!activeTab) return;
     const id = activeTab.id;
-    if (id === 'tab-calendar') renderCalendar();
-    else if (id === 'tab-leave') renderLeaveTab();
+    if (id === 'tab-calendar') {
+      renderMemberFilterChips();
+      renderCalendar();
+    } else if (id === 'tab-leave') renderLeaveTab();
     else if (id === 'tab-overtime') renderOvertimeTab();
     else if (id === 'tab-stats') renderStats();
     else if (id === 'tab-material') { if (typeof renderMaterialTab === 'function') renderMaterialTab(); }
@@ -2172,7 +2183,7 @@
       updateCloudStatusBadge('error', 'DB 연결 안됨');
     });
 
-    // 4. Group settings
+    // 4. Group settings & Member roster
     firebaseDb.collection('config').doc('group_settings').onSnapshot(doc => {
       isFirebaseReady = true;
       updateCloudStatusBadge('connected', 'DB 연결됨');
@@ -2180,9 +2191,20 @@
       if (doc.metadata && doc.metadata.hasPendingWrites) return;
       if (doc.exists) {
         const data = doc.data();
-        if (data && data.personGroup) {
-          personGroup = data.personGroup;
-          localStorage.setItem('duty_personGroup', JSON.stringify(personGroup));
+        if (data) {
+          if (data.personGroup) {
+            personGroup = data.personGroup;
+            localStorage.setItem('duty_personGroup', JSON.stringify(personGroup));
+          }
+          if (Array.isArray(data.allMembers) && data.allMembers.length > 0) {
+            ALL_MEMBERS = data.allMembers;
+            localStorage.setItem('duty_allMembers', JSON.stringify(ALL_MEMBERS));
+          }
+          if (Array.isArray(data.dutyRoster) && data.dutyRoster.length > 0) {
+            DUTY_ROSTER = data.dutyRoster;
+            localStorage.setItem('duty_dutyRoster', JSON.stringify(DUTY_ROSTER));
+          }
+          renderMemberFilterChips();
           renderCurrentActiveTab();
         }
       }
@@ -2305,10 +2327,16 @@
     }
   }
 
-  function cloudSaveGroupSettings(pg) {
+  function cloudSaveGroupSettings(pg, members, roster) {
     if (firebaseDb && isFirebaseReady) {
       const cleanPg = JSON.parse(JSON.stringify(pg || {}));
-      firebaseDb.collection('config').doc('group_settings').set({ personGroup: cleanPg }).catch(e => console.error(e));
+      const cleanMembers = JSON.parse(JSON.stringify(members || ALL_MEMBERS));
+      const cleanRoster = JSON.parse(JSON.stringify(roster || DUTY_ROSTER));
+      firebaseDb.collection('config').doc('group_settings').set({ 
+        personGroup: cleanPg,
+        allMembers: cleanMembers,
+        dutyRoster: cleanRoster
+      }).catch(e => console.error(e));
     }
   }
 
@@ -2317,8 +2345,49 @@
   /* =========================================================================
      1. 기본 데이터 및 상태 관리
      ========================================================================= */
-  const ALL_MEMBERS = ['용희', '세진', '소영', '이슬', '서영', '찬유'];
-  const DUTY_ROSTER = ['세진', '소영', '이슬', '서영', '찬유'];
+  const DEFAULT_MEMBERS = ['용희', '세진', '소영', '이슬', '서영', '찬유'];
+  const DEFAULT_DUTY_ROSTER = ['세진', '소영', '이슬', '서영', '찬유'];
+  const DEFAULT_PERSON_GROUP = {
+    '용희': 'FIXED',
+    '세진': 'B',
+    '소영': 'A',
+    '이슬': 'B',
+    '서영': 'A',
+    '찬유': 'B'
+  };
+
+  let ALL_MEMBERS = [...DEFAULT_MEMBERS];
+  let DUTY_ROSTER = [...DEFAULT_DUTY_ROSTER];
+  let personGroup = { ...DEFAULT_PERSON_GROUP };
+
+  // 로컬스토리지에서 설정 불러오기
+  try {
+    const savedGroup = localStorage.getItem('duty_personGroup');
+    if (savedGroup) {
+      personGroup = { ...DEFAULT_PERSON_GROUP, ...JSON.parse(savedGroup) };
+    }
+    const savedMembers = localStorage.getItem('duty_allMembers');
+    if (savedMembers) {
+      const parsed = JSON.parse(savedMembers);
+      if (Array.isArray(parsed) && parsed.length > 0) ALL_MEMBERS = parsed;
+    }
+    const savedRoster = localStorage.getItem('duty_dutyRoster');
+    if (savedRoster) {
+      const parsed = JSON.parse(savedRoster);
+      if (Array.isArray(parsed) && parsed.length > 0) DUTY_ROSTER = parsed;
+    }
+  } catch(e) {
+    console.error('Error loading stored member settings:', e);
+  }
+
+  function isFixedMember(name) {
+    return personGroup[name] === 'FIXED' || (name === '용희' && (!personGroup[name] || personGroup[name] === 'FIXED'));
+  }
+
+  function getFixedMembers() {
+    return ALL_MEMBERS.filter(m => isFixedMember(m));
+  }
+
   const ANNUAL_DEFAULT_LEAVE = 15; // 1인당 기본 연차 부여일수 (기본값)
 
   const WEEKDAYS_KOR = ['일', '월', '화', '수', '목', '금', '토'];
@@ -2375,20 +2444,6 @@
       cloudSaveLeaveGrants(allGrants);
     }
   }
-
-  let personGroup = {
-    '세진': 'B',
-    '소영': 'A',
-    '이슬': 'B',
-    '서영': 'A',
-    '찬유': 'B'
-  };
-
-  // 로컬스토리지에서 설정 불러오기
-  try {
-    const savedGroup = localStorage.getItem('duty_personGroup');
-    if (savedGroup) personGroup = JSON.parse(savedGroup);
-  } catch(e) {}
 
   // 2026년 하반기(7월~12월 31일) 실측 근무 데이터
   const EXCEL_2026_DATA = {
@@ -2898,9 +2953,28 @@
   }
 
   /* =========================================================================
-     4-1. 근무표 직원 일정 필터링 관리
+     4-1. 근무표 직원 일정 필터링 관리 (동적 렌더링 지원)
      ========================================================================= */
   let selectedMemberFilter = 'ALL';
+
+  function renderMemberFilterChips() {
+    const container = document.getElementById('member-filter-container');
+    if (!container) return;
+
+    if (selectedMemberFilter !== 'ALL' && !ALL_MEMBERS.includes(selectedMemberFilter)) {
+      selectedMemberFilter = 'ALL';
+    }
+
+    let chipsHtml = `<span style="font-size: 12.5px; font-weight: 700; color: #64748b; margin-right: 2px;">👤 직원 필터:</span>`;
+    chipsHtml += `<button type="button" class="member-filter-chip ${selectedMemberFilter === 'ALL' ? 'active' : ''}" id="filter-btn-ALL" onclick="setMemberFilter('ALL')">전체</button>`;
+    
+    ALL_MEMBERS.forEach(m => {
+      const isActive = (selectedMemberFilter === m);
+      chipsHtml += `<button type="button" class="member-filter-chip ${isActive ? 'active' : ''}" id="filter-btn-${m}" onclick="setMemberFilter('${m}')">${m}</button>`;
+    });
+
+    container.innerHTML = chipsHtml;
+  }
 
   function setMemberFilter(member) {
     if (selectedMemberFilter === member && member !== 'ALL') {
@@ -2961,7 +3035,7 @@
       });
 
       if ([1, 2, 4, 5].includes(dayOfWeek)) {
-        works.push('용희');
+        getFixedMembers().forEach(fm => works.push(fm));
       }
     } else {
       const calcStart = new Date(targetDate);
@@ -3097,12 +3171,14 @@
             }
           });
 
-          // 용희 고정 근무
-          if ([1, 2, 4, 5].includes(dayOfWeek)) {
-            workList.push('용희');
-          } else {
-            offList.push('용희');
-          }
+          // 고정 근무자 처리 (월·화·목·금 근무, 수·토·일 휴무)
+          getFixedMembers().forEach(fm => {
+            if ([1, 2, 4, 5].includes(dayOfWeek)) {
+              workList.push(fm);
+            } else {
+              offList.push(fm);
+            }
+          });
 
           // 근무 명단에서 전일 연차자 제거
           workList = workList.filter(p => !fullLeavePersons.includes(p));
@@ -5156,10 +5232,12 @@
             }
           });
 
-          // 용희 고정 근무
-          if ([1, 2, 4, 5].includes(dayOfWeek)) {
-            dayWorks.push('용희');
-          }
+          // 고정 근무자 처리
+          getFixedMembers().forEach(fm => {
+            if ([1, 2, 4, 5].includes(dayOfWeek)) {
+              dayWorks.push(fm);
+            }
+          });
         } else {
           // 주말 당번
           const dutyPerson = duties[dateKey];
@@ -5357,7 +5435,7 @@
     // 4) 상세 테이블 구성
     const tbody = document.getElementById('stats-table-tbody');
     tbody.innerHTML = ALL_MEMBERS.map(m => {
-      const group = (m === '용희') ? '고정(월·화·목·금)' : (personGroup[m] ? `${personGroup[m]}조` : '-');
+      const group = isFixedMember(m) ? '고정(월·화·목·금)' : (personGroup[m] ? `${personGroup[m]}조` : '-');
       const wDays = workStats[m].workDays;
       const dutyCount = workStats[m].dutyCount || 0;
       const weekdayDays = workStats[m].weekdayWorkDays !== undefined ? workStats[m].weekdayWorkDays : Math.max(0, wDays - dutyCount);
@@ -5676,38 +5754,221 @@
   function openSettingsModal() {
     requestAdminAuth(() => {
       const listContainer = document.getElementById('modal-settings-list');
-      listContainer.innerHTML = DUTY_ROSTER.map(name => `
-        <div class="setting-item">
-          <span>${name}</span>
-          <select id="group-select-${name}">
-            <option value="A" ${personGroup[name] === 'A' ? 'selected' : ''}>A조 (화수목금)</option>
-            <option value="B" ${personGroup[name] === 'B' ? 'selected' : ''}>B조 (월화수목)</option>
-          </select>
-        </div>
-      `).join('');
+      if (!listContainer) return;
+
+      listContainer.innerHTML = ALL_MEMBERS.map(name => {
+        const curGroup = isFixedMember(name) ? 'FIXED' : (personGroup[name] || 'A');
+        return `
+          <div class="setting-member-row" data-original-name="${name}" style="display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="flex: 1; min-width: 110px;">
+              <input type="text" class="setting-member-name-input" value="${name}" placeholder="직원 이름" style="width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 14px; font-weight: 700; color: #1e293b;" />
+            </div>
+            <div style="width: 160px;">
+              <select class="setting-member-group-select" style="width: 100%; padding: 7px 8px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-weight: 600; background: #ffffff; color: #334155; cursor: pointer;">
+                <option value="A" ${curGroup === 'A' ? 'selected' : ''}>A조 (화수목금)</option>
+                <option value="B" ${curGroup === 'B' ? 'selected' : ''}>B조 (월화수목)</option>
+                <option value="FIXED" ${curGroup === 'FIXED' ? 'selected' : ''}>고정근무 (월·화·목·금)</option>
+              </select>
+            </div>
+            <div>
+              <button type="button" onclick="removeSettingRow(this)" style="padding: 6px 10px; background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s ease;" title="직원 삭제">✕</button>
+            </div>
+          </div>
+        `;
+      }).join('');
 
       document.getElementById('settings-modal').classList.add('active');
     });
   }
 
+  function addNewMemberSettingRow() {
+    const listContainer = document.getElementById('modal-settings-list');
+    if (!listContainer) return;
+    const row = document.createElement('div');
+    row.className = 'setting-member-row';
+    row.setAttribute('data-original-name', '');
+    row.style.cssText = 'display: flex; align-items: center; gap: 8px; background: #f0fdf4; padding: 8px 12px; border-radius: 8px; border: 1.5px solid #86efac; animation: fadeIn 0.2s ease;';
+    row.innerHTML = `
+      <div style="flex: 1; min-width: 110px;">
+        <input type="text" class="setting-member-name-input" value="" placeholder="새 직원 이름" style="width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1.5px solid #86efac; border-radius: 6px; font-size: 14px; font-weight: 700; color: #1e293b;" />
+      </div>
+      <div style="width: 160px;">
+        <select class="setting-member-group-select" style="width: 100%; padding: 7px 8px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-weight: 600; background: #ffffff; color: #334155; cursor: pointer;">
+          <option value="A" selected>A조 (화수목금)</option>
+          <option value="B">B조 (월화수목)</option>
+          <option value="FIXED">고정근무 (월·화·목·금)</option>
+        </select>
+      </div>
+      <div>
+        <button type="button" onclick="removeSettingRow(this)" style="padding: 6px 10px; background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;" title="행 삭제">✕</button>
+      </div>
+    `;
+    listContainer.appendChild(row);
+    listContainer.scrollTop = listContainer.scrollHeight;
+    const input = row.querySelector('input');
+    if (input) input.focus();
+  }
+
+  function removeSettingRow(btn) {
+    const rows = document.querySelectorAll('.setting-member-row');
+    if (rows.length <= 1) {
+      alert('최소 1명 이상의 직원이 등록되어 있어야 합니다.');
+      return;
+    }
+    const row = btn.closest('.setting-member-row');
+    if (row) {
+      const name = (row.querySelector('.setting-member-name-input')?.value || '').trim();
+      if (name) {
+        if (!confirm(`'${name}' 직원을 삭제하시겠습니까?\n(하단의 '저장 및 적용' 버튼을 눌러야 최종 반영됩니다)`)) {
+          return;
+        }
+      }
+      row.remove();
+    }
+  }
+
   function closeSettingsModal() {
-    document.getElementById('settings-modal').classList.remove('active');
+    const modal = document.getElementById('settings-modal');
+    if (modal) modal.classList.remove('active');
   }
 
   function saveSettings() {
-    DUTY_ROSTER.forEach(name => {
-      const select = document.getElementById(`group-select-${name}`);
-      if (select) {
-        personGroup[name] = select.value;
-      }
-    });
-    localStorage.setItem('duty_personGroup', JSON.stringify(personGroup));
-    if (firebaseDb && isFirebaseReady) {
-      cloudSaveGroupSettings(personGroup);
+    const rows = document.querySelectorAll('.setting-member-row');
+    if (rows.length === 0) {
+      alert('직원을 최소 1명 이상 등록해주세요.');
+      return;
     }
+
+    const newMembers = [];
+    const newRoster = [];
+    const newPg = {};
+    const nameRenames = {};
+    const seenNames = new Set();
+
+    for (const row of rows) {
+      const oldName = row.getAttribute('data-original-name') || '';
+      const nameInput = row.querySelector('.setting-member-name-input');
+      const groupSelect = row.querySelector('.setting-member-group-select');
+      const newName = nameInput ? nameInput.value.trim() : '';
+      const group = groupSelect ? groupSelect.value : 'A';
+
+      if (!newName) {
+        alert('모든 직원의 이름을 입력해주세요.');
+        if (nameInput) nameInput.focus();
+        return;
+      }
+
+      if (seenNames.has(newName)) {
+        alert(`'${newName}' 직원이 중복 등록되었습니다. 서로 다른 이름을 입력해주세요.`);
+        if (nameInput) nameInput.focus();
+        return;
+      }
+      seenNames.add(newName);
+
+      if (oldName && oldName !== newName) {
+        nameRenames[oldName] = newName;
+      }
+
+      newMembers.push(newName);
+      newPg[newName] = group;
+      if (group !== 'FIXED') {
+        newRoster.push(newName);
+      }
+    }
+
+    if (newRoster.length === 0) {
+      newRoster.push(...newMembers);
+    }
+
+    // 1) 기존 데이터 중 이름 변경 사항 전파 (leaves, overtimes, swaps, grants)
+    const hasRenames = Object.keys(nameRenames).length > 0;
+    if (hasRenames) {
+      const currentLeaves = getStoredLeaves();
+      let leavesChanged = false;
+      currentLeaves.forEach(l => {
+        if (nameRenames[l.person]) {
+          l.person = nameRenames[l.person];
+          leavesChanged = true;
+        }
+      });
+      if (leavesChanged) {
+        localStorage.setItem('duty_leaves', JSON.stringify(currentLeaves));
+        syncListToFirestore('leaves', currentLeaves);
+      }
+
+      const currentOvertimes = getStoredOvertimes();
+      let otChanged = false;
+      currentOvertimes.forEach(o => {
+        if (nameRenames[o.person]) {
+          o.person = nameRenames[o.person];
+          otChanged = true;
+        }
+      });
+      if (otChanged) {
+        localStorage.setItem('duty_overtimes', JSON.stringify(currentOvertimes));
+        syncListToFirestore('overtimes', currentOvertimes);
+      }
+
+      const currentSwaps = getStoredSwaps();
+      let swapsChanged = false;
+      currentSwaps.forEach(s => {
+        if (nameRenames[s.person1]) {
+          s.person1 = nameRenames[s.person1];
+          swapsChanged = true;
+        }
+        if (nameRenames[s.person2]) {
+          s.person2 = nameRenames[s.person2];
+          swapsChanged = true;
+        }
+      });
+      if (swapsChanged) {
+        localStorage.setItem('duty_swaps', JSON.stringify(currentSwaps));
+        syncListToFirestore('swaps', currentSwaps);
+      }
+
+      const allGrants = getAllStoredLeaveGrants();
+      let grantsChanged = false;
+      Object.keys(allGrants).forEach(yr => {
+        const yrGrants = allGrants[yr];
+        if (yrGrants && typeof yrGrants === 'object') {
+          Object.keys(nameRenames).forEach(oldN => {
+            if (yrGrants[oldN] !== undefined) {
+              yrGrants[nameRenames[oldN]] = yrGrants[oldN];
+              delete yrGrants[oldN];
+              grantsChanged = true;
+            }
+          });
+        }
+      });
+      if (grantsChanged) {
+        localStorage.setItem('duty_leave_grants_by_year', JSON.stringify(allGrants));
+        localStorage.setItem('duty_leave_grants', JSON.stringify(allGrants));
+        cloudSaveLeaveGrants(allGrants);
+      }
+    }
+
+    // 2) 전역 상태 갱신
+    ALL_MEMBERS = newMembers;
+    DUTY_ROSTER = newRoster;
+    personGroup = newPg;
+
+    // 3) 로컬스토리지 저장
+    localStorage.setItem('duty_allMembers', JSON.stringify(ALL_MEMBERS));
+    localStorage.setItem('duty_dutyRoster', JSON.stringify(DUTY_ROSTER));
+    localStorage.setItem('duty_personGroup', JSON.stringify(personGroup));
+
+    // 4) Firebase 클라우드 저장
+    cloudSaveGroupSettings(personGroup, ALL_MEMBERS, DUTY_ROSTER);
+
+    // 5) 모달 닫기 및 뷰 갱신
     closeSettingsModal();
+    renderMemberFilterChips();
     renderCalendar();
-    alert('조 배정 설정이 저장되었습니다.');
+    if (typeof renderStats === 'function') renderStats();
+    if (typeof renderLeaveCalendarMatrix === 'function') renderLeaveCalendarMatrix();
+    if (typeof renderOtStats === 'function') renderOtStats();
+
+    alert('직원 목록 및 조 배정 설정이 성공적으로 저장 및 적용되었습니다.');
   }
 
   /* =========================================================================
@@ -5715,11 +5976,13 @@
      ========================================================================= */
   function exportDataToJson() {
     const data = {
+      allMembers: ALL_MEMBERS,
+      dutyRoster: DUTY_ROSTER,
+      personGroup: personGroup,
       leaves: getStoredLeaves(),
       overtimes: getStoredOvertimes(),
       leaveGrants: getAllStoredLeaveGrants(),
       swaps: getStoredSwaps(),
-      personGroup: personGroup,
       exportedAt: new Date().toISOString()
     };
     const jsonStr = JSON.stringify(data, null, 2);
