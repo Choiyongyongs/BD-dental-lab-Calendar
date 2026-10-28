@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BD DENTAL LAB 직원관리</title>
+  <title>서울비디치과기공실</title>
   <!-- Firebase App & Cloud Firestore SDK (Compat v10) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -940,8 +940,8 @@
   <!-- html2canvas for capturing materials order -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <link rel="stylesheet" href="materials-lunch.css">
-  <script src="materials.js"></script>
-  <script src="lunch.js"></script>
+  <script src="materials.js?v=1793179096083"></script>
+  <script src="lunch.js?v=1793179096083"></script>
 </head>
 <body>
 <div class="container">
@@ -949,7 +949,7 @@
   <!-- 상단 네비게이션 탭 -->
   <div class="top-nav">
     <div class="app-title-area">
-      <h1 class="app-title">BD DENTAL LAB 직원관리</h1>
+      <h1 class="app-title">서울비디치과기공실</h1>
       <span class="app-badge">통합 v2.0</span>
     </div>
     <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
@@ -1270,7 +1270,7 @@
 
         <!-- 재료상별 필터 칩 -->
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
-          <span style="font-size: 12px; font-weight: 700; color: #64748b;">재료상 필터:</span>
+          <span style="font-size: 12px; font-weight: 700; color: #64748b;">제조사 필터:</span>
           <div id="mat-supplier-filter-container" class="filter-chip-bar" style="margin-bottom: 0;"></div>
         </div>
 
@@ -1281,7 +1281,7 @@
                 <th style="width: 44px; text-align: center;">선택</th>
                 <th style="width: 75px; text-align: center;">구분</th>
                 <th>품목명 / 규격</th>
-                <th style="width: 95px;">재료상</th>
+                <th style="width: 95px;">제조사</th>
                 <th style="width: 120px; text-align: center;">수량</th>
                 <th>비고</th>
                 <th style="width: 44px; text-align: center;">삭제</th>
@@ -1459,7 +1459,7 @@
     <!-- 옵션 바 -->
     <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
       <div style="display: flex; align-items: center; gap: 8px;">
-        <label style="font-size: 13px; font-weight: 700; color: #334155;">수신처(재료상):</label>
+        <label style="font-size: 13px; font-weight: 700; color: #334155;">수신처:</label>
         <input type="text" id="capture-supplier-input" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; font-weight: 700; width: 170px;" oninput="renderCapturePreviewContent()" />
       </div>
       <div style="display: flex; gap: 6px; flex-wrap: wrap;">
@@ -2191,11 +2191,20 @@
       if (isSyncingToCloud) return;
       if (snapshot.metadata && snapshot.metadata.hasPendingWrites) return;
       const list = [];
+      let hasYonghee1 = false;
       snapshot.forEach(doc => {
-        list.push({ id: doc.id, ...doc.data() });
+        const item = { id: doc.id, ...doc.data() };
+        if (item.person === '용희1') {
+          item.person = '용희';
+          hasYonghee1 = true;
+        }
+        list.push(item);
       });
       list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       localStorage.setItem('duty_leaves_list', JSON.stringify(list));
+      if (hasYonghee1) {
+        saveStoredLeaves(list);
+      }
       renderCurrentActiveTab();
     }, err => {
       console.error('Firestore leaves listener error:', err);
@@ -2210,11 +2219,20 @@
       if (isSyncingToCloud) return;
       if (snapshot.metadata && snapshot.metadata.hasPendingWrites) return;
       const list = [];
+      let hasYonghee1 = false;
       snapshot.forEach(doc => {
-        list.push({ id: doc.id, ...doc.data() });
+        const item = { id: doc.id, ...doc.data() };
+        if (item.person === '용희1') {
+          item.person = '용희';
+          hasYonghee1 = true;
+        }
+        list.push(item);
       });
       list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       localStorage.setItem('duty_overtime_list', JSON.stringify(list));
+      if (hasYonghee1) {
+        saveStoredOvertimes(list);
+      }
       renderCurrentActiveTab();
     }, err => {
       console.error('Firestore overtimes listener error:', err);
@@ -2250,17 +2268,37 @@
       if (doc.exists) {
         const data = doc.data();
         if (data) {
+          let groupNeedResave = false;
           if (data.personGroup) {
             personGroup = data.personGroup;
+            if (personGroup['용희1']) {
+              personGroup['용희'] = personGroup['용희1'];
+              delete personGroup['용희1'];
+              groupNeedResave = true;
+            }
             localStorage.setItem('duty_personGroup', JSON.stringify(personGroup));
           }
           if (Array.isArray(data.allMembers) && data.allMembers.length > 0) {
             ALL_MEMBERS = data.allMembers;
+            if (ALL_MEMBERS.includes('용희1')) {
+              ALL_MEMBERS = Array.from(new Set(ALL_MEMBERS.map(m => m === '용희1' ? '용희' : m)));
+              groupNeedResave = true;
+            }
             localStorage.setItem('duty_allMembers', JSON.stringify(ALL_MEMBERS));
           }
           if (Array.isArray(data.dutyRoster) && data.dutyRoster.length > 0) {
             DUTY_ROSTER = data.dutyRoster;
+            if (DUTY_ROSTER.includes('용희1')) {
+              DUTY_ROSTER = Array.from(new Set(DUTY_ROSTER.map(m => m === '용희1' ? '용희' : m)));
+              groupNeedResave = true;
+            }
             localStorage.setItem('duty_dutyRoster', JSON.stringify(DUTY_ROSTER));
+          }
+          if (data.excelRenames) {
+            applyMemberRenamesToExcelData(data.excelRenames);
+          }
+          if (groupNeedResave) {
+            cloudSaveGroupSettings(personGroup, ALL_MEMBERS, DUTY_ROSTER, JSON.parse(localStorage.getItem('duty_excel_renames') || '{}'));
           }
           renderMemberFilterChips();
           renderCurrentActiveTab();
@@ -2385,16 +2423,25 @@
     }
   }
 
-  function cloudSaveGroupSettings(pg, members, roster) {
+  function cloudSaveGroupSettings(pg, members, roster, excelRenames = null) {
     if (firebaseDb && isFirebaseReady) {
       const cleanPg = JSON.parse(JSON.stringify(pg || {}));
       const cleanMembers = JSON.parse(JSON.stringify(members || ALL_MEMBERS));
       const cleanRoster = JSON.parse(JSON.stringify(roster || DUTY_ROSTER));
-      firebaseDb.collection('config').doc('group_settings').set({ 
+      const payload = { 
         personGroup: cleanPg,
         allMembers: cleanMembers,
         dutyRoster: cleanRoster
-      }).catch(e => console.error(e));
+      };
+      if (excelRenames) {
+        payload.excelRenames = JSON.parse(JSON.stringify(excelRenames));
+      } else {
+        try {
+          const savedRenames = localStorage.getItem('duty_excel_renames');
+          if (savedRenames) payload.excelRenames = JSON.parse(savedRenames);
+        } catch(e) {}
+      }
+      firebaseDb.collection('config').doc('group_settings').set(payload).catch(e => console.error(e));
     }
   }
 
@@ -2504,7 +2551,7 @@
   }
 
   // 2026년 하반기(7월~12월 31일) 실측 근무 데이터
-  const EXCEL_2026_DATA = {
+  let EXCEL_2026_DATA = {
     // 7월 (6/28 ~ 8/1)
     '2026-06-28': { work: ['이슬'] },
     '2026-06-29': { work: ['용희', '찬유', '세진', '이슬'] },
@@ -2737,6 +2784,221 @@
   let statsMode = 'month'; // 'month' or 'year'
   let statsYear = _initDate.getFullYear();
   let statsMonth = _initDate.getMonth();
+
+
+  /* =========================================================================
+     직원 이름 변경 시 근무표(EXCEL_2026_DATA) 동기화 및 '용희1' 자동 복구 헬퍼
+     ========================================================================= */
+  function applyMemberRenamesToExcelData(nameRenames) {
+    if (!nameRenames || Object.keys(nameRenames).length === 0) return;
+
+    // 1) 2026년 하반기 실측 근무 데이터(EXCEL_2026_DATA) 내의 직원명 일괄 치환
+    if (typeof EXCEL_2026_DATA === 'object' && EXCEL_2026_DATA) {
+      Object.keys(EXCEL_2026_DATA).forEach(dateKey => {
+        const day = EXCEL_2026_DATA[dateKey];
+        if (day && Array.isArray(day.work)) {
+          day.work = day.work.map(p => nameRenames[p] || p);
+        }
+      });
+    }
+
+    // 2) 로컬스토리지에 근무표 이름 치환 맵 누적 저장
+    let storedRenames = {};
+    try {
+      const saved = localStorage.getItem('duty_excel_renames');
+      if (saved) storedRenames = JSON.parse(saved);
+    } catch(e) {}
+
+    Object.entries(nameRenames).forEach(([oldN, newN]) => {
+      Object.keys(storedRenames).forEach(k => {
+        if (storedRenames[k] === oldN) storedRenames[k] = newN;
+      });
+      storedRenames[oldN] = newN;
+    });
+    localStorage.setItem('duty_excel_renames', JSON.stringify(storedRenames));
+  }
+
+  function initExcelDataRenames() {
+    try {
+      const saved = localStorage.getItem('duty_excel_renames');
+      if (saved && typeof EXCEL_2026_DATA === 'object' && EXCEL_2026_DATA) {
+        const renames = JSON.parse(saved);
+        Object.keys(EXCEL_2026_DATA).forEach(dateKey => {
+          const day = EXCEL_2026_DATA[dateKey];
+          if (day && Array.isArray(day.work)) {
+            day.work = day.work.map(p => renames[p] || p);
+          }
+        });
+      }
+    } catch(e) {}
+  }
+
+  // 사용자의 '용희1' 기록을 원래 이름인 '용희'로 완벽하게 자동 복구
+  function recoverAndNormalizeYonghee() {
+    let changed = false;
+
+    // 1) ALL_MEMBERS 복구
+    if (ALL_MEMBERS.includes('용희1')) {
+      ALL_MEMBERS = ALL_MEMBERS.map(m => m === '용희1' ? '용희' : m);
+      ALL_MEMBERS = Array.from(new Set(ALL_MEMBERS));
+      localStorage.setItem('duty_allMembers', JSON.stringify(ALL_MEMBERS));
+      changed = true;
+    }
+
+    // 2) DUTY_ROSTER 복구
+    if (DUTY_ROSTER.includes('용희1')) {
+      DUTY_ROSTER = DUTY_ROSTER.map(m => m === '용희1' ? '용희' : m);
+      DUTY_ROSTER = Array.from(new Set(DUTY_ROSTER));
+      localStorage.setItem('duty_dutyRoster', JSON.stringify(DUTY_ROSTER));
+      changed = true;
+    }
+
+    // 3) personGroup 복구
+    if (personGroup && personGroup['용희1']) {
+      personGroup['용희'] = personGroup['용희1'];
+      delete personGroup['용희1'];
+      localStorage.setItem('duty_personGroup', JSON.stringify(personGroup));
+      changed = true;
+    }
+
+    // 4) duty_excel_renames 및 EXCEL_2026_DATA 복구
+    try {
+      const savedRenames = localStorage.getItem('duty_excel_renames');
+      if (savedRenames) {
+        const renames = JSON.parse(savedRenames);
+        let renamesChanged = false;
+        if (renames['용희'] === '용희1') {
+          delete renames['용희'];
+          renamesChanged = true;
+        }
+        if (renames['용희1']) {
+          delete renames['용희1'];
+          renamesChanged = true;
+        }
+        if (renamesChanged) {
+          localStorage.setItem('duty_excel_renames', JSON.stringify(renames));
+        }
+      }
+    } catch(e) {}
+
+    if (typeof EXCEL_2026_DATA === 'object' && EXCEL_2026_DATA) {
+      Object.keys(EXCEL_2026_DATA).forEach(dateKey => {
+        const day = EXCEL_2026_DATA[dateKey];
+        if (day && Array.isArray(day.work)) {
+          if (day.work.includes('용희1')) {
+            day.work = day.work.map(p => p === '용희1' ? '용희' : p);
+          }
+        }
+      });
+    }
+
+    // 5) 연차 기록(leaves) 복구 ('duty_leaves_list' 및 'duty_leaves' 모두 점검)
+    let leavesList = getStoredLeaves();
+    let leavesModified = false;
+    leavesList.forEach(l => {
+      if (l.person === '용희1') {
+        l.person = '용희';
+        leavesModified = true;
+      }
+    });
+    if (leavesModified) {
+      saveStoredLeaves(leavesList);
+      changed = true;
+    }
+
+    try {
+      const rawOld = localStorage.getItem('duty_leaves');
+      if (rawOld) {
+        const parsed = JSON.parse(rawOld);
+        let rawMod = false;
+        parsed.forEach(l => {
+          if (l.person === '용희1') {
+            l.person = '용희';
+            rawMod = true;
+          }
+        });
+        if (rawMod) {
+          localStorage.setItem('duty_leaves', JSON.stringify(parsed));
+          saveStoredLeaves(parsed);
+          changed = true;
+        }
+      }
+    } catch(e) {}
+
+    // 6) 연장근무 기록(overtimes) 복구 ('duty_overtime_list' 및 'duty_overtimes' 모두 점검)
+    let otList = getStoredOvertimes();
+    let otModified = false;
+    otList.forEach(o => {
+      if (o.person === '용희1') {
+        o.person = '용희';
+        otModified = true;
+      }
+    });
+    if (otModified) {
+      saveStoredOvertimes(otList);
+      changed = true;
+    }
+
+    try {
+      const rawOldOt = localStorage.getItem('duty_overtimes');
+      if (rawOldOt) {
+        const parsed = JSON.parse(rawOldOt);
+        let rawOtMod = false;
+        parsed.forEach(o => {
+          if (o.person === '용희1') {
+            o.person = '용희';
+            rawOtMod = true;
+          }
+        });
+        if (rawOtMod) {
+          localStorage.setItem('duty_overtimes', JSON.stringify(parsed));
+          saveStoredOvertimes(parsed);
+          changed = true;
+        }
+      }
+    } catch(e) {}
+
+    // 7) 근무 맞바꿈(swaps) 복구
+    let swapList = getStoredSwaps();
+    let swapModified = false;
+    swapList.forEach(s => {
+      if (s.person1 === '용희1') { s.person1 = '용희'; swapModified = true; }
+      if (s.person2 === '용희1') { s.person2 = '용희'; swapModified = true; }
+    });
+    if (swapModified) {
+      saveStoredSwaps(swapList);
+      changed = true;
+    }
+
+    // 8) 연차 부여일수(leave grants) 복구
+    const allGrants = getAllStoredLeaveGrants();
+    let grantsModified = false;
+    Object.keys(allGrants).forEach(yr => {
+      const yrGrants = allGrants[yr];
+      if (yrGrants && yrGrants['용희1'] !== undefined) {
+        yrGrants['용희'] = yrGrants['용희1'];
+        delete yrGrants['용희1'];
+        grantsModified = true;
+      }
+    });
+    if (grantsModified) {
+      localStorage.setItem('duty_leave_grants_by_year', JSON.stringify(allGrants));
+      localStorage.setItem('duty_leave_grants', JSON.stringify(allGrants));
+      cloudSaveLeaveGrants(allGrants);
+      changed = true;
+    }
+
+    if (changed) {
+      if (firebaseDb && isFirebaseReady) {
+        cloudSaveGroupSettings(personGroup, ALL_MEMBERS, DUTY_ROSTER);
+      }
+      renderMemberFilterChips();
+      renderCalendar();
+      if (typeof renderLeaveCalendarMatrix === 'function') renderLeaveCalendarMatrix();
+      if (typeof renderStats === 'function') renderStats();
+      if (typeof renderOtStats === 'function') renderOtStats();
+    }
+  }
 
   /* =========================================================================
      2. 연차(Leave) 및 연장근무(OT) 스토리지 관리
@@ -6036,9 +6298,13 @@
       newRoster.push(...newMembers);
     }
 
-    // 1) 기존 데이터 중 이름 변경 사항 전파 (leaves, overtimes, swaps, grants)
+    // 1) 기존 데이터 중 이름 변경 사항 전파 (근무표, leaves, overtimes, swaps, grants)
     const hasRenames = Object.keys(nameRenames).length > 0;
     if (hasRenames) {
+      // (1) 근무표(EXCEL_2026_DATA) 내의 직원 이름 일괄 치환 및 영구 저장
+      applyMemberRenamesToExcelData(nameRenames);
+
+      // (2) 연차 (leaves)
       const currentLeaves = getStoredLeaves();
       let leavesChanged = false;
       currentLeaves.forEach(l => {
@@ -6048,10 +6314,10 @@
         }
       });
       if (leavesChanged) {
-        localStorage.setItem('duty_leaves', JSON.stringify(currentLeaves));
-        syncListToFirestore('leaves', currentLeaves);
+        saveStoredLeaves(currentLeaves);
       }
 
+      // (3) 연장근무 (overtimes)
       const currentOvertimes = getStoredOvertimes();
       let otChanged = false;
       currentOvertimes.forEach(o => {
@@ -6061,10 +6327,10 @@
         }
       });
       if (otChanged) {
-        localStorage.setItem('duty_overtimes', JSON.stringify(currentOvertimes));
-        syncListToFirestore('overtimes', currentOvertimes);
+        saveStoredOvertimes(currentOvertimes);
       }
 
+      // (4) 맞바꿈 (swaps)
       const currentSwaps = getStoredSwaps();
       let swapsChanged = false;
       currentSwaps.forEach(s => {
@@ -6078,10 +6344,10 @@
         }
       });
       if (swapsChanged) {
-        localStorage.setItem('duty_swaps', JSON.stringify(currentSwaps));
-        syncListToFirestore('swaps', currentSwaps);
+        saveStoredSwaps(currentSwaps);
       }
 
+      // (5) 연차 부여일수 (leave grants)
       const allGrants = getAllStoredLeaveGrants();
       let grantsChanged = false;
       Object.keys(allGrants).forEach(yr => {
@@ -6135,6 +6401,7 @@
       allMembers: ALL_MEMBERS,
       dutyRoster: DUTY_ROSTER,
       personGroup: personGroup,
+      excelRenames: JSON.parse(localStorage.getItem('duty_excel_renames') || '{}'),
       leaves: getStoredLeaves(),
       overtimes: getStoredOvertimes(),
       leaveGrants: getAllStoredLeaveGrants(),
@@ -6173,6 +6440,9 @@
           }
         }
         if (parsed.swaps) saveStoredSwaps(parsed.swaps);
+        if (parsed.excelRenames) {
+          applyMemberRenamesToExcelData(parsed.excelRenames);
+        }
         if (parsed.personGroup) {
           personGroup = parsed.personGroup;
           localStorage.setItem('duty_personGroup', JSON.stringify(personGroup));
@@ -6201,13 +6471,61 @@
     }, { passive: false });
   }
 
-  // 초기 로드 실행
+  // 초기 로드 실행 (근무표 이름 치환 복원 및 '용희1' -> '용희' 자동 복구)
+  initExcelDataRenames();
+  recoverAndNormalizeYonghee();
   renderCalendar();
   initFirebase();
   enableHorizontalWheelScroll('leave-member-summary-cards');
   enableHorizontalWheelScroll('ot-member-summary-cards');
   if (typeof initMaterialsModule === 'function') initMaterialsModule();
   if (typeof initLunchModule === 'function') initLunchModule();
+
+// 카카오톡 단톡방 공유용 텍스트 복사 (사용자 지정 양식 최신 보장)
+function copyLunchOrderText() {
+  const orders = (typeof lunchDailyState !== 'undefined' && lunchDailyState.orders) ? lunchDailyState.orders : [];
+  if (orders.length === 0) {
+    alert('복사할 주문 내역이 없습니다.');
+    return;
+  }
+
+  const todayStr = (lunchDailyState && lunchDailyState.date) || (typeof getTodayDateStr === 'function' ? getTodayDateStr() : new Date().toISOString().slice(0, 10));
+  const eatingCount = (lunchDailyState && lunchDailyState.eatingCount !== undefined && lunchDailyState.eatingCount !== null) 
+    ? lunchDailyState.eatingCount 
+    : (typeof getTodayWorkingCount === 'function' ? getTodayWorkingCount() : 5);
+  const perBudget = (lunchDailyState && lunchDailyState.perPersonBudget) || 10000;
+  const totalBudget = eatingCount * perBudget;
+  const totalOrderPrice = orders.reduce((sum, ord) => sum + (ord.price * (ord.quantity || 1)), 0);
+  const diff = totalOrderPrice - totalBudget;
+  const overAmount = diff > 0 ? diff : 0;
+
+  // 전체 메뉴별 주문 수량 취합
+  const menuMap = {};
+  orders.forEach(o => {
+    menuMap[o.menuName] = (menuMap[o.menuName] || 0) + (o.quantity || 1);
+  });
+
+  let txt = '[서울비디치과 점심주문]\n';
+  txt += todayStr + ' , 식사인원 총 ' + eatingCount + '명\n';
+  txt += '총주문액 : ' + totalOrderPrice.toLocaleString() + '원 초과금액' + overAmount.toLocaleString() + '원\n';
+  txt += '--주문취합--\n';
+  for (const [mName, qty] of Object.entries(menuMap)) {
+    txt += mName + ' * ' + qty + '개\n';
+  }
+  txt += '---------------\n';
+  txt += '감사합니다.';
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(() => {
+      alert('✅ 주문서 텍스트가 클립보드에 복사되었습니다!\n단톡방 등에 붙여넣어 전송하세요.\n\n[복사된 내용]\n' + txt);
+    }).catch(() => {
+      prompt('아래 텍스트를 복사하세요:', txt);
+    });
+  } else {
+    prompt('아래 텍스트를 복사하세요:', txt);
+  }
+}
+
 </script>
 </body>
 </html>

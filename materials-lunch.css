@@ -697,6 +697,11 @@ input[type="number"] {
   padding: 8px;
   vertical-align: middle;
 }
+.capture-table td span {
+  white-space: nowrap !important;
+  display: inline-block !important;
+  word-break: keep-all !important;
+}
 .capture-footer {
   border-top: 1px dashed #cbd5e1;
   padding-top: 12px;

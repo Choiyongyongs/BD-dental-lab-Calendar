@@ -502,14 +502,8 @@ function openMaterialCaptureModal() {
     return;
   }
 
-  // 대표 재료상 추출 (선택 품목 중 가장 많은 재료상 이름)
-  const supplierCounts = {};
-  checkedOrders.forEach(o => {
-    const s = o.supplier || '재료상';
-    supplierCounts[s] = (supplierCounts[s] || 0) + 1;
-  });
-  const mainSupplier = Object.keys(supplierCounts).sort((a,b) => supplierCounts[b] - supplierCounts[a])[0] || '재료상';
-  document.getElementById('capture-supplier-input').value = mainSupplier + ' 귀하';
+  // 기본 수신처: 더메이트 귀하
+  document.getElementById('capture-supplier-input').value = '더메이트 귀하';
 
   renderCapturePreviewContent();
   document.getElementById('material-capture-modal').classList.add('active');
@@ -521,7 +515,7 @@ function closeMaterialCaptureModal() {
 
 function renderCapturePreviewContent() {
   const container = document.getElementById('capture-preview-area');
-  const supplierTitle = document.getElementById('capture-supplier-input').value || '재료상 귀하';
+  const supplierTitle = document.getElementById('capture-supplier-input').value || '더메이트 귀하';
   const checkedOrders = materialOrders.filter(o => o.checked);
   const urgentCount = checkedOrders.filter(o => o.urgency === 'urgent').length;
 
@@ -531,14 +525,14 @@ function renderCapturePreviewContent() {
   let rowsHtml = checkedOrders.map((ord, idx) => `
     <tr>
       <td style="text-align: center; color: #64748b; font-weight: 600;">${idx + 1}</td>
-      <td style="text-align: center;">
+      <td style="text-align: center; white-space: nowrap;">
         ${ord.urgency === 'urgent' 
-          ? '<span style="background: #fee2e2; color: #dc2626; font-size: 11px; font-weight: 800; padding: 2px 6px; border-radius: 4px; border: 1px solid #f87171;">🚨 긴급</span>' 
-          : '<span style="background: #e0f2fe; color: #0284c7; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px;">📦 정기</span>'}
+          ? '<span style="display: inline-block; white-space: nowrap; background: #fee2e2; color: #dc2626; font-size: 11px; font-weight: 800; padding: 3px 7px; border-radius: 4px; border: 1px solid #f87171;">🚨 긴급</span>' 
+          : '<span style="display: inline-block; white-space: nowrap; background: #e0f2fe; color: #0284c7; font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 4px;">📦 정기</span>'}
       </td>
       <td style="font-weight: 700; color: #0f172a;">${escapeHtml(ord.name)}</td>
       <td style="color: #475569; font-size: 12px;">${escapeHtml(ord.spec || '-')}</td>
-      <td style="text-align: center; font-weight: 800; color: #1e3a8a;">${ord.quantity} ${escapeHtml(ord.unit || 'ea')}</td>
+      <td style="text-align: center; font-weight: 800; color: #1e3a8a; white-space: nowrap;">${ord.quantity} ${escapeHtml(ord.unit || 'ea')}</td>
       <td style="color: #64748b; font-size: 12px;">${escapeHtml(ord.note || '-')}</td>
     </tr>
   `).join('');
@@ -546,7 +540,7 @@ function renderCapturePreviewContent() {
   container.innerHTML = `
     <div class="capture-header">
       <div>
-        <div style="font-size: 12px; font-weight: 800; color: #2563eb; letter-spacing: 0.5px; margin-bottom: 2px;">BD DENTAL LABORATORY</div>
+        <div style="font-size: 13px; font-weight: 800; color: #2563eb; letter-spacing: 0.5px; margin-bottom: 2px;">서울비디치과기공실</div>
         <h2 class="capture-title">치과기공소 재료 발주서</h2>
         <div style="font-size: 14px; font-weight: 700; color: #334155; margin-top: 4px;">
           수신: <span style="color: #1e40af; text-decoration: underline;">${escapeHtml(supplierTitle)}</span>
@@ -563,10 +557,10 @@ function renderCapturePreviewContent() {
       <thead>
         <tr>
           <th style="width: 38px; text-align: center;">No</th>
-          <th style="width: 65px; text-align: center;">구분</th>
+          <th style="width: 75px; text-align: center; white-space: nowrap;">구분</th>
           <th>품목명</th>
           <th style="width: 140px;">규격 / 세부사항</th>
-          <th style="width: 80px; text-align: center;">수량</th>
+          <th style="width: 80px; text-align: center; white-space: nowrap;">수량</th>
           <th style="width: 130px;">비고</th>
         </tr>
       </thead>
@@ -576,8 +570,8 @@ function renderCapturePreviewContent() {
     </table>
 
     <div class="capture-footer">
-      <div>* 빠른 납기 및 정확한 규격 확인 부탁드립니다. 감사합니다.</div>
-      <div style="font-weight: 800; color: #0f172a;">BD DENTAL LAB (TEL: 02-0000-0000)</div>
+      <div>* 수량과 규격확인 부탁드립니다. 감사합니다.</div>
+      <div style="font-weight: 800; color: #0f172a;">서울비디치과기공실</div>
     </div>
   `;
 }
@@ -663,7 +657,7 @@ function copyMaterialOrderText() {
   const now = new Date();
   const dateStr = `${now.getFullYear()}.${now.getMonth() + 1}.${now.getDate()}`;
 
-  let txt = `[BD DENTAL LAB 재료 발주서]\n`;
+  let txt = `[서울비디치과기공실 재료 발주서]\n`;
   txt += `수신: ${supplier}\n`;
   txt += `일자: ${dateStr}\n`;
   txt += `------------------------------------\n`;

@@ -1794,18 +1794,19 @@ function clearAllLunchOrders() {
 }
 
 // 카카오톡 단톡방 공유용 텍스트 복사 (사용자 지정 양식)
+// 카카오톡 단톡방 공유용 텍스트 복사 (사용자 지정 양식 최신 보장)
 function copyLunchOrderText() {
-  const orders = lunchDailyState.orders || [];
+  const orders = (typeof lunchDailyState !== 'undefined' && lunchDailyState.orders) ? lunchDailyState.orders : [];
   if (orders.length === 0) {
     alert('복사할 주문 내역이 없습니다.');
     return;
   }
 
-  const todayStr = lunchDailyState.date || getTodayDateStr();
-  const eatingCount = (lunchDailyState.eatingCount !== undefined && lunchDailyState.eatingCount !== null) 
+  const todayStr = (lunchDailyState && lunchDailyState.date) || (typeof getTodayDateStr === 'function' ? getTodayDateStr() : new Date().toISOString().slice(0, 10));
+  const eatingCount = (lunchDailyState && lunchDailyState.eatingCount !== undefined && lunchDailyState.eatingCount !== null) 
     ? lunchDailyState.eatingCount 
-    : getTodayWorkingCount();
-  const perBudget = lunchDailyState.perPersonBudget || 10000;
+    : (typeof getTodayWorkingCount === 'function' ? getTodayWorkingCount() : 5);
+  const perBudget = (lunchDailyState && lunchDailyState.perPersonBudget) || 10000;
   const totalBudget = eatingCount * perBudget;
   const totalOrderPrice = orders.reduce((sum, ord) => sum + (ord.price * (ord.quantity || 1)), 0);
   const diff = totalOrderPrice - totalBudget;
@@ -1817,19 +1818,23 @@ function copyLunchOrderText() {
     menuMap[o.menuName] = (menuMap[o.menuName] || 0) + (o.quantity || 1);
   });
 
-  let txt = `[서울비디치과 점심주문]\n`;
-  txt += `${todayStr} , 식사인원 총 ${eatingCount}명\n`;
-  txt += `총주문액 : ${totalOrderPrice.toLocaleString()}원 초과금액${overAmount.toLocaleString()}원\n`;
-  txt += `--주문취합--\n`;
+  let txt = '[서울비디치과 점심주문]\n';
+  txt += todayStr + ' , 식사인원 총 ' + eatingCount + '명\n';
+  txt += '총주문액 : ' + totalOrderPrice.toLocaleString() + '원 초과금액' + overAmount.toLocaleString() + '원\n';
+  txt += '--주문취합--\n';
   for (const [mName, qty] of Object.entries(menuMap)) {
-    txt += `${mName} * ${qty}개\n`;
+    txt += mName + ' * ' + qty + '개\n';
   }
-  txt += `---------------\n`;
-  txt += `감사합니다.`;
+  txt += '---------------\n';
+  txt += '감사합니다.';
 
-  navigator.clipboard.writeText(txt).then(() => {
-    alert('✅ 주문서 텍스트가 복사되었습니다!\n단톡방 등에 붙여넣어 전송하세요.');
-  }).catch(() => {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(() => {
+      alert('✅ 주문서 텍스트가 클립보드에 복사되었습니다!\n단톡방 등에 붙여넣어 전송하세요.\n\n[복사된 내용]\n' + txt);
+    }).catch(() => {
+      prompt('아래 텍스트를 복사하세요:', txt);
+    });
+  } else {
     prompt('아래 텍스트를 복사하세요:', txt);
-  });
+  }
 }
