@@ -182,7 +182,7 @@ function renderMaterialOrderList() {
   if (filteredOrders.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" style="text-align: center; padding: 40px 10px; color: #94a3b8; font-size: 13.5px;">
+        <td colspan="6" style="text-align: center; padding: 40px 10px; color: #94a3b8; font-size: 13.5px;">
           🛒 이번 주 주문할 재료가 아직 없습니다.<br>
           <span style="font-size: 12px; color: #cbd5e1; margin-top: 6px; display: inline-block;">
             좌측 '재료목록'에서 품목을 선택하거나 '재료등록'을 클릭해 담아주세요!
@@ -201,19 +201,19 @@ function renderMaterialOrderList() {
 
     return `
       <tr style="${isUrgent ? 'background-color: #fffaf0;' : ''}">
-        <td style="text-align: center; width: 44px;">
+        <td style="text-align: center; width: 40px;">
           <input type="checkbox" class="custom-checkbox" ${ord.checked ? 'checked' : ''} onchange="toggleOrderCheck('${ord.id}', this.checked)" title="캡쳐 발주서에 포함" />
         </td>
-        <td style="text-align: center; width: 75px;">${urgencyBadge}</td>
-        <td>
-          <div style="font-weight: 700; color: #0f172a; font-size: 13.5px;">${escapeHtml(ord.name)}</div>
-          <div style="font-size: 11.5px; color: #64748b;">${escapeHtml(ord.spec || '-')}</div>
+        <td style="text-align: center; width: 68px; white-space: nowrap;">${urgencyBadge}</td>
+        <td style="word-break: keep-all; overflow-wrap: break-word;">
+          <div style="font-weight: 700; color: #0f172a; font-size: 13px; line-height: 1.35;">${escapeHtml(ord.name)}</div>
+          <div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">${escapeHtml(ord.spec || '-')}</div>
         </td>
-        <td style="width: 100px;">
+        <td style="text-align: center; width: 72px; white-space: nowrap;">
           <span class="supplier-chip">${escapeHtml(ord.supplier || '기본')}</span>
         </td>
-        <td style="width: 120px;">
-          <div style="display: flex; align-items: center; gap: 4px;">
+        <td style="text-align: center; width: 112px; white-space: nowrap;">
+          <div style="display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
             <div class="qty-controller">
               <button type="button" class="qty-btn" onclick="changeOrderQty('${ord.id}', -1)" title="1개 감소">-</button>
               <input type="number" class="qty-input" min="1" value="${ord.quantity}" onclick="this.select()" onfocus="this.select()" onchange="updateOrderQtyDirect('${ord.id}', this.value)" title="클릭하여 수량 직접 입력" />
@@ -222,10 +222,7 @@ function renderMaterialOrderList() {
             <span style="font-size: 11.5px; color: #64748b; font-weight: 600;">${escapeHtml(ord.unit || 'ea')}</span>
           </div>
         </td>
-        <td>
-          <input type="text" value="${escapeHtml(ord.note || '')}" placeholder="비고 (예: A2 쉐이드, 빠른 배송 등)" style="width: 100%; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 12px;" onchange="updateOrderNote('${ord.id}', this.value)" />
-        </td>
-        <td style="text-align: center; width: 50px;">
+        <td style="text-align: center; width: 44px;">
           <button type="button" class="btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteMaterialOrder('${ord.id}')" title="주문 목록에서 삭제">✕</button>
         </td>
       </tr>
