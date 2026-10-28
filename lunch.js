@@ -1094,6 +1094,7 @@ let isRouletteRunning = false;
 function initLunchModule() {
   loadStoredLunchData();
   setupLunchFirestoreListeners();
+  renderLunchTab();
 }
 
 function loadStoredLunchData() {
@@ -1460,19 +1461,19 @@ function renderLunchMenuList() {
 
     return `
       <div class="menu-item-card">
-        <div>
-          <div class="menu-item-name">${escapeHtml(m.name)}</div>
+        <div class="menu-item-info">
+          <div class="menu-item-name" title="${escapeHtml(m.name)}">${escapeHtml(m.name)}</div>
           <div class="menu-item-price">${m.price.toLocaleString()}원</div>
-          ${currentQty > 0 ? `<span style="font-size: 11px; font-weight: 800; color: #16a34a; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">주문서에 ${currentQty}개 담김</span>` : ''}
+          ${currentQty > 0 ? `<span class="menu-item-ordered-badge">주문서에 ${currentQty}개 담김</span>` : ''}
         </div>
-        <div style="display: flex; gap: 4px; align-items: center;">
-          <button type="button" class="btn-primary" style="padding: 5px 11px; font-size: 12.5px; font-weight: 800;" onclick="addMenuDirectToOrder('${rest.id}', '${m.id}')" title="주문서에 담기 (클릭할 때마다 1개씩 추가)">
+        <div class="menu-item-actions">
+          <button type="button" class="btn-primary btn-menu-add" onclick="addMenuDirectToOrder('${rest.id}', '${m.id}')" title="주문서에 담기 (클릭할 때마다 1개씩 추가)">
             담기 +
           </button>
-          <button type="button" style="padding: 4px 6px; font-size: 11px; color: #64748b;" onclick="openEditMenuModal('${rest.id}', '${m.id}')" title="메뉴 수정">
+          <button type="button" class="btn-menu-icon" onclick="openEditMenuModal('${rest.id}', '${m.id}')" title="메뉴 수정">
             ✏️
           </button>
-          <button type="button" class="btn-danger" style="padding: 4px 6px; font-size: 11px;" onclick="deleteRestaurantMenu('${rest.id}', '${m.id}')" title="메뉴 삭제">
+          <button type="button" class="btn-danger btn-menu-icon" onclick="deleteRestaurantMenu('${rest.id}', '${m.id}')" title="메뉴 삭제">
             ✕
           </button>
         </div>

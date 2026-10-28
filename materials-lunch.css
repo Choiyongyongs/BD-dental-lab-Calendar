@@ -418,37 +418,106 @@
 
 .menu-list-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
-  max-height: 380px;
+  grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+  gap: 12px;
+  max-height: 420px;
   overflow-y: auto;
   padding-right: 4px;
 }
 .menu-item-card {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  padding: 12px;
+  padding: 10px 12px;
   background: #ffffff;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  min-height: 74px;
+  box-sizing: border-box;
   transition: all 0.15s ease;
 }
 .menu-item-card:hover {
   border-color: #93c5fd;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
+.menu-item-info {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
 .menu-item-name {
   font-size: 13.5px;
   font-weight: 700;
   color: #0f172a;
+  line-height: 1.35;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .menu-item-price {
   font-size: 13px;
   font-weight: 700;
   color: #2563eb;
+}
+.menu-item-ordered-badge {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #16a34a;
+  background: #dcfce7;
+  padding: 1px 5px;
+  border-radius: 4px;
+  width: fit-content;
   margin-top: 2px;
+}
+.menu-item-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.btn-menu-add {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 6px 12px !important;
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+  min-width: 64px !important;
+  height: 32px !important;
+  box-sizing: border-box !important;
+  border-radius: 6px !important;
+}
+.btn-menu-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  width: 28px !important;
+  height: 32px !important;
+  font-size: 11px !important;
+  border-radius: 6px !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  cursor: pointer;
+}
+.btn-menu-icon:hover {
+  background: #e2e8f0;
 }
 
 /* 주문서 요약 테이블 & 박스 */

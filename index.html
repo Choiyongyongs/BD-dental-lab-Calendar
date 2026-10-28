@@ -1331,7 +1331,7 @@
     <div class="roulette-container">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
         <div>
-          <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: #6b21a8;">🎲 오늘 점심 뭐 먹지? 식당 랜덤 룰렛</h3>
+          <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: #6b21a8;">🎲 오늘 점심 뭐 먹지?</h3>
           <div style="font-size: 12.5px; color: #7e22ce; margin-top: 2px;">가고 싶은 후보 식당들을 클릭하여 선택한 후 [랜덤 식당 추첨] 버튼을 눌러보세요!</div>
         </div>
         <div style="display: flex; gap: 6px;">
@@ -2769,6 +2769,10 @@
       if (monthSel) monthSel.style.display = 'inline-block';
       initStatsControls();
       renderStats();
+    } else if (tabId === 'material') {
+      if (typeof renderMaterialTab === 'function') renderMaterialTab();
+    } else if (tabId === 'lunch') {
+      if (typeof renderLunchTab === 'function') renderLunchTab();
     }
   }
 
