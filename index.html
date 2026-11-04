@@ -1667,22 +1667,36 @@
           <label for="modal-leave-type">구분</label>
           <select id="modal-leave-type" required style="width: 100%;" onchange="onLeaveTypeChange()">
             <option value="전일">전일 연차</option>
-            <option value="오전반차">오전 반차 (0.5일)</option>
-            <option value="오후반차">오후 반차 (0.5일)</option>
+            <option value="오전반차">오전 반차</option>
+            <option value="오후반차">오후 반차</option>
             <option value="경조사,포상">경조사,포상 (연차 미차감)</option>
           </select>
         </div>
         <div class="form-group">
           <label id="modal-leave-date-label">연차 사용 기간 (시작일 ~ 종료일)</label>
           <div style="display: flex; align-items: center; gap: 8px;">
-            <div style="flex: 1; display: flex; align-items: center; gap: 4px;">
-              <input type="date" id="modal-leave-start-date" required style="flex: 1;" onchange="onLeaveDateRangeChange()" oninput="onLeaveDateRangeChange()" />
-              <span id="modal-leave-start-yoil" style="font-size: 13px; font-weight: 800; color: #2563eb; white-space: nowrap;"></span>
+            <div style="position: relative; flex: 1; display: flex; align-items: center;">
+              <input type="text" id="modal-leave-start-display" readonly 
+                     style="width: 100%; font-weight: 700; color: #1e293b; background: #ffffff; padding-right: 32px; cursor: pointer; text-align: center; font-size: 14.5px;" />
+              <span style="position: absolute; right: 10px; pointer-events: none; color: #64748b; font-size: 15px;">📅</span>
+              <input type="date" id="modal-leave-start-date" required 
+                     style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2;" 
+                     onclick="try { this.showPicker(); } catch(e) {}"
+                     onfocus="document.getElementById('modal-leave-start-display').style.borderColor = 'var(--primary)'"
+                     onblur="document.getElementById('modal-leave-start-display').style.borderColor = '#cbd5e1'"
+                     onchange="onLeaveDateRangeChange()" oninput="onLeaveDateRangeChange()" />
             </div>
             <span id="modal-leave-date-sep" style="font-weight: 700; color: #64748b;">~</span>
-            <div id="modal-leave-end-wrap" style="flex: 1; display: flex; align-items: center; gap: 4px;">
-              <input type="date" id="modal-leave-end-date" required style="flex: 1;" onchange="onLeaveDateRangeChange()" oninput="onLeaveDateRangeChange()" />
-              <span id="modal-leave-end-yoil" style="font-size: 13px; font-weight: 800; color: #2563eb; white-space: nowrap;"></span>
+            <div id="modal-leave-end-wrap" style="position: relative; flex: 1; display: flex; align-items: center;">
+              <input type="text" id="modal-leave-end-display" readonly 
+                     style="width: 100%; font-weight: 700; color: #1e293b; background: #ffffff; padding-right: 32px; cursor: pointer; text-align: center; font-size: 14.5px;" />
+              <span style="position: absolute; right: 10px; pointer-events: none; color: #64748b; font-size: 15px;">📅</span>
+              <input type="date" id="modal-leave-end-date" required 
+                     style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2;" 
+                     onclick="try { this.showPicker(); } catch(e) {}"
+                     onfocus="document.getElementById('modal-leave-end-display').style.borderColor = 'var(--primary)'"
+                     onblur="document.getElementById('modal-leave-end-display').style.borderColor = '#cbd5e1'"
+                     onchange="onLeaveDateRangeChange()" oninput="onLeaveDateRangeChange()" />
             </div>
           </div>
           <input type="hidden" id="modal-leave-date" />
@@ -4178,33 +4192,33 @@
     const sYoil = sVal ? getDayOfWeekStr(sVal) : '';
     const eYoil = eVal ? getDayOfWeekStr(eVal) : '';
 
-    const sYoilEl = document.getElementById('modal-leave-start-yoil');
-    const eYoilEl = document.getElementById('modal-leave-end-yoil');
-    if (sYoilEl) sYoilEl.innerText = sYoil ? `(${sYoil})` : '';
-    if (eYoilEl) eYoilEl.innerText = (!isHalf && eYoil) ? `(${eYoil})` : '';
+    const sDispEl = document.getElementById('modal-leave-start-display');
+    const eDispEl = document.getElementById('modal-leave-end-display');
+    if (sDispEl) sDispEl.value = sVal ? `${sVal}(${sYoil})` : '';
+    if (eDispEl) eDispEl.value = eVal ? `${eVal}(${eYoil})` : '';
 
     const totalDays = calculateDateRangeDays(sVal, eVal);
     const isCongrat = (type === '경조사,포상' || type === '경조사');
 
     if (isHalf) {
-      infoEl.innerHTML = `📌 <b>${sVal} (${sYoil})</b> 반차 (0.5일 차감)`;
+      infoEl.innerHTML = `📌 <b>${sVal}(${sYoil})</b> 반차 (0.5일 차감)`;
       return;
     }
 
     if (sVal === eVal) {
       if (isCongrat) {
-        infoEl.innerHTML = `📌 <b>${sVal} (${sYoil})</b> 1일 신청 <span style="color:#059669;">(경조사·포상: 연차 미차감)</span>`;
+        infoEl.innerHTML = `📌 <b>${sVal}(${sYoil})</b> 1일 신청 <span style="color:#059669;">(경조사·포상: 연차 미차감)</span>`;
       } else {
         const isWork = person ? isPersonWorkingOnDate(person, sVal) : true;
         const note = isWork ? '1.0일 차감' : '원래 휴무일 (차감 0일)';
-        infoEl.innerHTML = `📌 <b>${sVal} (${sYoil})</b> 1일 신청 (${note})`;
+        infoEl.innerHTML = `📌 <b>${sVal}(${sYoil})</b> 1일 신청 (${note})`;
       }
     } else {
       const deductDays = person ? calculateLeaveDeductDays(person, sVal, eVal, type) : totalDays;
       if (isCongrat) {
-        infoEl.innerHTML = `📌 <b>${sVal} (${sYoil}) ~ ${eVal} (${eYoil})</b> (총 <b>${totalDays}일간</b>) <span style="color:#059669;">(경조사·포상: 연차 미차감)</span>`;
+        infoEl.innerHTML = `📌 <b>${sVal}(${sYoil}) ~ ${eVal}(${eYoil})</b> (총 <b>${totalDays}일간</b>) <span style="color:#059669;">(경조사·포상: 연차 미차감)</span>`;
       } else {
-        infoEl.innerHTML = `📌 <b>${sVal} (${sYoil}) ~ ${eVal} (${eYoil})</b> (총 <b>${totalDays}일간</b> / 실제 출근일 <b>${deductDays}일</b> 차감)`;
+        infoEl.innerHTML = `📌 <b>${sVal}(${sYoil}) ~ ${eVal}(${eYoil})</b> (총 <b>${totalDays}일간</b> / 실제 출근일 <b>${deductDays}일</b> 차감)`;
       }
     }
   }
