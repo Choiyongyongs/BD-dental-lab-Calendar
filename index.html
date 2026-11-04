@@ -1661,24 +1661,30 @@
       <div style="display: flex; flex-direction: column; gap: 14px;">
         <div class="form-group">
           <label for="modal-leave-person">직원 이름</label>
-          <select id="modal-leave-person" required style="width: 100%;"></select>
-        </div>
-        <div class="form-group">
-          <label for="modal-leave-date">연차 사용일</label>
-          <input type="date" id="modal-leave-date" required style="width: 100%;" />
+          <select id="modal-leave-person" required style="width: 100%;" onchange="onLeaveDateRangeChange()"></select>
         </div>
         <div class="form-group">
           <label for="modal-leave-type">구분</label>
-          <select id="modal-leave-type" required style="width: 100%;">
+          <select id="modal-leave-type" required style="width: 100%;" onchange="onLeaveTypeChange()">
             <option value="전일">전일 연차 (1.0일)</option>
             <option value="오전반차">오전 반차 (0.5일)</option>
             <option value="오후반차">오후 반차 (0.5일)</option>
-            <option value="경조사">경조사 (1.0일 - 연차 미차감)</option>
+            <option value="경조사,포상">경조사,포상 (연차 미차감)</option>
           </select>
         </div>
         <div class="form-group">
+          <label id="modal-leave-date-label">연차 사용 기간 (시작일 ~ 종료일)</label>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="date" id="modal-leave-start-date" required style="flex: 1;" onchange="onLeaveDateRangeChange()" />
+            <span id="modal-leave-date-sep" style="font-weight: 700; color: #64748b;">~</span>
+            <input type="date" id="modal-leave-end-date" required style="flex: 1;" onchange="onLeaveDateRangeChange()" />
+          </div>
+          <input type="hidden" id="modal-leave-date" />
+          <div id="modal-leave-range-info" style="font-size: 12.5px; color: #2563eb; font-weight: 800; margin-top: 6px; padding: 6px 10px; background: #eff6ff; border-radius: 6px; border: 1px solid #bfdbfe;"></div>
+        </div>
+        <div class="form-group">
           <label for="modal-leave-reason">사유 (선택)</label>
-          <input type="text" id="modal-leave-reason" placeholder="개인사유, 병원 방문, 경조사 등" style="width: 100%;" />
+          <input type="text" id="modal-leave-reason" placeholder="개인사유, 병원 방문, 경조사, 포상 등" style="width: 100%;" />
         </div>
       </div>
       <div class="modal-footer" style="margin-top: 24px;">
@@ -3497,6 +3503,67 @@
   }
 
   /* =========================================================================
+     4-3. 특정 직원/날짜 실제 출근 여부 및 연차 일수 계산 헬퍼
+     ========================================================================= */
+  function isPersonWorkingOnDate(person, dateStr) {
+    if (!person || !dateStr) return false;
+    let works = getBaseWorkListForDate(dateStr);
+    const swaps = getStoredSwaps();
+    swaps.forEach(sw => {
+      if (sw.date1 === dateStr && sw.date2 === dateStr) {
+        if (works.includes(sw.person1) && !works.includes(sw.person2)) {
+          works = works.filter(p => p !== sw.person1);
+          if (!works.includes(sw.person2)) works.push(sw.person2);
+        } else if (works.includes(sw.person2) && !works.includes(sw.person1)) {
+          works = works.filter(p => p !== sw.person2);
+          if (!works.includes(sw.person1)) works.push(sw.person1);
+        }
+      } else if (sw.date1 === dateStr) {
+        if (works.includes(sw.person1)) {
+          works = works.filter(p => p !== sw.person1);
+          if (!works.includes(sw.person2)) works.push(sw.person2);
+        }
+      } else if (sw.date2 === dateStr) {
+        if (works.includes(sw.person2)) {
+          works = works.filter(p => p !== sw.person2);
+          if (!works.includes(sw.person1)) works.push(sw.person1);
+        }
+      }
+    });
+    return works.includes(person);
+  }
+
+  function calculateDateRangeDays(startDate, endDate) {
+    if (!startDate || !endDate) return 1;
+    const start = parseDateKey(startDate);
+    const end = parseDateKey(endDate);
+    const diffTime = end.getTime() - start.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return Math.max(1, diffDays);
+  }
+
+  function calculateLeaveDeductDays(person, startDate, endDate, type) {
+    if (type === '경조사,포상' || type === '경조사') {
+      return 0;
+    }
+    if (type === '오전반차' || type === '오후반차') {
+      return 0.5;
+    }
+    if (!startDate || !endDate) return 1.0;
+    let curr = parseDateKey(startDate);
+    const end = parseDateKey(endDate);
+    let workDayCount = 0;
+    while (curr <= end) {
+      const dStr = formatDateKey(curr);
+      if (isPersonWorkingOnDate(person, dStr)) {
+        workDayCount += 1;
+      }
+      curr.setDate(curr.getDate() + 1);
+    }
+    return workDayCount;
+  }
+
+  /* =========================================================================
      5. 근무표 렌더링 (연차 배지 & 맞바꿈 배지 융합)
      ========================================================================= */
   function renderCalendar() {
@@ -3569,26 +3636,19 @@
       let workList = [];
       let offList = [];
 
-      // 당일 연차 및 연장근무 데이터 사전 조회 (승인된 연차만 달력 반영)
-      const dayLeaves = leaves.filter(l => l.date === dateKey && l.status !== 'pending');
-      const fullLeavePersons = dayLeaves.filter(l => l.type === '전일' || l.type === '경조사').map(l => l.person);
-      const leaveDisplayItems = dayLeaves.map(l => l.type === '전일' ? l.person : (l.type === '경조사' ? `${l.person}(경조사)` : `${l.person}(${l.type})`));
-
-      // A. 2026년 하반기 (엑셀 데이터)
+      // A. 2026년 하반기 (엑셀 데이터 기본 근무/휴무)
       if (curr < ROTATION_START_DATE && EXCEL_2026_DATA[dateKey]) {
         const excelDay = EXCEL_2026_DATA[dateKey];
         if (holidayInfo && holidayInfo.type === 'holiday') {
           // 공휴일
         } else if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-          // 근무 명단에서 전일 연차자 제외
-          workList = excelDay.work.filter(p => !fullLeavePersons.includes(p));
-          // 휴무 명단에서 연차자 제외 (연차 배지로 별도 표시)
-          offList = ALL_MEMBERS.filter(p => !excelDay.work.includes(p) && !dayLeaves.some(l => l.person === p));
+          workList = [...(excelDay.work || [])];
+          offList = ALL_MEMBERS.filter(p => !workList.includes(p));
         } else {
-          workList = excelDay.work.filter(p => !fullLeavePersons.includes(p));
+          workList = [...(excelDay.work || [])];
         }
       }
-      // B. 자동 계산 엔진
+      // B. 자동 계산 엔진 기본 근무/휴무
       else {
         if (holidayInfo && holidayInfo.type === 'holiday') {
           // 법정공휴일
@@ -3626,15 +3686,10 @@
               offList.push(fm);
             }
           });
-
-          // 근무 명단에서 전일 연차자 제거
-          workList = workList.filter(p => !fullLeavePersons.includes(p));
-          // 휴무 명단에서도 연차자 제거
-          offList = offList.filter(p => !dayLeaves.some(l => l.person === p));
         } else {
           // 주말: 당번
           const dutyPerson = duties[dateKey];
-          if (dutyPerson && !fullLeavePersons.includes(dutyPerson)) {
+          if (dutyPerson) {
             workList.push(dutyPerson);
           }
         }
@@ -3688,9 +3743,40 @@
         }
       });
 
+      // D. 연차 적용 (규칙: 출근 예정자만 연차로 표시하고 근무에서 제외, 원래 휴무인 자는 휴무로 유지)
+      const dayLeaves = leaves.filter(l => {
+        if (l.status === 'pending') return false;
+        const s = l.startDate || l.date;
+        const e = l.endDate || l.date;
+        return dateKey >= s && dateKey <= e;
+      });
+
+      const leaveDisplayItems = [];
+      const dayAppliedLeaves = [];
+
+      dayLeaves.forEach(l => {
+        const isScheduledWork = workList.includes(l.person);
+        const isFull = (l.type === '전일' || l.type === '경조사,포상' || l.type === '경조사');
+        const isCongrat = (l.type === '경조사,포상' || l.type === '경조사');
+
+        if (isScheduledWork) {
+          // 출근 예정일인 경우만 연차로 표시!
+          dayAppliedLeaves.push(l);
+          const label = l.type === '전일' ? l.person : (isCongrat ? `${l.person}(경조사,포상)` : `${l.person}(${l.type})`);
+          leaveDisplayItems.push(label);
+
+          if (isFull) {
+            // 전일 연차/경조사면 근무 명단에서 제외
+            workList = workList.filter(p => p !== l.person);
+          }
+        } else {
+          // 원래 휴무였던 날은 휴무로 유지 (연차 배지에 표시하지 않음)
+        }
+      });
+
       // 직원 필터 적용 여부 및 상태 판별
       const isMemberWork = isFiltered && workList.includes(selectedMemberFilter);
-      const dayMemberLeaves = dayLeaves.filter(l => l.person === selectedMemberFilter);
+      const dayMemberLeaves = dayAppliedLeaves.filter(l => l.person === selectedMemberFilter);
       const isMemberLeave = isFiltered && dayMemberLeaves.length > 0;
 
       const isDutyDay = (curr.getFullYear() <= 2026) ? (dayOfWeek === 0) : (dayOfWeek === 0 || dayOfWeek === 6);
@@ -3698,7 +3784,7 @@
       if (isFiltered && curr.getMonth() === currentMonth) {
         let memberLeaveDays = 0;
         dayMemberLeaves.forEach(l => {
-          if (l.type !== '경조사') {
+          if (l.type !== '경조사' && l.type !== '경조사,포상') {
             memberLeaveDays += (l.type === '전일' ? 1.0 : 0.5);
           }
         });
@@ -3870,7 +3956,11 @@
 
     // 연차 캘린더의 연도(targetYear)에 해당하는 승인 연차 필터링
     const yearPrefix = `${targetYear}-`;
-    const yearApprovedLeaves = approvedLeaves.filter(l => l.date && l.date.startsWith(yearPrefix));
+    const yearApprovedLeaves = approvedLeaves.filter(l => {
+      const s = l.startDate || l.date || '';
+      const e = l.endDate || l.date || '';
+      return s.startsWith(yearPrefix) || e.startsWith(yearPrefix);
+    });
 
     document.getElementById('leave-total-count').innerText = `전체 대기 ${pendingLeaves.length}건`;
 
@@ -3881,7 +3971,22 @@
     });
 
     yearApprovedLeaves.forEach(l => {
-      const days = l.type === '전일' ? 1.0 : (l.type === '경조사' ? 0 : 0.5);
+      let days = 0;
+      if (l.type === '경조사,포상' || l.type === '경조사') {
+        days = 0;
+      } else if (l.type === '오전반차' || l.type === '오후반차') {
+        days = 0.5;
+      } else {
+        const s = l.startDate || l.date;
+        const e = l.endDate || l.date;
+        if (l.deductDays !== undefined) {
+          days = l.deductDays;
+        } else if (s && e) {
+          days = calculateLeaveDeductDays(l.person, s, e, l.type);
+        } else {
+          days = 1.0;
+        }
+      }
       if (memberStats[l.person]) {
         memberStats[l.person].used += days;
         memberStats[l.person].count += 1;
@@ -3897,21 +4002,33 @@
       // 해당 직원의 해당 연도 승인된 연차 목록 (빠른 날짜부터 오름차순 정렬)
       const memberLeaves = yearApprovedLeaves
         .filter(l => l.person === m)
-        .sort((a, b) => a.date.localeCompare(b.date));
+        .sort((a, b) => (a.startDate || a.date).localeCompare(b.startDate || b.date));
 
       let historyHtml = '';
       if (memberLeaves.length > 0) {
         historyHtml = memberLeaves.map(l => {
-          const yoil = getDayOfWeekStr(l.date);
+          const s = l.startDate || l.date;
+          const e = l.endDate || l.date;
+          const isRange = (s !== e);
+          const totalDays = l.totalDays || (isRange ? calculateDateRangeDays(s, e) : 1);
+          const sYoil = getDayOfWeekStr(s);
+          const eYoil = getDayOfWeekStr(e);
+
+          let dateText = `📅 ${Number(s.split('-')[1])}/${Number(s.split('-')[2])}(${sYoil})`;
+          if (isRange) {
+            dateText = `📅 ${Number(s.split('-')[1])}/${Number(s.split('-')[2])}~${Number(e.split('-')[1])}/${Number(e.split('-')[2])} (${totalDays}일)`;
+          }
+
           let pillClass = 'pill-leave';
           if (l.type === '오전반차') pillClass = 'pill-am';
           if (l.type === '오후반차') pillClass = 'pill-pm';
-          if (l.type === '경조사') pillClass = 'pill-congrat';
-          const typeLabel = l.type === '전일' ? '연차' : l.type;
+          if (l.type === '경조사' || l.type === '경조사,포상') pillClass = 'pill-congrat';
+          const isCongrat = (l.type === '경조사' || l.type === '경조사,포상');
+          const typeLabel = l.type === '전일' ? '연차' : (isCongrat ? '경조사,포상' : l.type);
 
           return `
-            <div class="leave-history-item" onclick="openLeaveDetailModal('${l.id}')" title="클릭 시 상세 사유 확인 및 연차 삭제: ${l.date} (${yoil}) [${typeLabel}]">
-              <span style="font-weight: 700; font-size: 11px; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">📅 ${Number(l.date.split('-')[1])}/${Number(l.date.split('-')[2])}(${yoil})</span>
+            <div class="leave-history-item" onclick="openLeaveDetailModal('${l.id}')" title="클릭 시 상세 사유 확인 및 연차 삭제: ${dateText} [${typeLabel}]">
+              <span style="font-weight: 700; font-size: 11px; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${dateText}</span>
               <span class="pill ${pillClass}" style="font-size: 10px; padding: 1px 5px; white-space: nowrap; flex-shrink: 0;">${typeLabel}</span>
             </div>
           `;
@@ -3943,25 +4060,49 @@
     }).join('');
 
     // 연차 신청내역 테이블 렌더링 (대기 목록만 표시, 최신 신청순)
-    const sortedPending = [...pendingLeaves].sort((a, b) => (b.createdAt || b.date).localeCompare(a.createdAt || a.date));
+    const sortedPending = [...pendingLeaves].sort((a, b) => (b.createdAt || b.startDate || b.date).localeCompare(a.createdAt || a.startDate || a.date));
     const tbody = document.getElementById('leave-list-tbody');
     if (sortedPending.length === 0) {
       tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 24px;">승인 대기 중인 연차 신청이 없습니다.</td></tr>`;
     } else {
       tbody.innerHTML = sortedPending.map(l => {
-        const days = l.type === '전일' ? '1.0일' : (l.type === '경조사' ? '0일 (미차감)' : '0.5일');
-        const yoil = getDayOfWeekStr(l.date);
+        const s = l.startDate || l.date;
+        const e = l.endDate || l.date;
+        const isRange = (s !== e);
+        const totalDays = l.totalDays || (isRange ? calculateDateRangeDays(s, e) : 1);
+        const sYoil = getDayOfWeekStr(s);
+        const eYoil = getDayOfWeekStr(e);
+
+        let dateDisplay = `${s} (${sYoil})`;
+        if (isRange) {
+          dateDisplay = `${s} (${sYoil}) ~ ${e} (${eYoil}) <span style="color:#2563eb; font-weight:800;">(총 ${totalDays}일)</span>`;
+        }
+
+        let daysText = '1.0일';
+        if (l.type === '경조사,포상' || l.type === '경조사') {
+          daysText = isRange ? `총 ${totalDays}일 (연차 미차감)` : '0일 (미차감)';
+        } else if (l.type === '오전반차' || l.type === '오후반차') {
+          daysText = '0.5일';
+        } else {
+          const deduct = (l.deductDays !== undefined) ? l.deductDays : calculateLeaveDeductDays(l.person, s, e, l.type);
+          if (isRange) {
+            daysText = `총 ${totalDays}일 (출근 ${deduct}일 차감)`;
+          } else {
+            daysText = `${deduct}일`;
+          }
+        }
+
         let pillClass = 'pill-leave';
         if (l.type === '오전반차') pillClass = 'pill-am';
         if (l.type === '오후반차') pillClass = 'pill-pm';
-        if (l.type === '경조사') pillClass = 'pill-congrat';
+        if (l.type === '경조사' || l.type === '경조사,포상') pillClass = 'pill-congrat';
 
         return `
           <tr>
-            <td style="font-weight: 700;">${l.date} (${yoil})</td>
+            <td style="font-weight: 700;">${dateDisplay}</td>
             <td><b>${l.person}</b></td>
             <td><span class="pill ${pillClass}">${l.type}</span></td>
-            <td><b>${days}</b></td>
+            <td><b>${daysText}</b></td>
             <td>${l.reason || '-'}</td>
             <td style="color: #94a3b8; font-size: 12px;">${l.createdAt ? l.createdAt.substring(0, 16) : '-'}</td>
             <td style="text-align: right;">
@@ -3978,14 +4119,95 @@
   }
 
   // --- 연차 신청 모달 제어 ---
+  function onLeaveTypeChange() {
+    const typeEl = document.getElementById('modal-leave-type');
+    if (!typeEl) return;
+    const type = typeEl.value;
+    const isHalf = (type === '오전반차' || type === '오후반차');
+    const endDateEl = document.getElementById('modal-leave-end-date');
+    const sepEl = document.getElementById('modal-leave-date-sep');
+    const sDateEl = document.getElementById('modal-leave-start-date');
+
+    if (isHalf) {
+      if (endDateEl) {
+        endDateEl.style.display = 'none';
+        endDateEl.value = sDateEl.value;
+      }
+      if (sepEl) sepEl.style.display = 'none';
+    } else {
+      if (endDateEl) endDateEl.style.display = 'block';
+      if (sepEl) sepEl.style.display = 'inline';
+    }
+    onLeaveDateRangeChange();
+  }
+
+  function onLeaveDateRangeChange() {
+    const personEl = document.getElementById('modal-leave-person');
+    const typeEl = document.getElementById('modal-leave-type');
+    const sEl = document.getElementById('modal-leave-start-date');
+    const eEl = document.getElementById('modal-leave-end-date');
+    const infoEl = document.getElementById('modal-leave-range-info');
+    if (!sEl || !eEl || !infoEl) return;
+
+    const person = personEl ? personEl.value : '';
+    const type = typeEl ? typeEl.value : '전일';
+    const isHalf = (type === '오전반차' || type === '오후반차');
+
+    if (isHalf) {
+      eEl.value = sEl.value;
+    } else {
+      if (eEl.value && sEl.value && eEl.value < sEl.value) {
+        eEl.value = sEl.value;
+      }
+    }
+
+    const sVal = sEl.value;
+    const eVal = eEl.value || sVal;
+    if (!sVal) {
+      infoEl.innerText = '';
+      return;
+    }
+
+    const totalDays = calculateDateRangeDays(sVal, eVal);
+    const isCongrat = (type === '경조사,포상' || type === '경조사');
+
+    if (isHalf) {
+      infoEl.innerHTML = `📌 <b>${sVal} (${getDayOfWeekStr(sVal)})</b> 반차 (0.5일 차감)`;
+      return;
+    }
+
+    if (sVal === eVal) {
+      if (isCongrat) {
+        infoEl.innerHTML = `📌 <b>${sVal} (${getDayOfWeekStr(sVal)})</b> 1일 신청 <span style="color:#059669;">(경조사·포상: 연차 미차감)</span>`;
+      } else {
+        const isWork = person ? isPersonWorkingOnDate(person, sVal) : true;
+        const note = isWork ? '1.0일 차감' : '원래 휴무일 (차감 0일)';
+        infoEl.innerHTML = `📌 <b>${sVal} (${getDayOfWeekStr(sVal)})</b> 1일 신청 (${note})`;
+      }
+    } else {
+      const deductDays = person ? calculateLeaveDeductDays(person, sVal, eVal, type) : totalDays;
+      if (isCongrat) {
+        infoEl.innerHTML = `📌 <b>${sVal} ~ ${eVal}</b> (총 <b>${totalDays}일간</b>) <span style="color:#059669;">(경조사·포상: 연차 미차감)</span>`;
+      } else {
+        infoEl.innerHTML = `📌 <b>${sVal} ~ ${eVal}</b> (총 <b>${totalDays}일간</b> / 실제 출근일 <b>${deductDays}일</b> 차감)`;
+      }
+    }
+  }
+
   function openLeaveApplyModal() {
     const select = document.getElementById('modal-leave-person');
     select.innerHTML = ALL_MEMBERS.map(m => `<option value="${m}">${m}</option>`).join('');
     const todayStr = formatDateKey(new Date());
-    if (!document.getElementById('modal-leave-date').value) {
-      document.getElementById('modal-leave-date').value = todayStr;
-    }
+    const sEl = document.getElementById('modal-leave-start-date');
+    const eEl = document.getElementById('modal-leave-end-date');
+    if (sEl) sEl.value = todayStr;
+    if (eEl) eEl.value = todayStr;
+    const legacyEl = document.getElementById('modal-leave-date');
+    if (legacyEl) legacyEl.value = todayStr;
+
+    document.getElementById('modal-leave-type').value = '전일';
     document.getElementById('modal-leave-reason').value = '';
+    onLeaveTypeChange();
     document.getElementById('leave-apply-modal').classList.add('active');
   }
 
@@ -3996,17 +4218,31 @@
   function handleLeaveApplySubmit(e) {
     e.preventDefault();
     const person = document.getElementById('modal-leave-person').value;
-    const date = document.getElementById('modal-leave-date').value;
+    const sEl = document.getElementById('modal-leave-start-date');
+    const eEl = document.getElementById('modal-leave-end-date');
+    const startDate = sEl ? sEl.value : document.getElementById('modal-leave-date').value;
+    let endDate = eEl ? eEl.value : startDate;
     const type = document.getElementById('modal-leave-type').value;
     const reason = document.getElementById('modal-leave-reason').value.trim();
 
-    if (!person || !date || !type) return;
+    if (!person || !startDate || !type) return;
+
+    if (type === '오전반차' || type === '오후반차' || !endDate || endDate < startDate) {
+      endDate = startDate;
+    }
+
+    const totalDays = calculateDateRangeDays(startDate, endDate);
+    const deductDays = calculateLeaveDeductDays(person, startDate, endDate, type);
 
     const leaves = getStoredLeaves();
     const newLeave = {
       id: 'leave_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
       person,
-      date,
+      startDate,
+      endDate,
+      date: startDate, // 하위 호환용
+      totalDays,
+      deductDays,
       type,
       reason,
       status: 'pending', // 대기 상태 등록
@@ -4017,14 +4253,17 @@
     saveStoredLeaves(leaves);
 
     // 신청한 날짜의 년/월로 연차 캘린더 이동하여 즉시 확인 가능하도록 처리
-    const dateParts = date.split('-');
+    const dateParts = startDate.split('-');
     if (dateParts.length === 3) {
       leaveCalYear = parseInt(dateParts[0], 10);
       leaveCalMonth = parseInt(dateParts[1], 10) - 1;
     }
 
     closeLeaveApplyModal();
-    alert(`[${person}] ${date} (${getDayOfWeekStr(date)}) ${type} 신청이 접수되었습니다.\n관리자 승인 대기 목록에 등록되었습니다.`);
+    const rangeMsg = (startDate === endDate)
+      ? `${startDate} (${getDayOfWeekStr(startDate)})`
+      : `${startDate} ~ ${endDate} (총 ${totalDays}일)`;
+    alert(`[${person}] ${rangeMsg} ${type} 신청이 접수되었습니다.\n관리자 승인 대기 목록에 등록되었습니다.`);
 
     renderLeaveTab();
     renderLeaveCalendar();
@@ -4036,13 +4275,19 @@
     const target = leaves.find(l => l.id === id);
     if (!target) return;
 
-    if (!confirm(`[${target.person}] ${target.date} (${getDayOfWeekStr(target.date)}) ${target.type} 신청을 승인하시겠습니까?\n\n승인 즉시 근무표 달력에 반영되고 신청내역에서 목록으로 이동합니다.`)) return;
+    const s = target.startDate || target.date;
+    const e = target.endDate || target.date;
+    const isRange = (s !== e);
+    const totalDays = target.totalDays || (isRange ? calculateDateRangeDays(s, e) : 1);
+    const dateText = isRange ? `${s} ~ ${e} (총 ${totalDays}일)` : `${s} (${getDayOfWeekStr(s)})`;
+
+    if (!confirm(`[${target.person}] ${dateText} ${target.type} 신청을 승인하시겠습니까?\n\n승인 즉시 근무표 달력에 반영되고 신청내역에서 목록으로 이동합니다.`)) return;
 
     target.status = 'approved';
     saveStoredLeaves(leaves);
 
     // 해당 연차의 년/월로 캘린더 뷰 동기화
-    const dateParts = target.date.split('-');
+    const dateParts = s.split('-');
     if (dateParts.length === 3) {
       leaveCalYear = parseInt(dateParts[0], 10);
       leaveCalMonth = parseInt(dateParts[1], 10) - 1;
@@ -4060,9 +4305,15 @@
     const target = leaves.find(l => l.id === id);
     if (!target) return;
 
-    if (!confirm(`[${target.person}] ${target.date} (${getDayOfWeekStr(target.date)}) ${target.type} 신청을 반려(삭제)하시겠습니까?`)) return;
+    const s = target.startDate || target.date;
+    const e = target.endDate || target.date;
+    const isRange = (s !== e);
+    const totalDays = target.totalDays || (isRange ? calculateDateRangeDays(s, e) : 1);
+    const dateText = isRange ? `${s} ~ ${e} (총 ${totalDays}일)` : `${s} (${getDayOfWeekStr(s)})`;
 
-    const targetDate = target.date;
+    if (!confirm(`[${target.person}] ${dateText} ${target.type} 신청을 반려(삭제)하시겠습니까?`)) return;
+
+    const targetDate = s;
     leaves = leaves.filter(l => l.id !== id);
     saveStoredLeaves(leaves);
 
@@ -4088,13 +4339,39 @@
     const l = leaves.find(item => item.id === id);
     if (!l) return;
 
-    const yoil = getDayOfWeekStr(l.date);
+    const s = l.startDate || l.date;
+    const e = l.endDate || l.date;
+    const isRange = (s !== e);
+    const totalDays = l.totalDays || (isRange ? calculateDateRangeDays(s, e) : 1);
+    const sYoil = getDayOfWeekStr(s);
+    const eYoil = getDayOfWeekStr(e);
+
+    let dateDisplay = `${s} (${sYoil})`;
+    if (isRange) {
+      dateDisplay = `${s} (${sYoil}) ~ ${e} (${eYoil}) <span style="color:#2563eb; font-weight:800;">(총 ${totalDays}일)</span>`;
+    }
+
     let pillClass = 'pill-leave';
     if (l.type === '오전반차') pillClass = 'pill-am';
     if (l.type === '오후반차') pillClass = 'pill-pm';
-    if (l.type === '경조사') pillClass = 'pill-congrat';
-    const typeLabel = l.type === '전일' ? '전일 연차' : (l.type === '경조사' ? '경조사 (1.0일)' : l.type);
-    const days = l.type === '전일' ? '1.0일' : (l.type === '경조사' ? '0일 (연차 미차감)' : '0.5일');
+    if (l.type === '경조사' || l.type === '경조사,포상') pillClass = 'pill-congrat';
+
+    const isCongrat = (l.type === '경조사' || l.type === '경조사,포상');
+    const typeLabel = l.type === '전일' ? '전일 연차' : (isCongrat ? '경조사,포상' : l.type);
+
+    let daysText = '1.0일 차감';
+    if (isCongrat) {
+      daysText = isRange ? `총 ${totalDays}일간 (연차 미차감)` : '0일 (연차 미차감)';
+    } else if (l.type === '오전반차' || l.type === '오후반차') {
+      daysText = '0.5일 차감';
+    } else {
+      const deduct = (l.deductDays !== undefined) ? l.deductDays : calculateLeaveDeductDays(l.person, s, e, l.type);
+      if (isRange) {
+        daysText = `총 ${totalDays}일간 (실제 출근일 ${deduct}일 차감)`;
+      } else {
+        daysText = `${deduct}일 차감`;
+      }
+    }
 
     const isPending = l.status === 'pending';
     const statusBadge = isPending
@@ -4110,14 +4387,14 @@
             <span style="font-weight: 800; color: #0f172a; font-size: 15px;">${l.person}</span>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
-            <span style="color: #64748b; font-weight: 600;">연차 날짜</span>
-            <span style="font-weight: 700; color: #0f172a;">${l.date} (${yoil})</span>
+            <span style="color: #64748b; font-weight: 600;">연차 사용 기간</span>
+            <span style="font-weight: 700; color: #0f172a;">${dateDisplay}</span>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
             <span style="color: #64748b; font-weight: 600;">구분 / 차감일수</span>
             <div style="display: flex; align-items: center; gap: 6px;">
               <span class="pill ${pillClass}">${typeLabel}</span>
-              <span style="font-weight: 700; color: #475569;">(${days} 차감)</span>
+              <span style="font-weight: 700; color: #475569;">(${daysText})</span>
             </div>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
@@ -4156,12 +4433,18 @@
     const target = leaves.find(l => l.id === id);
     if (!target) return;
 
-    const yoil = getDayOfWeekStr(target.date);
-    const typeLabel = target.type === '전일' ? '전일 연차' : target.type;
-    const msg = `[${target.person}] ${target.date} (${yoil}) ${typeLabel} 기록을 삭제하시겠습니까?\n\n삭제 시 근무표 달력 및 잔여 연차 일수가 즉시 원상 복구됩니다.`;
+    const s = target.startDate || target.date;
+    const e = target.endDate || target.date;
+    const isRange = (s !== e);
+    const totalDays = target.totalDays || (isRange ? calculateDateRangeDays(s, e) : 1);
+    const dateText = isRange ? `${s} ~ ${e} (총 ${totalDays}일)` : `${s} (${getDayOfWeekStr(s)})`;
+
+    const isCongrat = (target.type === '경조사' || target.type === '경조사,포상');
+    const typeLabel = target.type === '전일' ? '전일 연차' : (isCongrat ? '경조사,포상' : target.type);
+    const msg = `[${target.person}] ${dateText} ${typeLabel} 기록을 삭제하시겠습니까?\n\n삭제 시 근무표 달력 및 잔여 연차 일수가 즉시 원상 복구됩니다.`;
     if (!confirm(msg)) return;
 
-    const targetDate = target.date;
+    const targetDate = s;
     const targetPerson = target.person;
     leaves = leaves.filter(l => l.id !== id);
     saveStoredLeaves(leaves);
@@ -4393,17 +4676,23 @@
         <div class="badge-box">
       `;
 
-      // ★ 오직 연차만 표기 (승인된 연차와 대기 중인 연차 구분)
-      const dayLeaves = leaves.filter(l => l.date === dateKey);
+      // ★ 오직 연차만 표기 (승인된 연차와 대기 중인 연차 구분, 출근 예정일인 날만 표기)
+      const dayLeaves = leaves.filter(l => {
+        const s = l.startDate || l.date;
+        const e = l.endDate || l.date;
+        if (!(dateKey >= s && dateKey <= e)) return false;
+        return isPersonWorkingOnDate(l.person, dateKey);
+      });
       if (dayLeaves.length > 0) {
         dayLeaves.forEach(l => {
           const isPending = l.status === 'pending';
-          const typeLabel = l.type === '전일' ? '연차' : l.type;
+          const isCongrat = (l.type === '경조사' || l.type === '경조사,포상');
+          const typeLabel = l.type === '전일' ? '연차' : (isCongrat ? '경조사,포상' : l.type);
 
           if (isPending) {
-            html += `<span class="badge badge-leave-pending" onclick="openLeaveDetailModal('${l.id}')" style="cursor: pointer;" title="클릭 시 상세 정보 및 삭제: [승인대기] ${l.person} (${l.type})${l.reason ? ' - ' + l.reason : ''}"><span class="badge-person-name">⏳ ${l.person}</span><span class="badge-sub-info">(대기-${typeLabel})</span></span>`;
+            html += `<span class="badge badge-leave-pending" onclick="openLeaveDetailModal('${l.id}')" style="cursor: pointer;" title="클릭 시 상세 정보 및 삭제: [승인대기] ${l.person} (${typeLabel})${l.reason ? ' - ' + l.reason : ''}"><span class="badge-person-name">⏳ ${l.person}</span><span class="badge-sub-info">(대기-${typeLabel})</span></span>`;
           } else {
-            html += `<span class="badge badge-leave-approved" onclick="openLeaveDetailModal('${l.id}')" style="cursor: pointer;" title="클릭 시 상세 정보 및 삭제: [승인완료] ${l.person} (${l.type})${l.reason ? ' - ' + l.reason : ''}"><span class="badge-person-name">🌴 ${l.person}</span><span class="badge-sub-info">(${typeLabel})</span></span>`;
+            html += `<span class="badge badge-leave-approved" onclick="openLeaveDetailModal('${l.id}')" style="cursor: pointer;" title="클릭 시 상세 정보 및 삭제: [승인완료] ${l.person} (${typeLabel})${l.reason ? ' - ' + l.reason : ''}"><span class="badge-person-name">🌴 ${l.person}</span><span class="badge-sub-info">(${typeLabel})</span></span>`;
           }
         });
       }
@@ -5882,17 +6171,31 @@
       curr.setDate(curr.getDate() + 1);
     }
 
-    // 연차 사용일만큼 실제 근무일수(평일근무일수)에서 차감 (승인된 연차만 차감)
+    // 연차 사용일만큼 실제 근무일수(평일근무일수)에서 차감 (승인된 연차만 차감, 실제 출근일 기준)
     const leavesList = getStoredLeaves();
     const startStr = formatDateKey(startDate);
     const endStr = formatDateKey(endDate);
-    leavesList.forEach(l => {
-      if (l.status !== 'pending' && l.date >= startStr && l.date <= endStr && statsResult[l.person]) {
-        const days = (l.type === '전일' || l.type === '경조사') ? 1.0 : 0.5;
-        statsResult[l.person].weekdayWorkDays = Math.max(0, statsResult[l.person].weekdayWorkDays - days);
-        statsResult[l.person].workDays = statsResult[l.person].weekdayWorkDays + statsResult[l.person].dutyCount;
-      }
-    });
+
+    let checkDate = new Date(startDate);
+    while (checkDate <= endDate) {
+      const dStr = formatDateKey(checkDate);
+      const dayLeaves = leavesList.filter(l => {
+        if (l.status === 'pending') return false;
+        const s = l.startDate || l.date;
+        const e = l.endDate || l.date;
+        return dStr >= s && dStr <= e;
+      });
+
+      dayLeaves.forEach(l => {
+        if (statsResult[l.person] && isPersonWorkingOnDate(l.person, dStr)) {
+          const isFull = (l.type === '전일' || l.type === '경조사,포상' || l.type === '경조사');
+          const dayVal = isFull ? 1.0 : 0.5;
+          statsResult[l.person].weekdayWorkDays = Math.max(0, statsResult[l.person].weekdayWorkDays - dayVal);
+          statsResult[l.person].workDays = statsResult[l.person].weekdayWorkDays + statsResult[l.person].dutyCount;
+        }
+      });
+      checkDate.setDate(checkDate.getDate() + 1);
+    }
 
     return statsResult;
   }
@@ -5923,24 +6226,34 @@
     const startStr = formatDateKey(startDate);
     const endStr = formatDateKey(endDate);
 
-    // 1) 연차 집계 (승인된 연차만 집계)
+    // 1) 연차 집계 (승인된 연차만 집계, 실제 출근일 차감 기준)
     const leaves = getStoredLeaves();
     const grants = getStoredLeaveGrants(year);
-    const periodLeaves = leaves.filter(l => l.status !== 'pending' && l.date >= startStr && l.date <= endStr);
+    const approvedLeaves = leaves.filter(l => l.status !== 'pending');
     let totalLeaveDays = 0;
     const memberLeaveDays = {};
     ALL_MEMBERS.forEach(m => { memberLeaveDays[m] = 0; });
+    let totalLeaveCount = 0;
 
-    periodLeaves.forEach(l => {
-      const d = l.type === '전일' ? 1.0 : (l.type === '경조사' ? 0 : 0.5);
-      totalLeaveDays += d;
-      if (memberLeaveDays[l.person] !== undefined) {
-        memberLeaveDays[l.person] += d;
+    approvedLeaves.forEach(l => {
+      const s = l.startDate || l.date;
+      const e = l.endDate || l.date;
+      if (e >= startStr && s <= endStr) {
+        totalLeaveCount++;
+        if (l.type !== '경조사' && l.type !== '경조사,포상') {
+          const calcS = s < startStr ? startStr : s;
+          const calcE = e > endStr ? endStr : e;
+          const d = calculateLeaveDeductDays(l.person, calcS, calcE, l.type);
+          totalLeaveDays += d;
+          if (memberLeaveDays[l.person] !== undefined) {
+            memberLeaveDays[l.person] += d;
+          }
+        }
       }
     });
 
     document.getElementById('stat-total-leave-days').innerHTML = `${totalLeaveDays}<span style="font-size: 16px; font-weight: normal; margin-left: 4px;">일</span>`;
-    document.getElementById('stat-total-leave-count').innerText = `승인 건수: ${periodLeaves.length}건`;
+    document.getElementById('stat-total-leave-count').innerText = `승인 건수: ${totalLeaveCount}건`;
 
     // 2) 연장근무 집계 (형태별 분 및 갯수 집계)
     const overtimes = getStoredOvertimes();
