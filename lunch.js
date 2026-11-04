@@ -1070,9 +1070,13 @@ const DEFAULT_RESTAURANTS_DATA = [
   }
 ];
 
+// 기본 1인당 식대 (11,000원)
+const DEFAULT_PER_PERSON_BUDGET = 11000;
+
 // 로컬스토리지 키
 const STORAGE_KEY_LUNCH_RESTS = 'bd_lunch_restaurants_data_v2';
 const STORAGE_KEY_LUNCH_DAILY = 'bd_lunch_daily_order';
+const STORAGE_KEY_LUNCH_BUDGET = 'bd_lunch_per_person_budget_v2';
 
 // 상태 관리
 let lunchRestaurants = JSON.parse(JSON.stringify(DEFAULT_RESTAURANTS_DATA));
@@ -1082,13 +1086,30 @@ let candidateRestaurantIds = DEFAULT_RESTAURANTS_DATA.map(r => r.id); // 룰렛 
 // 당일 점심 주문 상태
 let lunchDailyState = {
   date: '', // YYYY-MM-DD
-  perPersonBudget: 10000, // 1인당 기본 기준 식대 (10,000원)
+  perPersonBudget: DEFAULT_PER_PERSON_BUDGET, // 1인당 기본 기준 식대 (11,000원)
   eatingCount: 5, // 오늘 식사 인원 (기본: 오늘 출근 인원수)
   orders: [] // [ { id, restaurantId, restaurantName, menuName, price, quantity, note } ]
 };
 
 let rouletteTimer = null;
 let isRouletteRunning = false;
+
+function getLunchFirestoreDb() {
+  return window.firebaseDb || (typeof firebaseDb !== 'undefined' ? firebaseDb : null);
+}
+
+function getSavedPerPersonBudget() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_LUNCH_BUDGET);
+    if (saved !== null) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed) && parsed >= 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {}
+  return DEFAULT_PER_PERSON_BUDGET;
+}
 
 // 모듈 초기화
 function initLunchModule() {
@@ -1106,18 +1127,20 @@ function loadStoredLunchData() {
     const savedDaily = localStorage.getItem(STORAGE_KEY_LUNCH_DAILY);
     const todayStr = getTodayDateStr();
     const defaultWorkingCount = getTodayWorkingCount();
+    const latestBudget = getSavedPerPersonBudget();
 
     if (savedDaily) {
       const parsed = JSON.parse(savedDaily);
       if (parsed.date === todayStr) {
         lunchDailyState = parsed;
+        lunchDailyState.perPersonBudget = latestBudget;
         if (lunchDailyState.eatingCount === undefined || lunchDailyState.eatingCount === null) {
           lunchDailyState.eatingCount = defaultWorkingCount;
         }
       } else {
         lunchDailyState = {
           date: todayStr,
-          perPersonBudget: parsed.perPersonBudget || 10000,
+          perPersonBudget: latestBudget,
           eatingCount: defaultWorkingCount,
           orders: []
         };
@@ -1125,7 +1148,7 @@ function loadStoredLunchData() {
     } else {
       lunchDailyState = {
         date: todayStr,
-        perPersonBudget: 10000,
+        perPersonBudget: latestBudget,
         eatingCount: defaultWorkingCount,
         orders: []
       };
@@ -1137,17 +1160,22 @@ function loadStoredLunchData() {
 
 function saveStoredLunchData() {
   try {
+    const currentBudget = (lunchDailyState.perPersonBudget !== undefined && lunchDailyState.perPersonBudget !== null)
+      ? lunchDailyState.perPersonBudget
+      : DEFAULT_PER_PERSON_BUDGET;
+    localStorage.setItem(STORAGE_KEY_LUNCH_BUDGET, String(currentBudget));
     localStorage.setItem(STORAGE_KEY_LUNCH_RESTS, JSON.stringify(lunchRestaurants));
     localStorage.setItem(STORAGE_KEY_LUNCH_DAILY, JSON.stringify(lunchDailyState));
-    if (window.firebaseDb) {
+    const db = getLunchFirestoreDb();
+    if (db) {
       // 메뉴 데이터 동기화
-      window.firebaseDb.collection('lunch').doc('restaurants').set({
+      db.collection('lunch').doc('restaurants').set({
         list: lunchRestaurants,
         updatedAt: new Date().toISOString()
       }).catch(e => console.warn('Firestore lunch rests err:', e));
 
       // 당일 주문 및 인원 동기화
-      window.firebaseDb.collection('lunch').doc('today_order').set({
+      db.collection('lunch').doc('today_order').set({
         daily: lunchDailyState,
         updatedAt: new Date().toISOString()
       }).catch(e => console.warn('Firestore today order err:', e));
@@ -1157,10 +1185,51 @@ function saveStoredLunchData() {
   }
 }
 
+function saveLunchBudgetSetting(budgetVal) {
+  try {
+    lunchDailyState.perPersonBudget = budgetVal;
+    localStorage.setItem(STORAGE_KEY_LUNCH_BUDGET, String(budgetVal));
+    localStorage.setItem(STORAGE_KEY_LUNCH_DAILY, JSON.stringify(lunchDailyState));
+    const db = getLunchFirestoreDb();
+    if (db) {
+      // 가장 마지막에 설정된 식대를 별도 문서(budget_settings)에 영구 저장하여 다른 기기/다른 날짜에도 즉시 공유
+      db.collection('lunch').doc('budget_settings').set({
+        perPersonBudget: budgetVal,
+        updatedAt: new Date().toISOString()
+      }).catch(e => console.warn('Firestore lunch budget_settings err:', e));
+
+      // 당일 주문 상태에도 함께 반영
+      db.collection('lunch').doc('today_order').set({
+        daily: lunchDailyState,
+        updatedAt: new Date().toISOString()
+      }).catch(e => console.warn('Firestore today order err:', e));
+    }
+  } catch (e) {
+    console.error('saveLunchBudgetSetting err:', e);
+  }
+}
+
 function setupLunchFirestoreListeners() {
-  if (!window.firebaseDb) return;
-  // 식당 & 메뉴 실시간 동기화
-  window.firebaseDb.collection('lunch').doc('restaurants').onSnapshot(doc => {
+  const db = getLunchFirestoreDb();
+  if (!db) return;
+
+  // 1. 가장 마지막에 설정된 1인당 식대 실시간 동기화 (날짜와 무관하게 영구 유지 및 전체 기기 공유)
+  db.collection('lunch').doc('budget_settings').onSnapshot(doc => {
+    if (doc.exists && doc.data() && doc.data().perPersonBudget !== undefined) {
+      const cloudBudget = parseInt(doc.data().perPersonBudget, 10);
+      if (!isNaN(cloudBudget) && cloudBudget >= 0) {
+        lunchDailyState.perPersonBudget = cloudBudget;
+        localStorage.setItem(STORAGE_KEY_LUNCH_BUDGET, String(cloudBudget));
+        localStorage.setItem(STORAGE_KEY_LUNCH_DAILY, JSON.stringify(lunchDailyState));
+        renderLunchHeaderBudgetBadge();
+        renderLunchEatingCountSection();
+        renderLunchOrdersTable();
+      }
+    }
+  }, err => console.warn('Firestore lunch budget listener note:', err));
+
+  // 2. 식당 & 메뉴 실시간 동기화
+  db.collection('lunch').doc('restaurants').onSnapshot(doc => {
     if (doc.exists && doc.data() && doc.data().list) {
       lunchRestaurants = doc.data().list;
       localStorage.setItem(STORAGE_KEY_LUNCH_RESTS, JSON.stringify(lunchRestaurants));
@@ -1171,13 +1240,17 @@ function setupLunchFirestoreListeners() {
     }
   }, err => console.warn('Firestore lunch listener note:', err));
 
-  // 당일 주문 및 인원 실시간 동기화
-  window.firebaseDb.collection('lunch').doc('today_order').onSnapshot(doc => {
+  // 3. 당일 주문 및 인원 실시간 동기화
+  db.collection('lunch').doc('today_order').onSnapshot(doc => {
     if (doc.exists && doc.data() && doc.data().daily) {
       const incoming = doc.data().daily;
       const todayStr = getTodayDateStr();
       if (incoming.date === todayStr) {
-        lunchDailyState = incoming;
+        const currentSavedBudget = getSavedPerPersonBudget();
+        lunchDailyState = {
+          ...incoming,
+          perPersonBudget: currentSavedBudget
+        };
         localStorage.setItem(STORAGE_KEY_LUNCH_DAILY, JSON.stringify(lunchDailyState));
         if (document.getElementById('tab-lunch') && document.getElementById('tab-lunch').classList.contains('active')) {
           renderLunchTab();
@@ -1233,7 +1306,7 @@ function renderLunchTab() {
 function renderLunchHeaderBudgetBadge() {
   const badgeEl = document.getElementById('lunch-header-per-budget');
   if (badgeEl) {
-    badgeEl.innerText = (lunchDailyState.perPersonBudget || 10000).toLocaleString();
+    badgeEl.innerText = (lunchDailyState.perPersonBudget || DEFAULT_PER_PERSON_BUDGET).toLocaleString();
   }
 }
 
@@ -1255,7 +1328,7 @@ function renderLunchEatingCountSection() {
   
   if (countInput) countInput.value = eatingCount;
 
-  const perBudget = lunchDailyState.perPersonBudget || 10000;
+  const perBudget = lunchDailyState.perPersonBudget || DEFAULT_PER_PERSON_BUDGET;
   if (perBudgetText) perBudgetText.innerText = `${perBudget.toLocaleString()}원`;
 
   const totalBudget = eatingCount * perBudget;
@@ -1293,7 +1366,7 @@ function resetEatingCountToWorking() {
 function openBudgetModal() {
   const inputEl = document.getElementById('modal-budget-input');
   if (inputEl) {
-    inputEl.value = lunchDailyState.perPersonBudget || 10000;
+    inputEl.value = lunchDailyState.perPersonBudget || DEFAULT_PER_PERSON_BUDGET;
   }
   document.getElementById('lunch-budget-modal').classList.add('active');
 }
@@ -1310,8 +1383,7 @@ function submitBudgetModal(e) {
     alert('올바른 식대 금액을 입력해주세요.');
     return;
   }
-  lunchDailyState.perPersonBudget = val;
-  saveStoredLunchData();
+  saveLunchBudgetSetting(val);
   closeBudgetModal();
   renderLunchTab();
 }
@@ -1622,7 +1694,7 @@ function renderLunchOrdersTable() {
   const eatingCount = (lunchDailyState.eatingCount !== undefined && lunchDailyState.eatingCount !== null) 
     ? lunchDailyState.eatingCount 
     : getTodayWorkingCount();
-  const perBudget = lunchDailyState.perPersonBudget || 10000;
+  const perBudget = lunchDailyState.perPersonBudget || DEFAULT_PER_PERSON_BUDGET;
   const totalBudget = eatingCount * perBudget;
   const totalOrderPrice = orders.reduce((sum, ord) => sum + (ord.price * (ord.quantity || 1)), 0);
   const diff = totalOrderPrice - totalBudget;
@@ -1806,7 +1878,7 @@ function copyLunchOrderText() {
   const eatingCount = (lunchDailyState && lunchDailyState.eatingCount !== undefined && lunchDailyState.eatingCount !== null) 
     ? lunchDailyState.eatingCount 
     : (typeof getTodayWorkingCount === 'function' ? getTodayWorkingCount() : 5);
-  const perBudget = (lunchDailyState && lunchDailyState.perPersonBudget) || 10000;
+  const perBudget = (lunchDailyState && lunchDailyState.perPersonBudget) || DEFAULT_PER_PERSON_BUDGET;
   const totalBudget = eatingCount * perBudget;
   const totalOrderPrice = orders.reduce((sum, ord) => sum + (ord.price * (ord.quantity || 1)), 0);
   const diff = totalOrderPrice - totalBudget;
