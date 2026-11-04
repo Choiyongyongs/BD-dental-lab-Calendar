@@ -939,9 +939,9 @@
   </style>
   <!-- html2canvas for capturing materials order -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <link rel="stylesheet" href="materials-lunch.css?v=1793182800000">
-  <script src="materials.js?v=1793182800000"></script>
-  <script src="lunch.js?v=1793182800000"></script>
+  <link rel="stylesheet" href="materials-lunch.css?v=1793183400000">
+  <script src="materials.js?v=1793183400000"></script>
+  <script src="lunch.js?v=1793183400000"></script>
 </head>
 <body>
 <div class="container">
@@ -950,7 +950,7 @@
   <div class="top-nav">
     <div class="app-title-area">
       <h1 class="app-title">서울비디치과기공실</h1>
-      <span class="app-badge">통합 v2.0</span>
+      <span class="app-badge">통합 v3.0</span>
     </div>
     <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
       <div id="cloud-status-badge" class="cloud-status disconnected" title="Firebase 데이터베이스 연결 상태">
@@ -1267,10 +1267,11 @@
               <span id="mat-total-count-badge" class="app-badge" style="background: #e0e7ff; color: #3730a3;">총 0건</span>
               <span id="mat-urgent-count-badge" class="urgency-badge urgency-urgent" style="cursor: default; font-size: 11px;">긴급 0건</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
               <span id="mat-checked-count-badge" style="font-size: 12.5px; font-weight: 700; color: #4f46e5;">캡쳐선택: 0건</span>
               <button type="button" style="padding: 4px 8px; font-size: 11.5px;" onclick="toggleAllMaterialOrders(true)">전체선택</button>
               <button type="button" style="padding: 4px 8px; font-size: 11.5px;" onclick="toggleAllMaterialOrders(false)">선택해제</button>
+              <button type="button" class="btn-danger" style="padding: 4px 8px; font-size: 11.5px; font-weight: 700;" onclick="deleteSelectedMaterialOrders()">선택삭제</button>
             </div>
           </div>
 
@@ -1716,10 +1717,10 @@
     </div>
 
     <div style="font-size: 12px; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; line-height: 1.55;">
-      <div style="font-weight: 800; color: #0f172a; margin-bottom: 3px;">⚖️ 근로기준법(제60조) 입사일 기준 연차 자동 계산</div>
-      • <strong>1년 미만 (입사 당해)</strong>: 1개월 개근 시 1일씩 발생 (최대 <strong>11개</strong>)<br>
-      • <strong>만 1년 ~ 2년차</strong>: 기본 <strong>15개</strong> 부여<br>
-      • <strong>만 3년차 이상 (가산연차)</strong>: 최초 1년 초과 매 2년마다 <strong>+1개씩 자동 가산</strong> (최대 25개)
+      <div style="font-weight: 800; color: #0f172a; margin-bottom: 3px;">⚖️ 근로기준법 회계연도(매년 1월 1일) 기준 연차 자동 계산</div>
+      • <strong>입사 당해 (1차년도)</strong>: 입사월~12월 말까지 1개월 개근 시 1개씩 발생 (<strong>12 - 입사월</strong>개)<br>
+      • <strong>입사 이듬해 1.1 (2차년도)</strong>: 전년도 재직일수 비례연차 부여 (<strong>15개 × 전년도 재직일수 / 365일</strong>, 반올림)<br>
+      • <strong>입사 2년 후 1.1~ (회계 만 1년차 이상)</strong>: 매년 1.1 기준 만 1~2년차 <strong>15개</strong>, 만 3년차부터 매 2년마다 <strong>+1개 가산</strong> (최대 25개)
     </div>
 
     <div id="modal-grant-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; padding-right: 4px;"></div>
@@ -2535,6 +2536,7 @@
     localStorage.setItem('duty_member_hire_dates', JSON.stringify(hireDates || {}));
   }
 
+  // 회계연도(매년 1월 1일) 기준 근로기준법 연차 자동 산정
   function calculateStatutoryLeave(hireDateStr, targetYear) {
     if (!hireDateStr) return null;
     const parts = String(hireDateStr).split('-').map(Number);
@@ -2547,6 +2549,7 @@
     if (isNaN(yr)) return null;
 
     const diffYears = yr - hireYear;
+    const isJanFirst = (hireMonth === 1 && hireDay === 1);
 
     // 1. 입사 이전 연도
     if (diffYears < 0) {
@@ -2558,38 +2561,54 @@
       };
     }
 
-    // 2. 입사 당해연도 (계속근로 1년 미만: 1개월 개근 시 1일, 최대 11일)
+    // 2. 입사 당해연도 (1차 회계연도: 해당 연도 12월 31일까지 매월 개근 시 1일씩 발생하는 월차)
     if (diffYears === 0) {
-      const today = new Date();
-      const hireDateObj = new Date(hireYear, hireMonth - 1, hireDay);
-      let elapsedMonths = 0;
-      if (today >= hireDateObj) {
-        elapsedMonths = (today.getFullYear() - hireYear) * 12 + (today.getMonth() - (hireMonth - 1));
-        if (today.getDate() < hireDay) elapsedMonths -= 1;
-        elapsedMonths = Math.max(0, Math.min(11, elapsedMonths));
-      }
+      const firstYearDays = isJanFirst ? 11 : Math.max(0, 12 - hireMonth);
       return {
-        days: 11,
+        days: firstYearDays,
         tenureYears: 0,
-        label: '1년 미만 (월차)',
-        detail: today.getFullYear() === yr
-          ? `월 1개씩 최대 11개 (현재 만 ${elapsedMonths}개월 경과)`
-          : `1년 미만 월차 (최대 11개)`
+        label: '입사 당해 (월차)',
+        detail: isJanFirst
+          ? `1년 미만 월차 11개 (1.1 입사)`
+          : `당해 회계연도 월차 ${firstYearDays}개 (${hireMonth}월 입사 · 연말까지 월 1개)`
       };
     }
 
-    // 3. 만 1년 이상 (근로기준법 제60조 제1항·제4항: 기본 15일 + 최초 1년 초과 매 2년마다 1일 가산, 최대 25일)
-    const extraDays = Math.floor((diffYears - 1) / 2);
+    // 3. 입사 이듬해 1월 1일 (2차 회계연도: 중도입사자는 전년도 근속기간 비례연차 부여)
+    if (diffYears === 1 && !isJanFirst) {
+      const isLeap = (hireYear % 4 === 0 && hireYear % 100 !== 0) || (hireYear % 400 === 0);
+      const daysInHireYear = isLeap ? 366 : 365;
+      const startUtc = Date.UTC(hireYear, hireMonth - 1, hireDay);
+      const endUtc = Date.UTC(hireYear, 11, 31);
+      const workedDays = Math.max(1, Math.floor((endUtc - startUtc) / (1000 * 60 * 60 * 24)) + 1);
+      const propExact = 15 * (workedDays / daysInHireYear);
+      const propRounded = Math.round(propExact);
+      const propOneDec = Number(propExact.toFixed(1));
+      const remainMonthly = Math.max(0, hireMonth - 1);
+
+      return {
+        days: propRounded,
+        tenureYears: 0,
+        label: '회계 2년차 (비례)',
+        detail: `전년도 비례 ${propRounded}개 (산식 ${propOneDec}개, ${workedDays}/${daysInHireYear}일 · 1년미만 잔여월차 ${remainMonthly}개 별도)`
+      };
+    }
+
+    // 4. 회계연도(1월 1일) 기준 만 1년 이상 근속자
+    // - 1월 1일 입사자는 만 근속연수 = diffYears
+    // - 연중 중도입사자는 해당 연도 1월 1일 기준 온전한 회계연도 근속연수 = diffYears - 1
+    const fiscalFullYears = isJanFirst ? diffYears : (diffYears - 1);
+    const extraDays = Math.floor((fiscalFullYears - 1) / 2);
     const totalDays = Math.min(25, 15 + extraDays);
 
     return {
       days: totalDays,
-      tenureYears: diffYears,
+      tenureYears: fiscalFullYears,
       extraDays: extraDays,
-      label: `만 ${diffYears}년차`,
+      label: `회계 만 ${fiscalFullYears}년차`,
       detail: extraDays > 0
-        ? `기본 15개 + 가산 ${extraDays}개`
-        : `기본 15개`
+        ? `기본 15개 + 가산 ${extraDays}개 (${yr}.1.1 기준 만 ${fiscalFullYears}년)`
+        : `기본 15개 (${yr}.1.1 기준 만 ${fiscalFullYears}년)`
     };
   }
 

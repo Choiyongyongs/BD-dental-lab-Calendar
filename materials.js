@@ -496,6 +496,22 @@ function deleteMaterialOrder(orderId) {
   renderMaterialTab();
 }
 
+function deleteSelectedMaterialOrders() {
+  let checkedOrders = materialOrders.filter(o => o.checked);
+  if (materialSupplierFilter !== 'ALL') {
+    checkedOrders = checkedOrders.filter(o => o.supplier === materialSupplierFilter);
+  }
+  if (checkedOrders.length === 0) {
+    alert('삭제할 재료를 체크박스로 먼저 선택해주세요.');
+    return;
+  }
+  if (!confirm(`선택한 재료 ${checkedOrders.length}건을 이번 주 발주 목록에서 삭제하시겠습니까?`)) return;
+  const removeIds = new Set(checkedOrders.map(o => o.id));
+  materialOrders = materialOrders.filter(o => !removeIds.has(o.id));
+  saveStoredMaterialsOrders();
+  renderMaterialTab();
+}
+
 function clearAllMaterialOrders() {
   if (materialOrders.length === 0) return;
   if (!confirm('이번 주 발주 목록을 모두 초기화(비우기)하시겠습니까?\n발주 완료 후 다음 주 주문을 시작할 때 사용하세요.')) return;

@@ -997,7 +997,7 @@ const DEFAULT_RESTAURANTS_DATA = [
   {
     "id": "rest_10",
     "name": "마테아",
-    "category": "이탈리안",
+    "category": "샐러드 샌드위치",
     "menus": [
       {
         "id": "m_mt_01",
@@ -1118,11 +1118,27 @@ function initLunchModule() {
   renderLunchTab();
 }
 
+function normalizeMateaCategory(restList) {
+  let changed = false;
+  if (Array.isArray(restList)) {
+    restList.forEach(r => {
+      if ((r.id === 'rest_10' || r.name === '마테아') && r.category === '이탈리안') {
+        r.category = '샐러드 샌드위치';
+        changed = true;
+      }
+    });
+  }
+  return changed;
+}
+
 function loadStoredLunchData() {
   try {
     const savedRests = localStorage.getItem(STORAGE_KEY_LUNCH_RESTS);
     if (savedRests) {
       lunchRestaurants = JSON.parse(savedRests);
+      if (normalizeMateaCategory(lunchRestaurants)) {
+        localStorage.setItem(STORAGE_KEY_LUNCH_RESTS, JSON.stringify(lunchRestaurants));
+      }
     }
     const savedDaily = localStorage.getItem(STORAGE_KEY_LUNCH_DAILY);
     const todayStr = getTodayDateStr();
@@ -1239,6 +1255,12 @@ function setupLunchFirestoreListeners() {
   db.collection('lunch').doc('restaurants').onSnapshot(doc => {
     if (doc.exists && doc.data() && Array.isArray(doc.data().list)) {
       lunchRestaurants = doc.data().list;
+      if (normalizeMateaCategory(lunchRestaurants)) {
+        db.collection('lunch').doc('restaurants').set({
+          list: lunchRestaurants,
+          updatedAt: new Date().toISOString()
+        }).catch(e => console.warn('Firestore lunch rests category update err:', e));
+      }
       localStorage.setItem(STORAGE_KEY_LUNCH_RESTS, JSON.stringify(lunchRestaurants));
       renderLunchRestaurantTabs();
       renderLunchMenuList();
