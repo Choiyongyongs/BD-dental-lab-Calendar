@@ -1225,37 +1225,53 @@ function setupLunchFirestoreListeners() {
         renderLunchEatingCountSection();
         renderLunchOrdersTable();
       }
+    } else if (!doc.exists) {
+      // 클라우드에 아직 식대 설정 문서가 없으면 현재 설정값(기본 11,000원)으로 초기 생성
+      const initBudget = getSavedPerPersonBudget();
+      db.collection('lunch').doc('budget_settings').set({
+        perPersonBudget: initBudget,
+        updatedAt: new Date().toISOString()
+      }).catch(e => console.warn('Firestore budget_settings init err:', e));
     }
   }, err => console.warn('Firestore lunch budget listener note:', err));
 
-  // 2. 식당 & 메뉴 실시간 동기화
+  // 2. 식당 & 메뉴 실시간 동기화 (메뉴 추가/수정/삭제 시 모든 접속자 실시간 공유)
   db.collection('lunch').doc('restaurants').onSnapshot(doc => {
-    if (doc.exists && doc.data() && doc.data().list) {
+    if (doc.exists && doc.data() && Array.isArray(doc.data().list)) {
       lunchRestaurants = doc.data().list;
       localStorage.setItem(STORAGE_KEY_LUNCH_RESTS, JSON.stringify(lunchRestaurants));
-      if (document.getElementById('tab-lunch') && document.getElementById('tab-lunch').classList.contains('active')) {
-        renderLunchRestaurantTabs();
-        renderLunchMenuList();
-      }
+      renderLunchRestaurantTabs();
+      renderLunchMenuList();
+      renderLunchRouletteCandidates();
+    } else if (!doc.exists && lunchRestaurants.length > 0) {
+      db.collection('lunch').doc('restaurants').set({
+        list: lunchRestaurants,
+        updatedAt: new Date().toISOString()
+      }).catch(e => console.warn('Firestore lunch rests init err:', e));
     }
   }, err => console.warn('Firestore lunch listener note:', err));
 
-  // 3. 당일 주문 및 인원 실시간 동기화
+  // 3. 당일 점심 주문서 및 식사 인원 실시간 동기화 (접속한 모든 사용자 실시간 공유)
   db.collection('lunch').doc('today_order').onSnapshot(doc => {
+    const todayStr = getTodayDateStr();
     if (doc.exists && doc.data() && doc.data().daily) {
       const incoming = doc.data().daily;
-      const todayStr = getTodayDateStr();
       if (incoming.date === todayStr) {
         const currentSavedBudget = getSavedPerPersonBudget();
         lunchDailyState = {
           ...incoming,
+          orders: Array.isArray(incoming.orders) ? incoming.orders : [],
           perPersonBudget: currentSavedBudget
         };
         localStorage.setItem(STORAGE_KEY_LUNCH_DAILY, JSON.stringify(lunchDailyState));
-        if (document.getElementById('tab-lunch') && document.getElementById('tab-lunch').classList.contains('active')) {
-          renderLunchTab();
-        }
+        renderLunchTab();
+      } else if (lunchDailyState.date === todayStr && Array.isArray(lunchDailyState.orders) && lunchDailyState.orders.length > 0) {
+        // 클라우드 문서가 이전 날짜이고 로컬에 오늘 담은 주문이 있는 경우 클라우드 갱신
+        saveStoredLunchData();
       }
+    } else if (!doc.exists && lunchDailyState.date === todayStr && Array.isArray(lunchDailyState.orders) && lunchDailyState.orders.length > 0) {
+      // 클라우드에 문서가 없고 로컬에 오늘 담은 주문이 있으면 즉시 클라우드에 업로드하여 공유
+      saveStoredLunchData();
     }
   }, err => console.warn('Firestore today order listener note:', err));
 }
@@ -1742,14 +1758,14 @@ function renderLunchOrdersTable() {
     `;
   }
 
-  // 2. 주문 테이블 렌더링
+  // 2. 주문 테이블 렌더링 (2줄 레이아웃: 1줄 메뉴명 전체, 2줄 식당·단가·수량·금액·삭제)
   if (orders.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" style="text-align: center; padding: 35px 10px; color: #94a3b8; font-size: 13.5px;">
+        <td style="text-align: center; padding: 35px 10px; color: #94a3b8; font-size: 13.5px;">
           🍚 아직 담긴 점심 메뉴가 없습니다.<br>
           <span style="font-size: 12px; color: #cbd5e1; margin-top: 4px; display: inline-block;">
-            위 식당 메뉴판에서 [담기 +] 버튼을 누르면 즉시 주문서에 추가됩니다!
+            식당 메뉴판에서 [담기 +] 버튼을 누르면 즉시 주문서에 추가됩니다!
           </span>
         </td>
       </tr>
@@ -1761,23 +1777,27 @@ function renderLunchOrdersTable() {
   tbody.innerHTML = orders.map((ord, idx) => {
     const itemTotal = ord.price * (ord.quantity || 1);
     return `
-      <tr>
-        <td style="text-align: center; width: 40px; color: #64748b; font-weight: 600;">${idx + 1}</td>
-        <td style="width: 100px;">
-          <span class="supplier-chip" style="font-weight: 700;">${escapeHtml(ord.restaurantName)}</span>
-        </td>
-        <td style="font-weight: 700; color: #0f172a;">${escapeHtml(ord.menuName)}</td>
-        <td style="text-align: right; color: #64748b; font-size: 12.5px; width: 80px;">${ord.price.toLocaleString()}원</td>
-        <td style="text-align: center; width: 110px;">
-          <div class="qty-controller" style="margin: 0 auto;">
-            <button type="button" class="qty-btn" onclick="changeLunchOrderQty('${ord.id}', -1)" title="1개 감소">-</button>
-            <input type="number" class="qty-input" min="1" value="${ord.quantity || 1}" onclick="this.select()" onfocus="this.select()" onchange="updateLunchOrderQtyDirect('${ord.id}', this.value)" title="클릭하여 수량 직접 입력" />
-            <button type="button" class="qty-btn" onclick="changeLunchOrderQty('${ord.id}', 1)" title="1개 증가">+</button>
+      <tr class="order-two-line-row">
+        <td>
+          <div class="order-row-top">
+            <span class="order-item-index">${idx + 1}.</span>
+            <div class="order-item-title">${escapeHtml(ord.menuName)}</div>
           </div>
-        </td>
-        <td style="text-align: right; font-weight: 800; color: #2563eb; width: 90px;">${itemTotal.toLocaleString()}원</td>
-        <td style="text-align: center; width: 44px;">
-          <button type="button" class="btn-danger" style="padding: 3px 7px; font-size: 11px;" onclick="deleteLunchOrder('${ord.id}')">✕</button>
+          <div class="order-row-bottom">
+            <div class="order-row-meta">
+              <span class="supplier-chip" style="font-weight: 700;">${escapeHtml(ord.restaurantName)}</span>
+              <span class="order-item-spec">단가 ${ord.price.toLocaleString()}원</span>
+            </div>
+            <div class="order-row-controls">
+              <div class="qty-controller">
+                <button type="button" class="qty-btn" onclick="changeLunchOrderQty('${ord.id}', -1)" title="1개 감소">-</button>
+                <input type="number" class="qty-input" min="1" value="${ord.quantity || 1}" onclick="this.select()" onfocus="this.select()" onchange="updateLunchOrderQtyDirect('${ord.id}', this.value)" title="클릭하여 수량 직접 입력" />
+                <button type="button" class="qty-btn" onclick="changeLunchOrderQty('${ord.id}', 1)" title="1개 증가">+</button>
+              </div>
+              <span class="order-item-total-price">${itemTotal.toLocaleString()}원</span>
+              <button type="button" class="btn-danger order-delete-btn" onclick="deleteLunchOrder('${ord.id}')" title="주문서에서 삭제">✕</button>
+            </div>
+          </div>
         </td>
       </tr>
     `;

@@ -63,10 +63,15 @@ let materialSupplierFilter = 'ALL';
 const STORAGE_KEY_MAT_MASTER = 'bd_material_custom_master';
 const STORAGE_KEY_MAT_ORDERS = 'bd_material_current_orders';
 
+function getMaterialFirestoreDb() {
+  return window.firebaseDb || (typeof firebaseDb !== 'undefined' ? firebaseDb : null);
+}
+
 // 초기 로드
 function initMaterialsModule() {
   loadStoredMaterials();
   setupMaterialFirestoreListeners();
+  renderMaterialTab();
 }
 
 function loadStoredMaterials() {
@@ -93,8 +98,9 @@ function loadStoredMaterials() {
 function saveStoredMaterialsOrders() {
   try {
     localStorage.setItem(STORAGE_KEY_MAT_ORDERS, JSON.stringify(materialOrders));
-    if (window.firebaseDb) {
-      window.firebaseDb.collection('materials').doc('current_orders').set({
+    const db = getMaterialFirestoreDb();
+    if (db) {
+      db.collection('materials').doc('current_orders').set({
         orders: materialOrders,
         updatedAt: new Date().toISOString()
       }).catch(err => console.warn('Firestore material orders sync err:', err));
@@ -108,8 +114,9 @@ function saveCustomMasterItem(item) {
   try {
     const customOnly = materialMasterList.filter(m => !DEFAULT_MATERIAL_MASTER.some(d => d.id === m.id));
     localStorage.setItem(STORAGE_KEY_MAT_MASTER, JSON.stringify(customOnly));
-    if (window.firebaseDb) {
-      window.firebaseDb.collection('materials').doc('custom_master').set({
+    const db = getMaterialFirestoreDb();
+    if (db) {
+      db.collection('materials').doc('custom_master').set({
         items: customOnly,
         updatedAt: new Date().toISOString()
       }).catch(err => console.warn('Firestore custom master sync err:', err));
@@ -120,21 +127,28 @@ function saveCustomMasterItem(item) {
 }
 
 function setupMaterialFirestoreListeners() {
-  if (!window.firebaseDb) return;
-  // 실시간 주문 동기화
-  window.firebaseDb.collection('materials').doc('current_orders').onSnapshot(doc => {
-    if (doc.exists && doc.data() && doc.data().orders) {
+  const db = getMaterialFirestoreDb();
+  if (!db) return;
+
+  // 1. 실시간 이번 주 발주 목록 동기화 (접속한 모든 사용자 실시간 공유)
+  db.collection('materials').doc('current_orders').onSnapshot(doc => {
+    if (doc.exists && doc.data() && Array.isArray(doc.data().orders)) {
       materialOrders = doc.data().orders;
       localStorage.setItem(STORAGE_KEY_MAT_ORDERS, JSON.stringify(materialOrders));
-      if (document.getElementById('tab-material') && document.getElementById('tab-material').classList.contains('active')) {
-        renderMaterialTab();
+      renderMaterialTab();
+      const capModal = document.getElementById('material-capture-modal');
+      if (capModal && capModal.classList.contains('active')) {
+        renderCapturePreviewContent();
       }
+    } else if (!doc.exists && materialOrders.length > 0) {
+      // 클라우드에 아직 문서가 없고 로컬에 담아둔 재료가 있으면 즉시 클라우드로 업로드하여 공유
+      saveStoredMaterialsOrders();
     }
   }, err => console.warn('Firestore material listener note:', err));
 
-  // 사용자 추가 재료 마스터 동기화
-  window.firebaseDb.collection('materials').doc('custom_master').onSnapshot(doc => {
-    if (doc.exists && doc.data() && doc.data().items) {
+  // 2. 사용자 추가 재료 마스터 실시간 동기화
+  db.collection('materials').doc('custom_master').onSnapshot(doc => {
+    if (doc.exists && doc.data() && Array.isArray(doc.data().items)) {
       const customItems = doc.data().items;
       const customIds = new Set(customItems.map(c => c.id));
       materialMasterList = [
@@ -142,8 +156,12 @@ function setupMaterialFirestoreListeners() {
         ...customItems
       ];
       localStorage.setItem(STORAGE_KEY_MAT_MASTER, JSON.stringify(customItems));
-      if (document.getElementById('tab-material') && document.getElementById('tab-material').classList.contains('active')) {
-        renderMaterialMasterGrid();
+      renderMaterialMasterGrid();
+      renderMaterialSupplierChips();
+    } else if (!doc.exists) {
+      const customOnly = materialMasterList.filter(m => !DEFAULT_MATERIAL_MASTER.some(d => d.id === m.id));
+      if (customOnly.length > 0) {
+        saveCustomMasterItem();
       }
     }
   }, err => console.warn('Firestore material master listener note:', err));
@@ -182,7 +200,7 @@ function renderMaterialOrderList() {
   if (filteredOrders.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="6" style="text-align: center; padding: 40px 10px; color: #94a3b8; font-size: 13.5px;">
+        <td style="text-align: center; padding: 40px 10px; color: #94a3b8; font-size: 13.5px;">
           🛒 이번 주 주문할 재료가 아직 없습니다.<br>
           <span style="font-size: 12px; color: #cbd5e1; margin-top: 6px; display: inline-block;">
             좌측 '재료목록'에서 품목을 선택하거나 '재료등록'을 클릭해 담아주세요!
@@ -200,30 +218,28 @@ function renderMaterialOrderList() {
       : `<span class="urgency-badge urgency-regular" onclick="toggleOrderUrgency('${ord.id}')" title="클릭시 긴급 주문으로 변경">📦 정기</span>`;
 
     return `
-      <tr style="${isUrgent ? 'background-color: #fffaf0;' : ''}">
-        <td style="text-align: center; width: 40px;">
-          <input type="checkbox" class="custom-checkbox" ${ord.checked ? 'checked' : ''} onchange="toggleOrderCheck('${ord.id}', this.checked)" title="캡쳐 발주서에 포함" />
-        </td>
-        <td style="text-align: center; width: 68px; white-space: nowrap;">${urgencyBadge}</td>
-        <td style="word-break: keep-all; overflow-wrap: break-word;">
-          <div style="font-weight: 700; color: #0f172a; font-size: 13px; line-height: 1.35;">${escapeHtml(ord.name)}</div>
-          <div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">${escapeHtml(ord.spec || '-')}</div>
-        </td>
-        <td style="text-align: center; width: 72px; white-space: nowrap;">
-          <span class="supplier-chip">${escapeHtml(ord.supplier || '기본')}</span>
-        </td>
-        <td style="text-align: center; width: 112px; white-space: nowrap;">
-          <div style="display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
-            <div class="qty-controller">
-              <button type="button" class="qty-btn" onclick="changeOrderQty('${ord.id}', -1)" title="1개 감소">-</button>
-              <input type="number" class="qty-input" min="1" value="${ord.quantity}" onclick="this.select()" onfocus="this.select()" onchange="updateOrderQtyDirect('${ord.id}', this.value)" title="클릭하여 수량 직접 입력" />
-              <button type="button" class="qty-btn" onclick="changeOrderQty('${ord.id}', 1)" title="1개 증가">+</button>
-            </div>
-            <span style="font-size: 11.5px; color: #64748b; font-weight: 600;">${escapeHtml(ord.unit || 'ea')}</span>
+      <tr class="order-two-line-row ${isUrgent ? 'is-urgent' : ''}">
+        <td>
+          <div class="order-row-top">
+            <input type="checkbox" class="custom-checkbox" ${ord.checked ? 'checked' : ''} onchange="toggleOrderCheck('${ord.id}', this.checked)" title="캡쳐 발주서에 포함" />
+            <div class="order-item-title">${escapeHtml(ord.name)}</div>
           </div>
-        </td>
-        <td style="text-align: center; width: 44px;">
-          <button type="button" class="btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteMaterialOrder('${ord.id}')" title="주문 목록에서 삭제">✕</button>
+          <div class="order-row-bottom">
+            <div class="order-row-meta">
+              ${urgencyBadge}
+              <span class="supplier-chip">${escapeHtml(ord.supplier || '기본')}</span>
+              <span class="order-item-spec">${escapeHtml(ord.spec || '-')}</span>
+            </div>
+            <div class="order-row-controls">
+              <div class="qty-controller">
+                <button type="button" class="qty-btn" onclick="changeOrderQty('${ord.id}', -1)" title="1개 감소">-</button>
+                <input type="number" class="qty-input" min="1" value="${ord.quantity}" onclick="this.select()" onfocus="this.select()" onchange="updateOrderQtyDirect('${ord.id}', this.value)" title="클릭하여 수량 직접 입력" />
+                <button type="button" class="qty-btn" onclick="changeOrderQty('${ord.id}', 1)" title="1개 증가">+</button>
+              </div>
+              <span class="order-item-unit">${escapeHtml(ord.unit || 'ea')}</span>
+              <button type="button" class="btn-danger order-delete-btn" onclick="deleteMaterialOrder('${ord.id}')" title="주문 목록에서 삭제">✕</button>
+            </div>
+          </div>
         </td>
       </tr>
     `;

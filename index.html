@@ -939,9 +939,9 @@
   </style>
   <!-- html2canvas for capturing materials order -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <link rel="stylesheet" href="materials-lunch.css?v=1793179300000">
-  <script src="materials.js?v=1793179300000"></script>
-  <script src="lunch.js?v=1793179300000"></script>
+  <link rel="stylesheet" href="materials-lunch.css?v=1793179500000">
+  <script src="materials.js?v=1793179500000"></script>
+  <script src="lunch.js?v=1793179500000"></script>
 </head>
 <body>
 <div class="container">
@@ -1274,18 +1274,8 @@
           <div id="mat-supplier-filter-container" class="filter-chip-bar" style="margin-bottom: 0;"></div>
         </div>
 
-        <div class="data-table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th style="width: 40px; text-align: center;">선택</th>
-                <th style="width: 68px; text-align: center;">구분</th>
-                <th>품목명 / 규격</th>
-                <th style="width: 72px; text-align: center;">제조사</th>
-                <th style="width: 112px; text-align: center;">수량</th>
-                <th style="width: 44px; text-align: center;">삭제</th>
-              </tr>
-            </thead>
+        <div class="data-table-container" style="overflow-x: hidden;">
+          <table class="data-table order-two-line-table">
             <tbody id="material-order-tbody"></tbody>
           </table>
         </div>
@@ -1366,20 +1356,9 @@
         <!-- 주문서 상단 실시간 예산 비교 배너 (오바 / 남은 금액 체크) -->
         <div id="lunch-order-budget-comparison" class="order-budget-banner"></div>
 
-        <!-- 메뉴별 주문 테이블 -->
-        <div class="data-table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th style="width: 40px; text-align: center;">No</th>
-                <th style="width: 95px;">식당</th>
-                <th>메뉴명</th>
-                <th style="text-align: right; width: 80px;">단가</th>
-                <th style="text-align: center; width: 110px;">수량</th>
-                <th style="text-align: right; width: 90px;">금액</th>
-                <th style="width: 44px; text-align: center;">삭제</th>
-              </tr>
-            </thead>
+        <!-- 메뉴별 주문 테이블 (2줄 레이아웃) -->
+        <div class="data-table-container" style="overflow-x: hidden;">
+          <table class="data-table order-two-line-table">
             <tbody id="lunch-orders-tbody"></tbody>
           </table>
         </div>
