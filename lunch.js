@@ -1514,15 +1514,15 @@ function runLunchRoulette() {
   rollStep();
 }
 
-// 3. 식당별 메뉴판 및 식당 목록 2줄 배치 (5개씩 2줄)
+// 3. 식당별 메뉴판 및 식당 목록 배치
 function renderLunchRestaurantTabs() {
   const container = document.getElementById('restaurant-tab-bar');
   if (!container) return;
 
   container.innerHTML = lunchRestaurants.map(rest => `
     <button type="button" class="restaurant-tab-btn ${rest.id === selectedRestaurantId ? 'active' : ''}" onclick="selectRestaurantTab('${rest.id}')">
-      <div>${escapeHtml(rest.name)}</div>
-      <div style="font-size: 11px; opacity: 0.8; font-weight: normal;">${escapeHtml(rest.category)} (${rest.menus ? rest.menus.length : 0})</div>
+      <div class="rest-tab-name">${escapeHtml(rest.name)}</div>
+      <div class="rest-tab-sub">${escapeHtml(rest.category)} (${rest.menus ? rest.menus.length : 0})</div>
     </button>
   `).join('');
 }

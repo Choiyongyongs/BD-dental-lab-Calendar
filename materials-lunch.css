@@ -693,22 +693,12 @@ input[type="number"] {
   gap: 10px;
 }
 
-/* 식당 메뉴판 탭 및 카드 (11개 식당 2줄 배치: 6열 그리드) */
+/* 식당 메뉴판 탭 및 카드 (PC: 6열 그리드 / 모바일: 가로로 최대한 촘촘히 배치) */
 .restaurant-tabs {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 8px;
   margin-bottom: 16px;
-}
-@media (max-width: 1100px) {
-  .restaurant-tabs {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-@media (max-width: 768px) {
-  .restaurant-tabs {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 .restaurant-tab-btn {
   padding: 10px 8px;
@@ -726,6 +716,50 @@ input[type="number"] {
   align-items: center;
   justify-content: center;
   gap: 2px;
+  min-width: 0;
+}
+.rest-tab-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.rest-tab-sub {
+  font-size: 11px;
+  opacity: 0.8;
+  font-weight: normal;
+  white-space: nowrap;
+}
+@media (max-width: 1100px) {
+  .restaurant-tabs {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@media (max-width: 768px) {
+  .restaurant-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 12px;
+  }
+  .restaurant-tab-btn {
+    flex: 1 1 auto;
+    padding: 6px 9px;
+    font-size: 12px;
+    border-radius: 8px;
+    gap: 0;
+  }
+  .rest-tab-sub {
+    display: none;
+  }
+  .restaurant-select-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .restaurant-chip {
+    padding: 6px 4px;
+    font-size: 12px;
+  }
 }
 .restaurant-tab-btn:hover {
   background: #f8fafc;
