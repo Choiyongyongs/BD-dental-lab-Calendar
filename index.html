@@ -939,9 +939,9 @@
   </style>
   <!-- html2canvas for capturing materials order -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <link rel="stylesheet" href="materials-lunch.css?v=1793179500000">
-  <script src="materials.js?v=1793179500000"></script>
-  <script src="lunch.js?v=1793179500000"></script>
+  <link rel="stylesheet" href="materials-lunch.css?v=1793179600000">
+  <script src="materials.js?v=1793179600000"></script>
+  <script src="lunch.js?v=1793179600000"></script>
 </head>
 <body>
 <div class="container">
@@ -1206,8 +1206,6 @@
       </div>
       <div class="controls">
         <button type="button" class="btn-primary" onclick="openAddCustomMaterialModal()" style="background: #2563eb;">➕ 재료등록</button>
-        <button type="button" class="btn-primary" onclick="openMaterialCaptureModal()" style="background: #4f46e5; border-color: #4338ca;">📸 선택 항목 캡쳐 (발주용)</button>
-        <button type="button" class="btn-danger" onclick="clearAllMaterialOrders()">🗑️ 주문 초기화</button>
       </div>
     </div>
 
@@ -1216,7 +1214,7 @@
       <div class="feature-banner-text">
         <span class="feature-banner-badge">주문 안내</span>
         모든 직원이 주문해야 될 재료를 선택하고 담을 수 있습니다. 1주일에 한 번씩 주문하며, 급한 재료는 <strong>[🚨 긴급]</strong>으로 표시해주세요.<br>
-        입력이 완료된 재료는 <strong>[📸 선택 항목 캡쳐]</strong> 버튼으로 재료상별로 원하는 품목만 체크하여 깔끔한 이미지로 캡쳐 후 전달할 수 있습니다.
+        입력이 완료된 재료는 <strong>[📸 선택 항목 캡쳐]</strong>로 전달하고, <strong>[💾 목록 저장]</strong>을 눌러 재료 도착 시 주문이 잘 들어왔는지 체크하세요.
       </div>
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         <span class="urgency-badge urgency-urgent" style="cursor: default;">🚨 긴급: 당일/익일 긴급 발주</span>
@@ -1253,31 +1251,52 @@
         <div id="material-master-grid" class="material-master-grid"></div>
       </div>
 
-      <!-- 우측: 이번 주 발주 목록 (체크박스로 캡쳐 대상 선택) -->
-      <div class="card">
-        <div class="card-title" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <span>📋 이번 주 발주 목록</span>
-            <span id="mat-total-count-badge" class="app-badge" style="background: #e0e7ff; color: #3730a3;">총 0건</span>
-            <span id="mat-urgent-count-badge" class="urgency-badge urgency-urgent" style="cursor: default; font-size: 11px;">긴급 0건</span>
+      <!-- 우측: 상단 버튼 바 + 이번 주 발주 목록 + 저장된 발주 입고 확인 목록 -->
+      <div style="min-width: 0; width: 100%;">
+        <!-- 이번 주 발주 목록 바로 위 액션 버튼 바 -->
+        <div class="order-section-action-bar">
+          <button type="button" class="btn-primary" onclick="openMaterialCaptureModal()" style="background: #4f46e5; border-color: #4338ca;">📸 선택 항목 캡쳐 (발주용)</button>
+          <button type="button" class="btn-primary" onclick="saveCurrentMaterialOrderToCheckList()" style="background: #059669; border-color: #047857;">💾 목록 저장 (입고체크)</button>
+          <button type="button" class="btn-danger" onclick="clearAllMaterialOrders()">🗑️ 주문 초기화</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span>📋 이번 주 발주 목록</span>
+              <span id="mat-total-count-badge" class="app-badge" style="background: #e0e7ff; color: #3730a3;">총 0건</span>
+              <span id="mat-urgent-count-badge" class="urgency-badge urgency-urgent" style="cursor: default; font-size: 11px;">긴급 0건</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span id="mat-checked-count-badge" style="font-size: 12.5px; font-weight: 700; color: #4f46e5;">캡쳐선택: 0건</span>
+              <button type="button" style="padding: 4px 8px; font-size: 11.5px;" onclick="toggleAllMaterialOrders(true)">전체선택</button>
+              <button type="button" style="padding: 4px 8px; font-size: 11.5px;" onclick="toggleAllMaterialOrders(false)">선택해제</button>
+            </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span id="mat-checked-count-badge" style="font-size: 12.5px; font-weight: 700; color: #4f46e5;">캡쳐선택: 0건</span>
-            <button type="button" style="padding: 4px 8px; font-size: 11.5px;" onclick="toggleAllMaterialOrders(true)">전체선택</button>
-            <button type="button" style="padding: 4px 8px; font-size: 11.5px;" onclick="toggleAllMaterialOrders(false)">선택해제</button>
+
+          <!-- 재료상별 필터 칩 -->
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+            <span style="font-size: 12px; font-weight: 700; color: #64748b;">제조사 필터:</span>
+            <div id="mat-supplier-filter-container" class="filter-chip-bar" style="margin-bottom: 0;"></div>
+          </div>
+
+          <div class="data-table-container" style="overflow-x: hidden;">
+            <table class="data-table order-two-line-table">
+              <tbody id="material-order-tbody"></tbody>
+            </table>
           </div>
         </div>
 
-        <!-- 재료상별 필터 칩 -->
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
-          <span style="font-size: 12px; font-weight: 700; color: #64748b;">제조사 필터:</span>
-          <div id="mat-supplier-filter-container" class="filter-chip-bar" style="margin-bottom: 0;"></div>
-        </div>
-
-        <div class="data-table-container" style="overflow-x: hidden;">
-          <table class="data-table order-two-line-table">
-            <tbody id="material-order-tbody"></tbody>
-          </table>
+        <!-- 저장된 발주 목록 (주문이 잘 들어왔는지 입고 체크하는 영역) -->
+        <div class="card" id="material-saved-history-card">
+          <div class="card-title" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span>✅ 저장된 발주 목록 (입고 확인 체크)</span>
+              <span id="mat-saved-history-badge" class="app-badge" style="background: #dcfce7; color: #166534;">0건</span>
+            </div>
+            <span style="font-size: 11.5px; color: #64748b;">항목 클릭 시 [입고대기 ↔ 입고완료] 체크</span>
+          </div>
+          <div id="material-saved-history-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
         </div>
       </div>
     </div>
@@ -1292,9 +1311,7 @@
       </div>
       <div class="controls">
         <button type="button" class="btn-primary" onclick="openLunchRouletteModal()" style="background: #9333ea; border-color: #7e22ce; font-weight: 700;">🎲 오늘 뭐먹지?</button>
-        <button type="button" class="btn-primary" onclick="copyLunchOrderText()" style="background: #10b981; border-color: #059669;">📋 주문서 카톡 복사</button>
         <button type="button" onclick="openBudgetModal()" style="font-weight: 700; background: #f0fdf4; border: 1.5px solid #86efac; color: #166534;">💵 식대 설정 (<span id="lunch-header-per-budget">11,000</span>원)</button>
-        <button type="button" class="btn-danger" onclick="clearAllLunchOrders()">🔄 주문 초기화</button>
       </div>
     </div>
 
@@ -1346,29 +1363,50 @@
         <div id="restaurant-menu-list-grid" class="menu-list-grid"></div>
       </div>
 
-      <!-- 우측: 오늘 점심 주문서 (수량 수정 & 실시간 예산 비교 오바체크) -->
-      <div class="card">
-        <div class="card-title" style="justify-content: space-between;">
-          <span>📋 오늘 점심 주문서</span>
-          <span style="font-size: 12px; color: #64748b;">메뉴별 수량 조정 및 실시간 예산 비교</span>
+      <!-- 우측: 상단 버튼 바 + 오늘 점심 주문서 + 저장된 주문 확인 목록 -->
+      <div style="min-width: 0; width: 100%;">
+        <!-- 오늘 점심 주문서 바로 위 액션 버튼 바 -->
+        <div class="order-section-action-bar">
+          <button type="button" class="btn-primary" onclick="copyLunchOrderText()" style="background: #10b981; border-color: #059669;">📋 주문서 카톡 복사</button>
+          <button type="button" class="btn-primary" onclick="saveCurrentLunchOrderToCheckList()" style="background: #0284c7; border-color: #0369a1;">💾 목록 저장 (주문체크)</button>
+          <button type="button" class="btn-danger" onclick="clearAllLunchOrders()">🔄 주문 초기화</button>
         </div>
 
-        <!-- 주문서 상단 실시간 예산 비교 배너 (오바 / 남은 금액 체크) -->
-        <div id="lunch-order-budget-comparison" class="order-budget-banner"></div>
-
-        <!-- 메뉴별 주문 테이블 (2줄 레이아웃) -->
-        <div class="data-table-container" style="overflow-x: hidden;">
-          <table class="data-table order-two-line-table">
-            <tbody id="lunch-orders-tbody"></tbody>
-          </table>
-        </div>
-
-        <!-- 식당 주문용 최종 합산 취합 박스 -->
-        <div style="margin-top: 16px; border-top: 1.5px solid #f1f5f9; padding-top: 14px;">
-          <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">
-            📞 식당 주문용 요약 취합 (배달/전화 주문 시 확인용)
+        <div class="card">
+          <div class="card-title" style="justify-content: space-between;">
+            <span>📋 오늘 점심 주문서</span>
+            <span style="font-size: 12px; color: #64748b;">메뉴별 수량 조정 및 실시간 예산 비교</span>
           </div>
-          <div id="lunch-orders-aggregated-box" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;"></div>
+
+          <!-- 주문서 상단 실시간 예산 비교 배너 (오바 / 남은 금액 체크) -->
+          <div id="lunch-order-budget-comparison" class="order-budget-banner"></div>
+
+          <!-- 메뉴별 주문 테이블 (2줄 레이아웃) -->
+          <div class="data-table-container" style="overflow-x: hidden;">
+            <table class="data-table order-two-line-table">
+              <tbody id="lunch-orders-tbody"></tbody>
+            </table>
+          </div>
+
+          <!-- 식당 주문용 최종 합산 취합 박스 -->
+          <div style="margin-top: 16px; border-top: 1.5px solid #f1f5f9; padding-top: 14px;">
+            <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">
+              📞 식당 주문용 요약 취합 (배달/전화 주문 시 확인용)
+            </div>
+            <div id="lunch-orders-aggregated-box" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;"></div>
+          </div>
+        </div>
+
+        <!-- 저장된 점심 주문 목록 (주문이 잘 들어왔는지 체크하는 영역) -->
+        <div class="card" id="lunch-saved-checklist-card">
+          <div class="card-title" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span>✅ 저장된 주문 목록 (배달/도착 확인 체크)</span>
+              <span id="lunch-saved-checklist-badge" class="app-badge" style="background: #dcfce7; color: #166534;">0건</span>
+            </div>
+            <span style="font-size: 11.5px; color: #64748b;">메뉴 클릭 시 [확인대기 ↔ 도착완료] 체크</span>
+          </div>
+          <div id="lunch-saved-checklist-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
         </div>
       </div>
     </div>
@@ -1663,18 +1701,19 @@
   </div>
 </div>
 
-<!-- 연차 부여 모달 -->
+<!-- 연차 부여 모달 (근로기준법 입사일 기준 자동 계산) -->
 <div class="modal-overlay" id="leave-grant-modal">
-  <div class="modal-card" style="width: 440px;">
+  <div class="modal-card" style="width: 580px; max-width: 95vw;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
       <h3 style="margin: 0;">⚙️ 직원별 연차 부여 관리</h3>
       <button type="button" onclick="closeLeaveGrantModal()" style="padding: 3px 8px; font-size: 13px; border: none; background: #f1f5f9; border-radius: 6px; cursor: pointer; color: #64748b; font-weight: 700;">✕</button>
     </div>
     
     <!-- 부여 대상 연도 선택 바 -->
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; background: #f1f5f9; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1;">
-      <label for="leave-grant-year-select" style="font-weight: 700; font-size: 13.5px; color: #0f172a;">📅 부여 기준 연도</label>
-      <select id="leave-grant-year-select" onchange="onLeaveGrantYearChange()" style="padding: 6px 12px; font-size: 14px; font-weight: 700; border-radius: 6px; border: 1.5px solid #2563eb; background: #ffffff; color: #1e293b; cursor: pointer;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; background: #eff6ff; padding: 10px 14px; border-radius: 8px; border: 1.5px solid #bfdbfe;">
+      <label for="leave-grant-year-select" style="font-weight: 800; font-size: 14px; color: #1e3a8a;">📅 연도 선택 (선택 연도별 발생 연차 확인)</label>
+      <select id="leave-grant-year-select" onchange="onLeaveGrantYearChange()" style="padding: 6px 14px; font-size: 14.5px; font-weight: 800; border-radius: 6px; border: 1.5px solid #2563eb; background: #ffffff; color: #1e293b; cursor: pointer;">
+        <option value="2024">2024년</option>
         <option value="2025">2025년</option>
         <option value="2026">2026년</option>
         <option value="2027">2027년</option>
@@ -1689,14 +1728,16 @@
       </select>
     </div>
 
-    <p style="font-size: 12.5px; color: #64748b; margin-top: 0; margin-bottom: 14px; line-height: 1.5;">
-      선택한 연도의 각 직원별 기본 연차 부여일수를 입력하세요.<br>
-      <span style="color: #2563eb; font-weight: 600;">*연도별로 부여일수가 각각 독립적으로 저장·관리됩니다.</span>
-    </p>
+    <div style="font-size: 12px; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; line-height: 1.55;">
+      <div style="font-weight: 800; color: #0f172a; margin-bottom: 3px;">⚖️ 근로기준법(제60조) 입사일 기준 연차 자동 계산</div>
+      • <strong>1년 미만 (입사 당해)</strong>: 1개월 개근 시 1일씩 발생 (최대 <strong>11개</strong>)<br>
+      • <strong>만 1년 ~ 2년차</strong>: 기본 <strong>15개</strong> 부여<br>
+      • <strong>만 3년차 이상 (가산연차)</strong>: 최초 1년 초과 매 2년마다 <strong>+1개씩 자동 가산</strong> (최대 25개)
+    </div>
 
-    <div id="modal-grant-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 280px; overflow-y: auto; padding-right: 4px;"></div>
+    <div id="modal-grant-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; padding-right: 4px;"></div>
     
-    <div class="modal-footer" style="margin-top: 20px;">
+    <div class="modal-footer" style="margin-top: 18px;">
       <button type="button" onclick="closeLeaveGrantModal()">닫기</button>
       <button type="button" class="btn-primary" onclick="saveLeaveGrants()">저장 및 적용</button>
     </div>
@@ -2289,7 +2330,7 @@
       updateCloudStatusBadge('error', 'DB 연결 안됨');
     });
 
-    // 5. Leave grants
+    // 5. Leave grants & Member hire dates
     firebaseDb.collection('config').doc('leave_grants').onSnapshot(doc => {
       isFirebaseReady = true;
       updateCloudStatusBadge('connected', 'DB 연결됨');
@@ -2297,9 +2338,14 @@
       if (doc.metadata && doc.metadata.hasPendingWrites) return;
       if (doc.exists) {
         const data = doc.data();
-        if (data && data.grants) {
-          localStorage.setItem('duty_leave_grants_by_year', JSON.stringify(data.grants));
-          localStorage.setItem('duty_leave_grants', JSON.stringify(data.grants));
+        if (data) {
+          if (data.hireDates) {
+            localStorage.setItem('duty_member_hire_dates', JSON.stringify(data.hireDates));
+          }
+          if (data.grants) {
+            localStorage.setItem('duty_leave_grants_by_year', JSON.stringify(data.grants));
+            localStorage.setItem('duty_leave_grants', JSON.stringify(data.grants));
+          }
           renderCurrentActiveTab();
         }
       }
@@ -2360,7 +2406,8 @@
       const grantDoc = await firebaseDb.collection('config').doc('leave_grants').get();
       if (!grantDoc.exists) {
         const allGrants = getAllStoredLeaveGrants();
-        await firebaseDb.collection('config').doc('leave_grants').set({ grants: allGrants });
+        const hireDates = getStoredHireDates();
+        await firebaseDb.collection('config').doc('leave_grants').set({ grants: allGrants, hireDates });
       }
     } catch(err) {
       console.warn('Migration check note:', err);
@@ -2395,10 +2442,14 @@
     }
   }
 
-  function cloudSaveLeaveGrants(grants) {
+  function cloudSaveLeaveGrants(grants, hireDates = null) {
     if (firebaseDb && isFirebaseReady) {
-      const cleanGrants = JSON.parse(JSON.stringify(grants || {}));
-      firebaseDb.collection('config').doc('leave_grants').set({ grants: cleanGrants }).catch(e => console.error(e));
+      const cleanGrants = JSON.parse(JSON.stringify(grants || getAllStoredLeaveGrants()));
+      const cleanHireDates = JSON.parse(JSON.stringify(hireDates || getStoredHireDates()));
+      firebaseDb.collection('config').doc('leave_grants').set({
+        grants: cleanGrants,
+        hireDates: cleanHireDates
+      }).catch(e => console.error(e));
     }
   }
 
@@ -2484,6 +2535,77 @@
 
   let selectedLeaveYear = 2026;
 
+  // 직원별 입사일 로컬스토리지 관리 및 근로기준법(제60조) 연차 자동 계산
+  function getStoredHireDates() {
+    try {
+      const saved = localStorage.getItem('duty_member_hire_dates');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {};
+  }
+
+  function saveStoredHireDates(hireDates) {
+    localStorage.setItem('duty_member_hire_dates', JSON.stringify(hireDates || {}));
+  }
+
+  function calculateStatutoryLeave(hireDateStr, targetYear) {
+    if (!hireDateStr) return null;
+    const parts = String(hireDateStr).split('-').map(Number);
+    if (parts.length !== 3 || isNaN(parts[0])) return null;
+
+    const hireYear = parts[0];
+    const hireMonth = parts[1];
+    const hireDay = parts[2];
+    const yr = parseInt(targetYear, 10);
+    if (isNaN(yr)) return null;
+
+    const diffYears = yr - hireYear;
+
+    // 1. 입사 이전 연도
+    if (diffYears < 0) {
+      return {
+        days: 0,
+        tenureYears: -1,
+        label: '입사 전',
+        detail: `${hireYear}년 입사 (0개)`
+      };
+    }
+
+    // 2. 입사 당해연도 (계속근로 1년 미만: 1개월 개근 시 1일, 최대 11일)
+    if (diffYears === 0) {
+      const today = new Date();
+      const hireDateObj = new Date(hireYear, hireMonth - 1, hireDay);
+      let elapsedMonths = 0;
+      if (today >= hireDateObj) {
+        elapsedMonths = (today.getFullYear() - hireYear) * 12 + (today.getMonth() - (hireMonth - 1));
+        if (today.getDate() < hireDay) elapsedMonths -= 1;
+        elapsedMonths = Math.max(0, Math.min(11, elapsedMonths));
+      }
+      return {
+        days: 11,
+        tenureYears: 0,
+        label: '1년 미만 (월차)',
+        detail: today.getFullYear() === yr
+          ? `월 1개씩 최대 11개 (현재 만 ${elapsedMonths}개월 경과)`
+          : `1년 미만 월차 (최대 11개)`
+      };
+    }
+
+    // 3. 만 1년 이상 (근로기준법 제60조 제1항·제4항: 기본 15일 + 최초 1년 초과 매 2년마다 1일 가산, 최대 25일)
+    const extraDays = Math.floor((diffYears - 1) / 2);
+    const totalDays = Math.min(25, 15 + extraDays);
+
+    return {
+      days: totalDays,
+      tenureYears: diffYears,
+      extraDays: extraDays,
+      label: `만 ${diffYears}년차`,
+      detail: extraDays > 0
+        ? `기본 15개 + 가산 ${extraDays}개`
+        : `기본 15개`
+    };
+  }
+
   function getAllStoredLeaveGrants() {
     try {
       const saved = localStorage.getItem('duty_leave_grants_by_year');
@@ -2505,27 +2627,42 @@
   function getStoredLeaveGrants(year = (typeof leaveCalYear !== 'undefined' ? leaveCalYear : 2026)) {
     const yKey = String(year);
     const allGrants = getAllStoredLeaveGrants();
-    const defaults = {};
-    ALL_MEMBERS.forEach(m => { defaults[m] = ANNUAL_DEFAULT_LEAVE; });
+    const hireDates = getStoredHireDates();
+    const yearGrants = allGrants[yKey] || {};
+    const result = {};
 
-    if (allGrants[yKey]) {
-      return { ...defaults, ...allGrants[yKey] };
-    }
-    // 해당 연도에 설정된 값이 없으면 2026년 설정값 또는 기본값 활용
-    if (allGrants['2026']) {
-      return { ...defaults, ...allGrants['2026'] };
-    }
-    return defaults;
+    ALL_MEMBERS.forEach(m => {
+      // 입사일이 입력되어 있으면 근로기준법에 따라 해당 연도 연차를 자동 산정
+      if (hireDates[m]) {
+        const calc = calculateStatutoryLeave(hireDates[m], year);
+        if (calc) {
+          result[m] = calc.days;
+          return;
+        }
+      }
+      if (yearGrants[m] !== undefined) {
+        result[m] = yearGrants[m];
+      } else if (allGrants['2026'] && allGrants['2026'][m] !== undefined) {
+        result[m] = allGrants['2026'][m];
+      } else {
+        result[m] = ANNUAL_DEFAULT_LEAVE;
+      }
+    });
+
+    return result;
   }
 
-  function saveStoredLeaveGrants(year, grants) {
+  function saveStoredLeaveGrants(year, grants, hireDates = null) {
     const yKey = String(year);
     const allGrants = getAllStoredLeaveGrants();
     allGrants[yKey] = grants;
     localStorage.setItem('duty_leave_grants_by_year', JSON.stringify(allGrants));
     localStorage.setItem('duty_leave_grants', JSON.stringify(allGrants));
+    if (hireDates) {
+      saveStoredHireDates(hireDates);
+    }
     if (firebaseDb && isFirebaseReady) {
-      cloudSaveLeaveGrants(allGrants);
+      cloudSaveLeaveGrants(allGrants, hireDates || getStoredHireDates());
     }
   }
 
@@ -3745,10 +3882,13 @@
     });
 
     const summaryCardsEl = document.getElementById('leave-member-summary-cards');
+    const hireDates = getStoredHireDates();
     summaryCardsEl.innerHTML = ALL_MEMBERS.map(m => {
       const grant = grants[m] ?? ANNUAL_DEFAULT_LEAVE;
       const used = memberStats[m].used;
       const remain = grant - used;
+      const hDate = hireDates[m] || '';
+      const calcInfo = hDate ? calculateStatutoryLeave(hDate, targetYear) : null;
 
       // 해당 직원의 해당 연도 승인된 연차 목록 (빠른 날짜부터 오름차순 정렬)
       const memberLeaves = yearApprovedLeaves
@@ -3778,7 +3918,10 @@
 
       return `
         <div class="stat-card">
-          <div class="stat-card-title" style="white-space: nowrap; font-size: 12px;">${m} 님 <span style="font-size: 11px; font-weight: normal; color: #64748b;">(${targetYear}년)</span></div>
+          <div class="stat-card-title" style="white-space: nowrap; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <span>${m} 님 <span style="font-size: 11px; font-weight: normal; color: #64748b;">(${targetYear}년)</span></span>
+            ${calcInfo ? `<span style="font-size: 10px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 1px 5px; border-radius: 4px;">${calcInfo.label}</span>` : ''}
+          </div>
           <div class="stat-card-value" style="font-size: 20px;">
             ${remain}<span style="font-size: 12.5px; font-weight: normal; color: #64748b; margin-left: 2px;">일 남음</span>
           </div>
@@ -3786,6 +3929,7 @@
             <span>사용: <b>${used}일</b></span>
             <span>부여: <b>${grant}일</b></span>
           </div>
+          ${hDate ? `<div style="font-size: 10.5px; color: #64748b; margin-top: 3px;">입사일: ${hDate}</div>` : ''}
           <div class="leave-history-container" style="margin-top: 8px; padding-top: 6px;">
             <div class="leave-history-title" style="font-size: 10.5px;">
               <span>📅 승인 (${memberLeaves.length}건)</span>
@@ -4042,10 +4186,13 @@
     deleteLeave(id);
   }
 
-  // --- 연차 부여 모달 제어 (관리자 인증 필요) ---
+  // --- 연차 부여 모달 제어 (관리자 인증 필요 & 근로기준법 입사일 기준 자동 계산) ---
+  let modalEditingHireDates = {};
+
   function openLeaveGrantModal(defaultYear = null) {
     requestAdminAuth(() => {
       const targetYear = defaultYear || leaveCalYear || 2026;
+      modalEditingHireDates = { ...getStoredHireDates() };
       const yearSelect = document.getElementById('leave-grant-year-select');
       if (yearSelect) {
         yearSelect.value = targetYear;
@@ -4060,39 +4207,87 @@
   }
 
   function onLeaveGrantYearChange() {
+    // 현재 입력창에 입력된 입사일들을 먼저 동기화한 뒤 선택된 연도로 재계산 렌더링
+    ALL_MEMBERS.forEach(m => {
+      const hEl = document.getElementById(`hire-date-input-${m}`);
+      if (hEl) {
+        modalEditingHireDates[m] = hEl.value;
+      }
+    });
+    const yearSelect = document.getElementById('leave-grant-year-select');
+    const targetYear = parseInt(yearSelect.value, 10) || 2026;
+    renderGrantInputsForYear(targetYear);
+  }
+
+  function onHireDateInputChange(member, val) {
+    modalEditingHireDates[member] = val;
     const yearSelect = document.getElementById('leave-grant-year-select');
     const targetYear = parseInt(yearSelect.value, 10) || 2026;
     renderGrantInputsForYear(targetYear);
   }
 
   function renderGrantInputsForYear(year) {
-    const grants = getStoredLeaveGrants(year);
+    const storedGrants = getStoredLeaveGrants(year);
     const container = document.getElementById('modal-grant-list');
-    container.innerHTML = ALL_MEMBERS.map(m => `
-      <div class="setting-item">
-        <span style="font-weight: 600;">${m}</span>
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <input type="number" id="grant-input-${m}" value="${grants[m] ?? ANNUAL_DEFAULT_LEAVE}" min="0" max="50" step="0.5" 
-                 style="width: 75px; padding: 5px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 700; text-align: right;" />
-          <span style="font-size: 13px; color: #64748b;">일</span>
+    if (!container) return;
+
+    container.innerHTML = ALL_MEMBERS.map(m => {
+      const hDate = modalEditingHireDates[m] || '';
+      const calc = hDate ? calculateStatutoryLeave(hDate, year) : null;
+      const grantDays = calc ? calc.days : (storedGrants[m] ?? ANNUAL_DEFAULT_LEAVE);
+
+      const badgeHtml = calc
+        ? `<span style="font-size: 11px; font-weight: 800; color: #1d4ed8; background: #dbeafe; padding: 2px 7px; border-radius: 10px;">${calc.label}</span>
+           <span style="font-size: 11px; color: #475569;">${calc.detail}</span>`
+        : `<span style="font-size: 11px; color: #94a3b8;">입사일을 입력하면 ${year}년 연차가 자동 계산됩니다</span>`;
+
+      return `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: 800; font-size: 14.5px; color: #0f172a; min-width: 42px;">${m}</span>
+              <div style="display: flex; align-items: center; gap: 5px;">
+                <label for="hire-date-input-${m}" style="font-size: 12px; font-weight: 700; color: #475569;">입사일:</label>
+                <input type="date" id="hire-date-input-${m}" value="${hDate}"
+                       onchange="onHireDateInputChange('${m}', this.value)"
+                       style="padding: 4px 8px; border: 1.5px solid ${hDate ? '#3b82f6' : '#cbd5e1'}; border-radius: 6px; font-size: 12.5px; font-weight: 700; color: #0f172a; background: #ffffff; cursor: pointer;" />
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; background: #ffffff; border: 1.5px solid #bfdbfe; padding: 4px 10px; border-radius: 8px;">
+              <span style="font-size: 12px; font-weight: 700; color: #1e3a8a;">${year}년 연차:</span>
+              <input type="number" id="grant-input-${m}" value="${grantDays}" min="0" max="50" step="0.5"
+                     style="width: 52px; padding: 2px 4px; border: none; background: transparent; font-size: 16px; font-weight: 900; color: #2563eb; text-align: right; outline: none;" />
+              <span style="font-size: 13px; font-weight: 800; color: #1e3a8a;">개 (일)</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; padding-left: 2px;">
+            ${badgeHtml}
+          </div>
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   }
 
   function saveLeaveGrants() {
     const yearSelect = document.getElementById('leave-grant-year-select');
     const targetYear = parseInt(yearSelect.value, 10) || 2026;
     const grants = {};
+    const hireDates = { ...getStoredHireDates() };
+
     ALL_MEMBERS.forEach(m => {
+      const hEl = document.getElementById(`hire-date-input-${m}`);
+      if (hEl) {
+        if (hEl.value) hireDates[m] = hEl.value;
+        else delete hireDates[m];
+      }
       const el = document.getElementById(`grant-input-${m}`);
-      const val = parseFloat(el.value);
+      const val = parseFloat(el ? el.value : '');
       grants[m] = !isNaN(val) ? val : ANNUAL_DEFAULT_LEAVE;
     });
 
-    saveStoredLeaveGrants(targetYear, grants);
+    saveStoredLeaveGrants(targetYear, grants, hireDates);
     closeLeaveGrantModal();
-    alert(`${targetYear}년도 직원별 연차 부여일수가 저장 및 적용되었습니다.`);
+    alert(`${targetYear}년도 직원별 입사일 및 연차 부여일수가 저장 및 적용되었습니다.`);
 
     // 저장한 연도를 달력 기준 연도와 동기화하여 상단 현황표와 하단 캘린더 함께 갱신
     leaveCalYear = targetYear;
@@ -6341,10 +6536,22 @@
           });
         }
       });
-      if (grantsChanged) {
+      const hireDates = getStoredHireDates();
+      let hireDatesChanged = false;
+      Object.keys(nameRenames).forEach(oldN => {
+        if (hireDates[oldN] !== undefined) {
+          hireDates[nameRenames[oldN]] = hireDates[oldN];
+          delete hireDates[oldN];
+          hireDatesChanged = true;
+        }
+      });
+      if (hireDatesChanged) {
+        saveStoredHireDates(hireDates);
+      }
+      if (grantsChanged || hireDatesChanged) {
         localStorage.setItem('duty_leave_grants_by_year', JSON.stringify(allGrants));
         localStorage.setItem('duty_leave_grants', JSON.stringify(allGrants));
-        cloudSaveLeaveGrants(allGrants);
+        cloudSaveLeaveGrants(allGrants, hireDates);
       }
     }
 
@@ -6384,6 +6591,7 @@
       leaves: getStoredLeaves(),
       overtimes: getStoredOvertimes(),
       leaveGrants: getAllStoredLeaveGrants(),
+      hireDates: getStoredHireDates(),
       swaps: getStoredSwaps(),
       exportedAt: new Date().toISOString()
     };
@@ -6410,12 +6618,16 @@
         const parsed = JSON.parse(e.target.result);
         if (parsed.leaves) saveStoredLeaves(parsed.leaves);
         if (parsed.overtimes) saveStoredOvertimes(parsed.overtimes);
+        if (parsed.hireDates) {
+          saveStoredHireDates(parsed.hireDates);
+        }
         if (parsed.leaveGrants) {
           if (parsed.leaveGrants['2025'] || parsed.leaveGrants['2026'] || parsed.leaveGrants['2027']) {
             localStorage.setItem('duty_leave_grants_by_year', JSON.stringify(parsed.leaveGrants));
             localStorage.setItem('duty_leave_grants', JSON.stringify(parsed.leaveGrants));
+            cloudSaveLeaveGrants(parsed.leaveGrants, getStoredHireDates());
           } else {
-            saveStoredLeaveGrants(2026, parsed.leaveGrants);
+            saveStoredLeaveGrants(2026, parsed.leaveGrants, getStoredHireDates());
           }
         }
         if (parsed.swaps) saveStoredSwaps(parsed.swaps);

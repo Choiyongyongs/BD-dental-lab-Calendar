@@ -55,6 +55,7 @@ const DEFAULT_MATERIAL_MASTER = [
 // 상태 변수
 let materialMasterList = [...DEFAULT_MATERIAL_MASTER];
 let materialOrders = [];
+let materialSavedHistory = [];
 let materialCategoryFilter = 'ALL';
 let materialSearchKeyword = '';
 let materialSupplierFilter = 'ALL';
@@ -62,6 +63,7 @@ let materialSupplierFilter = 'ALL';
 // 로컬스토리지 키
 const STORAGE_KEY_MAT_MASTER = 'bd_material_custom_master';
 const STORAGE_KEY_MAT_ORDERS = 'bd_material_current_orders';
+const STORAGE_KEY_MAT_SAVED_HISTORY = 'bd_material_saved_history';
 
 function getMaterialFirestoreDb() {
   return window.firebaseDb || (typeof firebaseDb !== 'undefined' ? firebaseDb : null);
@@ -90,6 +92,10 @@ function loadStoredMaterials() {
     if (savedOrders) {
       materialOrders = JSON.parse(savedOrders);
     }
+    const savedHistory = localStorage.getItem(STORAGE_KEY_MAT_SAVED_HISTORY);
+    if (savedHistory) {
+      materialSavedHistory = JSON.parse(savedHistory);
+    }
   } catch (e) {
     console.error('Failed to load local materials data:', e);
   }
@@ -107,6 +113,21 @@ function saveStoredMaterialsOrders() {
     }
   } catch (e) {
     console.error('saveStoredMaterialsOrders error:', e);
+  }
+}
+
+function saveStoredMaterialHistory() {
+  try {
+    localStorage.setItem(STORAGE_KEY_MAT_SAVED_HISTORY, JSON.stringify(materialSavedHistory));
+    const db = getMaterialFirestoreDb();
+    if (db) {
+      db.collection('materials').doc('saved_history').set({
+        history: materialSavedHistory,
+        updatedAt: new Date().toISOString()
+      }).catch(err => console.warn('Firestore material saved_history sync err:', err));
+    }
+  } catch (e) {
+    console.error('saveStoredMaterialHistory error:', e);
   }
 }
 
@@ -165,6 +186,17 @@ function setupMaterialFirestoreListeners() {
       }
     }
   }, err => console.warn('Firestore material master listener note:', err));
+
+  // 3. 저장된 발주 목록 (입고 확인 체크리스트) 실시간 동기화
+  db.collection('materials').doc('saved_history').onSnapshot(doc => {
+    if (doc.exists && doc.data() && Array.isArray(doc.data().history)) {
+      materialSavedHistory = doc.data().history;
+      localStorage.setItem(STORAGE_KEY_MAT_SAVED_HISTORY, JSON.stringify(materialSavedHistory));
+      renderMaterialSavedHistory();
+    } else if (!doc.exists && materialSavedHistory.length > 0) {
+      saveStoredMaterialHistory();
+    }
+  }, err => console.warn('Firestore material saved_history listener note:', err));
 }
 
 // 탭 렌더링 메인 함수
@@ -172,6 +204,7 @@ function renderMaterialTab() {
   renderMaterialOrderList();
   renderMaterialMasterGrid();
   renderMaterialSupplierChips();
+  renderMaterialSavedHistory();
 }
 
 // 발주 대기 목록 렌더링
@@ -692,6 +725,178 @@ function copyMaterialOrderText() {
   }).catch(() => {
     prompt('아래 텍스트를 복사하세요:', txt);
   });
+}
+
+// =========================================================================
+// 목록 저장 및 입고 확인 체크 기능
+// =========================================================================
+function formatSavedDateTime(isoStr) {
+  try {
+    const d = isoStr ? new Date(isoStr) : new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${day} ${hh}:${mm}`;
+  } catch (e) {
+    return '';
+  }
+}
+
+function saveCurrentMaterialOrderToCheckList() {
+  if (!materialOrders || materialOrders.length === 0) {
+    alert('저장할 발주 목록이 없습니다. 먼저 재료를 담아주세요!');
+    return;
+  }
+
+  // 체크된 항목이 있으면 체크된 항목 우선, 없으면 전체 발주 목록 저장
+  let targetItems = materialOrders;
+  if (materialSupplierFilter !== 'ALL') {
+    targetItems = materialOrders.filter(o => o.supplier === materialSupplierFilter);
+  }
+
+  if (targetItems.length === 0) {
+    alert('저장할 발주 품목이 없습니다.');
+    return;
+  }
+
+  const nowIso = new Date().toISOString();
+  const newBatch = {
+    id: 'mat_batch_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+    savedAt: nowIso,
+    supplierFilter: materialSupplierFilter === 'ALL' ? '전체 발주' : materialSupplierFilter,
+    items: targetItems.map(ord => ({
+      id: ord.id,
+      name: ord.name,
+      spec: ord.spec || '',
+      supplier: ord.supplier || '기본',
+      urgency: ord.urgency || 'regular',
+      quantity: ord.quantity || 1,
+      unit: ord.unit || 'ea',
+      received: false
+    }))
+  };
+
+  if (!Array.isArray(materialSavedHistory)) {
+    materialSavedHistory = [];
+  }
+  materialSavedHistory.unshift(newBatch);
+  saveStoredMaterialHistory();
+  renderMaterialSavedHistory();
+
+  const card = document.getElementById('material-saved-history-card');
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function renderMaterialSavedHistory() {
+  const container = document.getElementById('material-saved-history-container');
+  const badge = document.getElementById('mat-saved-history-badge');
+  if (!container) return;
+
+  const list = Array.isArray(materialSavedHistory) ? materialSavedHistory : [];
+  if (badge) {
+    badge.innerText = `저장 ${list.length}건`;
+  }
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 24px 10px; color: #94a3b8; font-size: 13px;">
+        💾 상단의 <strong>[목록 저장]</strong> 버튼을 누르면 현재 발주 목록이 이곳에 저장되어 입고 여부를 하나씩 체크할 수 있습니다.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = list.map(batch => {
+    const items = Array.isArray(batch.items) ? batch.items : [];
+    const totalCnt = items.length;
+    const receivedCnt = items.filter(it => it.received).length;
+    const allReceived = totalCnt > 0 && receivedCnt === totalCnt;
+    const dateLabel = formatSavedDateTime(batch.savedAt);
+
+    const statusBadge = allReceived
+      ? `<span style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 800;">🎉 전체 입고완료 (${receivedCnt}/${totalCnt})</span>`
+      : `<span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 800;">📦 입고 확인중 (${receivedCnt}/${totalCnt})</span>`;
+
+    const rowsHtml = items.map((it, idx) => {
+      const isRec = !!it.received;
+      const urgBadge = it.urgency === 'urgent'
+        ? `<span class="urgency-badge urgency-urgent" style="cursor: default;">🚨 긴급</span>`
+        : `<span class="urgency-badge urgency-regular" style="cursor: default;">📦 정기</span>`;
+
+      return `
+        <div class="saved-check-row ${isRec ? 'is-received' : ''}" onclick="toggleSavedMaterialItemCheck('${batch.id}', ${idx})" style="cursor: pointer;">
+          <div class="order-row-top">
+            <input type="checkbox" class="custom-checkbox" ${isRec ? 'checked' : ''} onclick="event.stopPropagation(); toggleSavedMaterialItemCheck('${batch.id}', ${idx})" />
+            <div class="order-item-title">${escapeHtml(it.name)}</div>
+          </div>
+          <div class="order-row-bottom">
+            <div class="order-row-meta">
+              ${urgBadge}
+              <span class="supplier-chip">${escapeHtml(it.supplier || '기본')}</span>
+              <span class="order-item-spec">${escapeHtml(it.spec || '-')}</span>
+            </div>
+            <div class="order-row-controls">
+              <span style="font-size: 13px; font-weight: 800; color: #1e3a8a;">${it.quantity}${escapeHtml(it.unit || 'ea')}</span>
+              <button type="button" class="receive-status-btn ${isRec ? 'done' : 'pending'}" onclick="event.stopPropagation(); toggleSavedMaterialItemCheck('${batch.id}', ${idx})">
+                ${isRec ? '✅ 입고완료' : '⬜ 입고대기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="saved-batch-box">
+        <div class="saved-batch-header">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <strong style="font-size: 13px; color: #0f172a;">📅 ${escapeHtml(dateLabel)} 발주분</strong>
+            ${statusBadge}
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button type="button" class="btn-outline" style="padding: 4px 8px; font-size: 11.5px;" onclick="toggleAllSavedMaterialBatchCheck('${batch.id}', ${!allReceived})">
+              ${allReceived ? '전체 해제' : '전체 완료체크'}
+            </button>
+            <button type="button" class="btn-danger" style="padding: 4px 8px; font-size: 11.5px;" onclick="deleteSavedMaterialBatch('${batch.id}')">
+              삭제
+            </button>
+          </div>
+        </div>
+        <div>
+          ${rowsHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleSavedMaterialItemCheck(batchId, itemIdx) {
+  const batch = (materialSavedHistory || []).find(b => b.id === batchId);
+  if (!batch || !Array.isArray(batch.items) || !batch.items[itemIdx]) return;
+  batch.items[itemIdx].received = !batch.items[itemIdx].received;
+  saveStoredMaterialHistory();
+  renderMaterialSavedHistory();
+}
+
+function toggleAllSavedMaterialBatchCheck(batchId, receivedState) {
+  const batch = (materialSavedHistory || []).find(b => b.id === batchId);
+  if (!batch || !Array.isArray(batch.items)) return;
+  batch.items.forEach(it => {
+    it.received = !!receivedState;
+  });
+  saveStoredMaterialHistory();
+  renderMaterialSavedHistory();
+}
+
+function deleteSavedMaterialBatch(batchId) {
+  if (!confirm('이 저장된 발주 확인 목록을 삭제하시겠습니까?')) return;
+  materialSavedHistory = (materialSavedHistory || []).filter(b => b.id !== batchId);
+  saveStoredMaterialHistory();
+  renderMaterialSavedHistory();
 }
 
 function escapeHtml(str) {

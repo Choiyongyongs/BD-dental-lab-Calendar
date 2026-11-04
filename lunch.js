@@ -1077,11 +1077,13 @@ const DEFAULT_PER_PERSON_BUDGET = 11000;
 const STORAGE_KEY_LUNCH_RESTS = 'bd_lunch_restaurants_data_v2';
 const STORAGE_KEY_LUNCH_DAILY = 'bd_lunch_daily_order';
 const STORAGE_KEY_LUNCH_BUDGET = 'bd_lunch_per_person_budget_v2';
+const STORAGE_KEY_LUNCH_SAVED_CHECKLISTS = 'bd_lunch_saved_checklists';
 
 // 상태 관리
 let lunchRestaurants = JSON.parse(JSON.stringify(DEFAULT_RESTAURANTS_DATA));
 let selectedRestaurantId = 'rest_01'; // 현재 메뉴판 보고 있는 식당
 let candidateRestaurantIds = DEFAULT_RESTAURANTS_DATA.map(r => r.id); // 룰렛 후보 식당들
+let lunchSavedChecklists = []; // 저장된 점심 주문 체크리스트 목록
 
 // 당일 점심 주문 상태
 let lunchDailyState = {
@@ -1153,8 +1155,28 @@ function loadStoredLunchData() {
         orders: []
       };
     }
+
+    const savedChecklists = localStorage.getItem(STORAGE_KEY_LUNCH_SAVED_CHECKLISTS);
+    if (savedChecklists) {
+      lunchSavedChecklists = JSON.parse(savedChecklists);
+    }
   } catch (e) {
     console.error('loadStoredLunchData err:', e);
+  }
+}
+
+function saveStoredLunchChecklists() {
+  try {
+    localStorage.setItem(STORAGE_KEY_LUNCH_SAVED_CHECKLISTS, JSON.stringify(lunchSavedChecklists));
+    const db = getLunchFirestoreDb();
+    if (db) {
+      db.collection('lunch').doc('saved_checklists').set({
+        list: lunchSavedChecklists,
+        updatedAt: new Date().toISOString()
+      }).catch(e => console.warn('Firestore lunch saved_checklists err:', e));
+    }
+  } catch (e) {
+    console.error('saveStoredLunchChecklists err:', e);
   }
 }
 
@@ -1274,6 +1296,17 @@ function setupLunchFirestoreListeners() {
       saveStoredLunchData();
     }
   }, err => console.warn('Firestore today order listener note:', err));
+
+  // 4. 저장된 점심 주문 체크리스트 (배달/도착 확인 체크) 실시간 동기화
+  db.collection('lunch').doc('saved_checklists').onSnapshot(doc => {
+    if (doc.exists && doc.data() && Array.isArray(doc.data().list)) {
+      lunchSavedChecklists = doc.data().list;
+      localStorage.setItem(STORAGE_KEY_LUNCH_SAVED_CHECKLISTS, JSON.stringify(lunchSavedChecklists));
+      renderLunchSavedChecklists();
+    } else if (!doc.exists && lunchSavedChecklists.length > 0) {
+      saveStoredLunchChecklists();
+    }
+  }, err => console.warn('Firestore lunch saved_checklists listener note:', err));
 }
 
 // 오늘 날짜 문자열 (YYYY-MM-DD)
@@ -1316,6 +1349,7 @@ function renderLunchTab() {
   renderLunchRestaurantTabs();
   renderLunchMenuList();
   renderLunchOrdersTable();
+  renderLunchSavedChecklists();
 }
 
 // 상단 헤더 식대 배지 표시
@@ -1929,4 +1963,167 @@ function copyLunchOrderText() {
   } else {
     prompt('아래 텍스트를 복사하세요:', txt);
   }
+}
+
+// =========================================================================
+// 점심 주문 목록 저장 및 배달/도착 확인 체크 기능
+// =========================================================================
+function formatLunchSavedDateTime(isoStr) {
+  try {
+    const d = isoStr ? new Date(isoStr) : new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${day} ${hh}:${mm}`;
+  } catch (e) {
+    return '';
+  }
+}
+
+function saveCurrentLunchOrderToCheckList() {
+  const orders = (lunchDailyState && Array.isArray(lunchDailyState.orders)) ? lunchDailyState.orders : [];
+  if (orders.length === 0) {
+    alert('저장할 점심 주문 목록이 없습니다. 먼저 메뉴를 담아주세요!');
+    return;
+  }
+
+  const nowIso = new Date().toISOString();
+  const totalOrderPrice = orders.reduce((sum, ord) => sum + (ord.price * (ord.quantity || 1)), 0);
+
+  const newBatch = {
+    id: 'lunch_batch_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+    savedAt: nowIso,
+    totalPrice: totalOrderPrice,
+    items: orders.map(ord => ({
+      id: ord.id,
+      restaurantName: ord.restaurantName || '',
+      menuName: ord.menuName || '',
+      price: ord.price || 0,
+      quantity: ord.quantity || 1,
+      received: false
+    }))
+  };
+
+  if (!Array.isArray(lunchSavedChecklists)) {
+    lunchSavedChecklists = [];
+  }
+  lunchSavedChecklists.unshift(newBatch);
+  saveStoredLunchChecklists();
+  renderLunchSavedChecklists();
+
+  const card = document.getElementById('lunch-saved-checklist-card');
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function renderLunchSavedChecklists() {
+  const container = document.getElementById('lunch-saved-checklist-container');
+  const badge = document.getElementById('lunch-saved-checklist-badge');
+  if (!container) return;
+
+  const list = Array.isArray(lunchSavedChecklists) ? lunchSavedChecklists : [];
+  if (badge) {
+    badge.innerText = `저장 ${list.length}건`;
+  }
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 24px 10px; color: #94a3b8; font-size: 13px;">
+        💾 상단의 <strong>[목록 저장]</strong> 버튼을 누르면 현재 주문 목록이 이곳에 저장되어 메뉴가 잘 도착했는지 하나씩 체크할 수 있습니다.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = list.map(batch => {
+    const items = Array.isArray(batch.items) ? batch.items : [];
+    const totalCnt = items.length;
+    const receivedCnt = items.filter(it => it.received).length;
+    const allReceived = totalCnt > 0 && receivedCnt === totalCnt;
+    const dateLabel = formatLunchSavedDateTime(batch.savedAt);
+    const totalPrice = batch.totalPrice !== undefined
+      ? batch.totalPrice
+      : items.reduce((sum, it) => sum + ((it.price || 0) * (it.quantity || 1)), 0);
+
+    const statusBadge = allReceived
+      ? `<span style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 800;">🎉 전체 도착완료 (${receivedCnt}/${totalCnt})</span>`
+      : `<span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 800;">🍱 도착 확인중 (${receivedCnt}/${totalCnt})</span>`;
+
+    const rowsHtml = items.map((it, idx) => {
+      const isRec = !!it.received;
+      const itemTotal = (it.price || 0) * (it.quantity || 1);
+
+      return `
+        <div class="saved-check-row ${isRec ? 'is-received' : ''}" onclick="toggleSavedLunchItemCheck('${batch.id}', ${idx})" style="cursor: pointer;">
+          <div class="order-row-top">
+            <input type="checkbox" class="custom-checkbox" ${isRec ? 'checked' : ''} onclick="event.stopPropagation(); toggleSavedLunchItemCheck('${batch.id}', ${idx})" />
+            <div class="order-item-title">${escapeHtml(it.menuName)}</div>
+          </div>
+          <div class="order-row-bottom">
+            <div class="order-row-meta">
+              <span class="supplier-chip" style="font-weight: 700;">${escapeHtml(it.restaurantName)}</span>
+              <span class="order-item-spec">${(it.price || 0).toLocaleString()}원 × ${it.quantity || 1}개</span>
+            </div>
+            <div class="order-row-controls">
+              <span style="font-size: 13px; font-weight: 800; color: #1e3a8a;">${itemTotal.toLocaleString()}원</span>
+              <button type="button" class="receive-status-btn ${isRec ? 'done' : 'pending'}" onclick="event.stopPropagation(); toggleSavedLunchItemCheck('${batch.id}', ${idx})">
+                ${isRec ? '✅ 도착완료' : '⬜ 확인대기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="saved-batch-box">
+        <div class="saved-batch-header">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <strong style="font-size: 13px; color: #0f172a;">📅 ${escapeHtml(dateLabel)} 주문분</strong>
+            <span style="font-size: 12px; color: #2563eb; font-weight: 800;">(합계 ${totalPrice.toLocaleString()}원)</span>
+            ${statusBadge}
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button type="button" class="btn-outline" style="padding: 4px 8px; font-size: 11.5px;" onclick="toggleAllSavedLunchBatchCheck('${batch.id}', ${!allReceived})">
+              ${allReceived ? '전체 해제' : '전체 도착체크'}
+            </button>
+            <button type="button" class="btn-danger" style="padding: 4px 8px; font-size: 11.5px;" onclick="deleteSavedLunchBatch('${batch.id}')">
+              삭제
+            </button>
+          </div>
+        </div>
+        <div>
+          ${rowsHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleSavedLunchItemCheck(batchId, itemIdx) {
+  const batch = (lunchSavedChecklists || []).find(b => b.id === batchId);
+  if (!batch || !Array.isArray(batch.items) || !batch.items[itemIdx]) return;
+  batch.items[itemIdx].received = !batch.items[itemIdx].received;
+  saveStoredLunchChecklists();
+  renderLunchSavedChecklists();
+}
+
+function toggleAllSavedLunchBatchCheck(batchId, receivedState) {
+  const batch = (lunchSavedChecklists || []).find(b => b.id === batchId);
+  if (!batch || !Array.isArray(batch.items)) return;
+  batch.items.forEach(it => {
+    it.received = !!receivedState;
+  });
+  saveStoredLunchChecklists();
+  renderLunchSavedChecklists();
+}
+
+function deleteSavedLunchBatch(batchId) {
+  if (!confirm('이 저장된 주문 확인 목록을 삭제하시겠습니까?')) return;
+  lunchSavedChecklists = (lunchSavedChecklists || []).filter(b => b.id !== batchId);
+  saveStoredLunchChecklists();
+  renderLunchSavedChecklists();
 }
