@@ -318,30 +318,13 @@ function renderMaterialMasterGrid() {
       .filter(o => o.urgency === 'urgent')
       .reduce((sum, o) => sum + (Number(o.quantity) || 1), 0);
     const totalQty = regularQty + urgentQty;
-    const unitStr = escapeHtml(item.unit || 'ea');
-
-    let orderedBadgeHtml = '';
-    if (totalQty > 0) {
-      const detailParts = [];
-      if (regularQty > 0) detailParts.push(`정기 ${regularQty}`);
-      if (urgentQty > 0) detailParts.push(`긴급 ${urgentQty}`);
-      const detailStr = detailParts.length > 0 ? ` (${detailParts.join(' · ')})` : '';
-      orderedBadgeHtml = `
-        <span class="material-ordered-badge ${urgentQty > 0 ? 'has-urgent' : ''}">
-          🛒 주문서에 ${totalQty}${unitStr} 담김${detailStr}
-        </span>
-      `;
-    }
 
     return `
       <div class="material-item-card ${totalQty > 0 ? 'is-in-order' : ''}">
         <div class="material-card-header">
-          <div style="width: 100%;">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap;">
-              <span style="font-size: 10.5px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 2px 6px; border-radius: 4px;">${escapeHtml(item.category)}</span>
-              ${orderedBadgeHtml}
-            </div>
-            <div class="material-card-name" style="margin-top: 5px;">${escapeHtml(item.name)}</div>
+          <div>
+            <span style="font-size: 10.5px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 2px 6px; border-radius: 4px;">${escapeHtml(item.category)}</span>
+            <div class="material-card-name" style="margin-top: 4px;">${escapeHtml(item.name)}</div>
             <div class="material-card-spec">${escapeHtml(item.spec || '-')}</div>
           </div>
         </div>
