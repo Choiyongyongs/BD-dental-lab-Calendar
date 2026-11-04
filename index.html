@@ -1718,8 +1718,8 @@
 
     <div style="font-size: 12px; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; line-height: 1.55;">
       <div style="font-weight: 800; color: #0f172a; margin-bottom: 3px;">⚖️ 근로기준법 회계연도(매년 1월 1일) 기준 연차 자동 계산</div>
-      • <strong>입사 당해 (1차년도)</strong>: 입사월~12월 말까지 1개월 개근 시 1개씩 발생 (<strong>12 - 입사월</strong>개)<br>
-      • <strong>입사 이듬해 1.1 (2차년도)</strong>: 전년도 재직일수 비례연차 부여 (<strong>15개 × 전년도 재직일수 / 365일</strong>, 반올림)<br>
+      • <strong>입사 당해 (1차년도)</strong>: 입사월~12월 말까지 1개월 개근 시 1개씩 월차 발생 (<strong>12 - 입사월</strong>개)<br>
+      • <strong>입사 이듬해 1.1 (2차년도)</strong>: <strong>전년도 비례연차 + 만 1년 미만 잔여 월차</strong> 합산 부여<br>
       • <strong>입사 2년 후 1.1~ (회계 만 1년차 이상)</strong>: 매년 1.1 기준 만 1~2년차 <strong>15개</strong>, 만 3년차부터 매 2년마다 <strong>+1개 가산</strong> (최대 25개)
     </div>
 
@@ -2574,7 +2574,7 @@
       };
     }
 
-    // 3. 입사 이듬해 1월 1일 (2차 회계연도: 중도입사자는 전년도 근속기간 비례연차 부여)
+    // 3. 입사 이듬해 1월 1일 (2차 회계연도: 전년도 비례연차 + 만 1년 미만 잔여 월차 합산 부여)
     if (diffYears === 1 && !isJanFirst) {
       const isLeap = (hireYear % 4 === 0 && hireYear % 100 !== 0) || (hireYear % 400 === 0);
       const daysInHireYear = isLeap ? 366 : 365;
@@ -2585,12 +2585,13 @@
       const propRounded = Math.round(propExact);
       const propOneDec = Number(propExact.toFixed(1));
       const remainMonthly = Math.max(0, hireMonth - 1);
+      const combinedDays = propRounded + remainMonthly;
 
       return {
-        days: propRounded,
+        days: combinedDays,
         tenureYears: 0,
-        label: '회계 2년차 (비례)',
-        detail: `전년도 비례 ${propRounded}개 (산식 ${propOneDec}개, ${workedDays}/${daysInHireYear}일 · 1년미만 잔여월차 ${remainMonthly}개 별도)`
+        label: '회계 2년차 (비례+월차)',
+        detail: `비례연차 ${propRounded}개(산식 ${propOneDec}개) + 1년미만 월차 ${remainMonthly}개 = 총 ${combinedDays}개`
       };
     }
 
@@ -3888,13 +3889,10 @@
     });
 
     const summaryCardsEl = document.getElementById('leave-member-summary-cards');
-    const hireDates = getStoredHireDates();
     summaryCardsEl.innerHTML = ALL_MEMBERS.map(m => {
       const grant = grants[m] ?? ANNUAL_DEFAULT_LEAVE;
       const used = memberStats[m].used;
       const remain = grant - used;
-      const hDate = hireDates[m] || '';
-      const calcInfo = hDate ? calculateStatutoryLeave(hDate, targetYear) : null;
 
       // 해당 직원의 해당 연도 승인된 연차 목록 (빠른 날짜부터 오름차순 정렬)
       const memberLeaves = yearApprovedLeaves
@@ -3924,10 +3922,7 @@
 
       return `
         <div class="stat-card">
-          <div class="stat-card-title" style="white-space: nowrap; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
-            <span>${m} 님 <span style="font-size: 11px; font-weight: normal; color: #64748b;">(${targetYear}년)</span></span>
-            ${calcInfo ? `<span style="font-size: 10px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 1px 5px; border-radius: 4px;">${calcInfo.label}</span>` : ''}
-          </div>
+          <div class="stat-card-title" style="white-space: nowrap; font-size: 12px;">${m} 님 <span style="font-size: 11px; font-weight: normal; color: #64748b;">(${targetYear}년)</span></div>
           <div class="stat-card-value" style="font-size: 20px;">
             ${remain}<span style="font-size: 12.5px; font-weight: normal; color: #64748b; margin-left: 2px;">일 남음</span>
           </div>
@@ -3935,7 +3930,6 @@
             <span>사용: <b>${used}일</b></span>
             <span>부여: <b>${grant}일</b></span>
           </div>
-          ${hDate ? `<div style="font-size: 10.5px; color: #64748b; margin-top: 3px;">입사일: ${hDate}</div>` : ''}
           <div class="leave-history-container" style="margin-top: 8px; padding-top: 6px;">
             <div class="leave-history-title" style="font-size: 10.5px;">
               <span>📅 승인 (${memberLeaves.length}건)</span>
