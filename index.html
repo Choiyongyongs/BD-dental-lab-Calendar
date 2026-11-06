@@ -3483,8 +3483,23 @@
       return [];
     }
 
-    if (targetDate < ROTATION_START_DATE && EXCEL_2026_DATA[dateStr]) {
-      return [...(EXCEL_2026_DATA[dateStr].work || [])];
+    if (targetDate < ROTATION_START_DATE) {
+      if (EXCEL_2026_DATA[dateStr]) {
+        return [...(EXCEL_2026_DATA[dateStr].work || [])];
+      }
+      // 2026년 상반기 등 EXCEL_2026_DATA 범위 외의 2026년 기본 근무 패턴:
+      // 용희(고정): 월,화,목,금 / 소영,서영,이슬: 월,화,수,목 / 세진,찬유: 수,목,금,토
+      const works2026 = [];
+      ALL_MEMBERS.forEach(person => {
+        if (isFixedMember(person)) {
+          if ([1, 2, 4, 5].includes(dayOfWeek)) works2026.push(person);
+        } else if (person === '세진' || person === '찬유') {
+          if ([3, 4, 5, 6].includes(dayOfWeek)) works2026.push(person);
+        } else {
+          if ([1, 2, 3, 4].includes(dayOfWeek)) works2026.push(person);
+        }
+      });
+      return works2026;
     }
 
     let works = [];
@@ -3569,7 +3584,8 @@
     if (type === '오전반차' || type === '오후반차') {
       return 0.5;
     }
-    if (!startDate || !endDate) return 1.0;
+    // 단일 날짜(1일) 전일 연차는 항상 1.0일 차감
+    if (!startDate || !endDate || startDate === endDate) return 1.0;
     let curr = parseDateKey(startDate);
     const end = parseDateKey(endDate);
     let workDayCount = 0;
@@ -3581,6 +3597,83 @@
       curr.setDate(curr.getDate() + 1);
     }
     return workDayCount;
+  }
+
+  // 특정 연차 건(l)에 대해 대상 연도(targetYear) 내의:
+  // - totalDeductDays: 총 승인(차감) 연차 일수
+  // - pastDays: 이미 날짜가 지난 연차 일수 (dStr < todayKey)
+  // - upcomingDays: 아직 날짜가 지나지 않은 써놓은 연차 일수 (dStr >= todayKey)
+  function getLeaveBreakdownForYear(l, targetYear, todayKey) {
+    const result = { totalDeductDays: 0, pastDays: 0, upcomingDays: 0 };
+    if (!l) return result;
+
+    if (l.type === '경조사,포상' || l.type === '경조사') {
+      return result;
+    }
+
+    const yearPrefix = `${targetYear}-`;
+    const s = l.startDate || l.date || '';
+    const e = l.endDate || l.startDate || l.date || '';
+    if (!s) return result;
+
+    // 1) 반차 (오전반차 / 오후반차): 0.5일
+    if (l.type === '오전반차' || l.type === '오후반차') {
+      if (s.startsWith(yearPrefix)) {
+        result.totalDeductDays = 0.5;
+        if (s >= todayKey) {
+          result.upcomingDays = 0.5;
+        } else {
+          result.pastDays = 0.5;
+        }
+      }
+      return result;
+    }
+
+    // 2) 단일 날짜 전일 연차 (s === e): 1.0일
+    if (s === e) {
+      if (s.startsWith(yearPrefix)) {
+        result.totalDeductDays = 1.0;
+        if (s >= todayKey) {
+          result.upcomingDays = 1.0;
+        } else {
+          result.pastDays = 1.0;
+        }
+      }
+      return result;
+    }
+
+    // 3) 범위 설정된 전일 연차 (s !== e): 범위 내 출근 예정일만 1.0일씩 합산
+    let curr = parseDateKey(s);
+    const end = parseDateKey(e);
+    let matchedAnyInYear = false;
+
+    while (curr <= end) {
+      const dStr = formatDateKey(curr);
+      if (dStr.startsWith(yearPrefix)) {
+        matchedAnyInYear = true;
+        if (isPersonWorkingOnDate(l.person, dStr)) {
+          result.totalDeductDays += 1.0;
+          if (dStr >= todayKey) {
+            result.upcomingDays += 1.0;
+          } else {
+            result.pastDays += 1.0;
+          }
+        }
+      }
+      curr.setDate(curr.getDate() + 1);
+    }
+
+    if (matchedAnyInYear && result.totalDeductDays === 0) {
+      const fallback = (l.deductDays !== undefined && l.deductDays > 0) ? Number(l.deductDays) : 1.0;
+      result.totalDeductDays = fallback;
+      if (e >= todayKey) {
+        result.upcomingDays = fallback;
+      } else {
+        result.pastDays = fallback;
+      }
+    }
+
+    return result;
   }
 
   /* =========================================================================
@@ -3976,48 +4069,38 @@
 
     // 연차 캘린더의 연도(targetYear)에 해당하는 승인 연차 필터링
     const yearPrefix = `${targetYear}-`;
+    const todayKey = formatDateKey(new Date());
     const yearApprovedLeaves = approvedLeaves.filter(l => {
       const s = l.startDate || l.date || '';
       const e = l.endDate || l.date || '';
-      return s.startsWith(yearPrefix) || e.startsWith(yearPrefix);
+      return s.startsWith(yearPrefix) || e.startsWith(yearPrefix) || (s < yearPrefix && e >= yearPrefix);
     });
 
     document.getElementById('leave-total-count').innerText = `전체 대기 ${pendingLeaves.length}건`;
 
-    // 직원별 연차 사용/잔여 및 승인 내역 카드 렌더링 (선택된 연도 기준)
+    // 직원별 연차 승인/미경과/잔여 및 승인 내역 카드 렌더링 (선택된 연도 기준)
     const memberStats = {};
     ALL_MEMBERS.forEach(m => {
-      memberStats[m] = { used: 0, count: 0 };
+      memberStats[m] = { approvedDays: 0, pastDays: 0, upcomingDays: 0, count: 0 };
     });
 
     yearApprovedLeaves.forEach(l => {
-      let days = 0;
-      if (l.type === '경조사,포상' || l.type === '경조사') {
-        days = 0;
-      } else if (l.type === '오전반차' || l.type === '오후반차') {
-        days = 0.5;
-      } else {
-        const s = l.startDate || l.date;
-        const e = l.endDate || l.date;
-        if (l.deductDays !== undefined) {
-          days = l.deductDays;
-        } else if (s && e) {
-          days = calculateLeaveDeductDays(l.person, s, e, l.type);
-        } else {
-          days = 1.0;
-        }
-      }
-      if (memberStats[l.person]) {
-        memberStats[l.person].used += days;
-        memberStats[l.person].count += 1;
-      }
+      if (!memberStats[l.person]) return;
+      const bd = getLeaveBreakdownForYear(l, targetYear, todayKey);
+      memberStats[l.person].approvedDays += bd.totalDeductDays;
+      memberStats[l.person].pastDays += bd.pastDays;
+      memberStats[l.person].upcomingDays += bd.upcomingDays;
+      memberStats[l.person].count += 1;
     });
 
     const summaryCardsEl = document.getElementById('leave-member-summary-cards');
     summaryCardsEl.innerHTML = ALL_MEMBERS.map(m => {
-      const grant = grants[m] ?? ANNUAL_DEFAULT_LEAVE;
-      const used = memberStats[m].used;
-      const remain = grant - used;
+      const grant = Number(grants[m] ?? ANNUAL_DEFAULT_LEAVE);
+      const approvedDays = Number(memberStats[m].approvedDays.toFixed(1));
+      const upcomingDays = Number(memberStats[m].upcomingDays.toFixed(1));
+      const pastDays = Number(memberStats[m].pastDays.toFixed(1));
+      // 이름 바로 밑 남은 일수 = 부여갯수 - 승인갯수
+      const remain = Number((grant - approvedDays).toFixed(1));
 
       // 해당 직원의 해당 연도 승인된 연차 목록 (빠른 날짜부터 오름차순 정렬)
       const memberLeaves = yearApprovedLeaves
@@ -4032,24 +4115,35 @@
           const isRange = (s !== e);
           const totalDays = l.totalDays || (isRange ? calculateDateRangeDays(s, e) : 1);
           const sYoil = getDayOfWeekStr(s);
-          const eYoil = getDayOfWeekStr(e);
+          const bd = getLeaveBreakdownForYear(l, targetYear, todayKey);
+          const isCongrat = (l.type === '경조사' || l.type === '경조사,포상');
+          const isUpcoming = (e >= todayKey);
 
           let dateText = `📅 ${Number(s.split('-')[1])}/${Number(s.split('-')[2])}(${sYoil})`;
           if (isRange) {
-            dateText = `📅 ${Number(s.split('-')[1])}/${Number(s.split('-')[2])}~${Number(e.split('-')[1])}/${Number(e.split('-')[2])} (${totalDays}일)`;
+            const displayDays = isCongrat ? totalDays : bd.totalDeductDays;
+            dateText = `📅 ${Number(s.split('-')[1])}/${Number(s.split('-')[2])}~${Number(e.split('-')[1])}/${Number(e.split('-')[2])} (${displayDays}일)`;
           }
 
           let pillClass = 'pill-leave';
           if (l.type === '오전반차') pillClass = 'pill-am';
           if (l.type === '오후반차') pillClass = 'pill-pm';
-          if (l.type === '경조사' || l.type === '경조사,포상') pillClass = 'pill-congrat';
-          const isCongrat = (l.type === '경조사' || l.type === '경조사,포상');
+          if (isCongrat) pillClass = 'pill-congrat';
           const typeLabel = l.type === '전일' ? '연차' : (isCongrat ? '경조사,포상' : l.type);
+          const upcomingBadge = isUpcoming
+            ? `<span style="font-size: 9.5px; font-weight: 800; color: #2563eb; background: #dbeafe; padding: 1px 4px; border-radius: 4px; flex-shrink: 0;">예정</span>`
+            : '';
+          const itemStyle = isUpcoming
+            ? `border-left: 3px solid #3b82f6; background: #f8fbff;`
+            : ``;
 
           return `
-            <div class="leave-history-item" onclick="openLeaveDetailModal('${l.id}')" title="클릭 시 상세 사유 확인 및 연차 삭제: ${dateText} [${typeLabel}]">
+            <div class="leave-history-item" style="${itemStyle}" onclick="openLeaveDetailModal('${l.id}')" title="클릭 시 상세 사유 확인 및 연차 삭제: ${dateText} [${typeLabel}]${isUpcoming ? ' (아직 날짜가 지나지 않은 연차)' : ''}">
               <span style="font-weight: 700; font-size: 11px; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${dateText}</span>
-              <span class="pill ${pillClass}" style="font-size: 10px; padding: 1px 5px; white-space: nowrap; flex-shrink: 0;">${typeLabel}</span>
+              <div style="display: flex; align-items: center; gap: 3px; flex-shrink: 0;">
+                ${upcomingBadge}
+                <span class="pill ${pillClass}" style="font-size: 10px; padding: 1px 5px; white-space: nowrap;">${typeLabel}</span>
+              </div>
             </div>
           `;
         }).join('');
@@ -4060,16 +4154,21 @@
       return `
         <div class="stat-card">
           <div class="stat-card-title" style="white-space: nowrap; font-size: 12px;">${m} 님 <span style="font-size: 11px; font-weight: normal; color: #64748b;">(${targetYear}년)</span></div>
-          <div class="stat-card-value" style="font-size: 20px;">
+          <div class="stat-card-value" style="font-size: 20px;" title="남은 일수 = 부여(${grant}일) - 승인(${approvedDays}일)">
             ${remain}<span style="font-size: 12.5px; font-weight: normal; color: #64748b; margin-left: 2px;">일 남음</span>
           </div>
-          <div class="stat-card-sub" style="display: flex; justify-content: space-between; font-size: 11px;">
-            <span>사용: <b>${used}일</b></span>
+          <div class="stat-card-sub" style="display: flex; justify-content: space-between; font-size: 11px; color: #475569; margin-top: 4px;">
             <span>부여: <b>${grant}일</b></span>
+            <span>승인: <b>${approvedDays}일</b></span>
+          </div>
+          <div style="margin-top: 5px; padding: 4px 7px; background: ${upcomingDays > 0 ? '#eff6ff' : '#f1f5f9'}; border: 1px solid ${upcomingDays > 0 ? '#bfdbfe' : '#e2e8f0'}; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 11px;" title="승인건 중 아직 날짜가 지나지 않은 써놓은 연차: ${upcomingDays}일 (이미 지난 연차: ${pastDays}일)">
+            <span style="color: ${upcomingDays > 0 ? '#1e40af' : '#64748b'}; font-weight: 700; white-space: nowrap;">⏳ 안 지난 연차</span>
+            <span style="color: ${upcomingDays > 0 ? '#2563eb' : '#64748b'}; font-weight: 800; white-space: nowrap;">${upcomingDays}일</span>
           </div>
           <div class="leave-history-container" style="margin-top: 8px; padding-top: 6px;">
             <div class="leave-history-title" style="font-size: 10.5px;">
               <span>📅 승인 (${memberLeaves.length}건)</span>
+              <span style="color: #475569;">총 ${approvedDays}일</span>
             </div>
             <div class="leave-history-list">
               ${historyHtml}
@@ -4705,11 +4804,12 @@
         <div class="badge-box">
       `;
 
-      // ★ 오직 연차만 표기 (승인된 연차와 대기 중인 연차 구분, 출근 예정일인 날만 표기)
+      // ★ 오직 연차만 표기 (승인된 연차와 대기 중인 연차 구분, 범위 연차는 출근 예정일인 날만 표기)
       const dayLeaves = leaves.filter(l => {
         const s = l.startDate || l.date;
         const e = l.endDate || l.date;
         if (!(dateKey >= s && dateKey <= e)) return false;
+        if (s === e) return true;
         return isPersonWorkingOnDate(l.person, dateKey);
       });
       if (dayLeaves.length > 0) {
