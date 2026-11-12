@@ -460,16 +460,26 @@ input[type="number"] {
 .material-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 6px;
 }
 .material-card-name {
-  font-size: 13.5px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 800;
   color: #0f172a;
-  line-height: 1.3;
+  line-height: 1.35;
   word-break: keep-all;
   overflow-wrap: break-word;
+  cursor: pointer;
+  padding: 2px 4px;
+  margin: 0 -4px;
+  border-radius: 5px;
+  transition: all 0.15s ease;
+}
+.material-card-name:hover {
+  color: #2563eb;
+  background: #eff6ff;
+  text-decoration: underline;
 }
 .material-card-spec {
   font-size: 11.5px;
@@ -479,11 +489,17 @@ input[type="number"] {
   overflow-wrap: break-word;
 }
 .material-card-footer {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
   align-items: center;
   padding-top: 6px;
   border-top: 1px dashed #f1f5f9;
+}
+.material-card-footer .urgency-badge {
+  justify-content: center;
+  width: 100%;
+  text-align: center;
 }
 
 /* 체크박스 커스텀 */

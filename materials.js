@@ -4,58 +4,17 @@
  * =========================================================================
  */
 
-// 치과 기공소 실무 필수 기본 재료 마스터 목록 (카테고리별 30종 이상)
-const DEFAULT_MATERIAL_MASTER = [
-  // CAD/CAM & 블록/디스크
-  { id: 'mat_01', name: '지르코니아 블록 ST (98×14mm)', category: 'CAD/CAM', defaultSupplier: '한일치재', spec: 'A2 쉐이드 / 98×14', unit: 'ea' },
-  { id: 'mat_02', name: '지르코니아 블록 ST (98×18mm)', category: 'CAD/CAM', defaultSupplier: '한일치재', spec: 'A2 쉐이드 / 98×18', unit: 'ea' },
-  { id: 'mat_03', name: '지르코니아 블록 UT (98×14mm)', category: 'CAD/CAM', defaultSupplier: '한일치재', spec: '전치부용 고투명 / 98×14', unit: 'ea' },
-  { id: 'mat_04', name: 'PMMA 멀티 디스크 (98×16mm)', category: 'CAD/CAM', defaultSupplier: '신흥', spec: 'A2 멀티레이어 / 임시치아용', unit: 'ea' },
-  { id: 'mat_05', name: 'CAD 왁스 디스크 (98×14mm)', category: 'CAD/CAM', defaultSupplier: '신흥', spec: 'Blue / 캐스팅·프레스용', unit: 'ea' },
-  { id: 'mat_06', name: '밀링버 0.6mm (DLC코팅)', category: 'CAD/CAM', defaultSupplier: '한일치재', spec: '지르코니아 가공용 피니싱버', unit: 'ea' },
-  { id: 'mat_07', name: '밀링버 1.0mm (DLC코팅)', category: 'CAD/CAM', defaultSupplier: '한일치재', spec: '지르코니아 가공용 레귤러버', unit: 'ea' },
-  { id: 'mat_08', name: '밀링버 2.0mm (DLC코팅)', category: 'CAD/CAM', defaultSupplier: '한일치재', spec: '지르코니아 황삭용 라프버', unit: 'ea' },
+// 지원 카테고리 목록
+const MATERIAL_CATEGORIES = ['더메이트', '쿠팡', '다이소', '기타'];
 
-  // 포세린 & 세라믹
-  { id: 'mat_09', name: '세라믹 파우더 (Vintage MP A2 Body)', category: '포세린', defaultSupplier: '신흥', spec: '50g / 메탈포세린용', unit: '통' },
-  { id: 'mat_10', name: '지르코니아 세라믹 파우더 (ZR Body A2)', category: '포세린', defaultSupplier: '한일치재', spec: '50g / 지르 빌드업용', unit: '통' },
-  { id: 'mat_11', name: '세라믹 오파크 페이스트 (A2)', category: '포세린', defaultSupplier: '신흥', spec: '메탈 차폐용 오파크', unit: '개' },
-  { id: 'mat_12', name: '글레이즈 페이스트 & 전용 리퀴드', category: '포세린', defaultSupplier: '한일치재', spec: '형광성 글레이즈', unit: 'set' },
-  { id: 'mat_13', name: '스테인 키트 기본 색상 리필', category: '포세린', defaultSupplier: '신흥', spec: 'A계열·B계열·White', unit: '개' },
-
-  // 레진 & 덴처
-  { id: 'mat_14', name: '자가중합 레진 분말 & 액 (유니패스트)', category: '레진', defaultSupplier: '신흥', spec: 'A2 분말 100g + 액 100ml', unit: 'set' },
-  { id: 'mat_15', name: '광중합 레진 (트레이 레진 플레이트)', category: '레진', defaultSupplier: '오스템', spec: '개인트레이 제작용 50매', unit: 'box' },
-  { id: 'mat_16', name: '레진치 (상악 전치부 6전치 A2)', category: '레진', defaultSupplier: '신흥', spec: 'Endura / Antares 택1', unit: '조' },
-  { id: 'mat_17', name: '레진치 (하악 전치부 6전치 A2)', category: '레진', defaultSupplier: '신흥', spec: 'Endura / Antares 택1', unit: '조' },
-  { id: 'mat_18', name: '열중합 덴처 레진 (루시톤 199)', category: '레진', defaultSupplier: '덴티움', spec: '오리지널 핑크 분말 1파운드', unit: '통' },
-
-  // 석고 & 매몰재
-  { id: 'mat_19', name: '초경석고 후지락 (노랑)', category: '석고', defaultSupplier: '한일치재', spec: '12kg 박스 / 마스터 모델용', unit: 'box' },
-  { id: 'mat_20', name: '보통석고 화이트 (20kg)', category: '석고', defaultSupplier: '한일치재', spec: '20kg 대포대 / 마운팅용', unit: '포' },
-  { id: 'mat_21', name: '급가열 인레이/크라운 매몰재', category: '석고', defaultSupplier: '신흥', spec: 'Formula 1 (100g×30포)', unit: 'box' },
-  { id: 'mat_22', name: '석고 분리제 (하이세퍼 액)', category: '석고', defaultSupplier: '신흥', spec: '1000ml 대용량 리필', unit: '통' },
-
-  // 메탈 & 합금
-  { id: 'mat_23', name: '크라운/브릿지용 니켈-크롬 합금 (VeraBond)', category: '메탈', defaultSupplier: '신흥', spec: '베라본드 2 1000g', unit: 'box' },
-  { id: 'mat_24', name: '파샬 덴처용 코발트-크롬 합금 (베라스타)', category: '메탈', defaultSupplier: '한일치재', spec: '탄성 우수 프레임용 1kg', unit: 'box' },
-  { id: 'mat_25', name: '캐스팅 납착용 솔더 & 플럭스', category: '메탈', defaultSupplier: '신흥', spec: '화이트 솔더 봉 + 페이스트 플럭스', unit: 'set' },
-
-  // 기공 기구 & 소모품
-  { id: 'mat_26', name: '지르코니아 폴리싱 다이아몬드 휠', category: '소모품', defaultSupplier: '한일치재', spec: '2단계 세트 (초벌·광택)', unit: 'set' },
-  { id: 'mat_27', name: '메탈 커팅 디스크 (카보런덤 휠)', category: '소모품', defaultSupplier: '신흥', spec: '0.6mm 박형 절단용 100매', unit: 'box' },
-  { id: 'mat_28', name: '기공용 순간접착제 (록타이트 401)', category: '소모품', defaultSupplier: '오스템', spec: '20g 고강도 핀작업용', unit: '개' },
-  { id: 'mat_29', name: '교합지 (바우쉬 200미크론)', category: '소모품', defaultSupplier: '신흥', spec: '블루/레드 양면 300매', unit: 'box' },
-  { id: 'mat_30', name: '다웰핀 (황동 쌍핀/단핀)', category: '소모품', defaultSupplier: '한일치재', spec: '핀작업용 스파이크 1000개', unit: 'box' },
-  { id: 'mat_31', name: '니트릴 글러브 (화이트 M사이즈)', category: '소모품', defaultSupplier: '덴티움', spec: '파우더프리 100매입', unit: 'box' },
-  { id: 'mat_32', name: '3단 덴탈 멜트블로운 마스크', category: '소모품', defaultSupplier: '덴티움', spec: '비말차단 50매입', unit: 'box' },
-  { id: 'mat_33', name: '알코올 램프 심지 & 왁스 조각도', category: '소모품', defaultSupplier: '신흥', spec: '기공용 소모성 리필', unit: 'set' }
-];
+// 초기 고정 마스터 목록은 사용하지 않고 주문 통계 및 등록 기반으로 구성
+const DEFAULT_MATERIAL_MASTER = [];
 
 // 상태 변수
-let materialMasterList = [...DEFAULT_MATERIAL_MASTER];
+let materialMasterList = [];
 let materialOrders = [];
 let materialSavedHistory = [];
+let materialOrderStatsLog = []; // 주간 초기화/삭제 후에도 누적 주문 통계를 유지하기 위한 기록
 let materialCategoryFilter = 'ALL';
 let materialSearchKeyword = '';
 let materialSupplierFilter = 'ALL';
@@ -64,14 +23,57 @@ let materialSupplierFilter = 'ALL';
 const STORAGE_KEY_MAT_MASTER = 'bd_material_custom_master';
 const STORAGE_KEY_MAT_ORDERS = 'bd_material_current_orders';
 const STORAGE_KEY_MAT_SAVED_HISTORY = 'bd_material_saved_history';
+const STORAGE_KEY_MAT_STATS_LOG = 'bd_material_order_stats_log';
 
 function getMaterialFirestoreDb() {
   return window.firebaseDb || (typeof firebaseDb !== 'undefined' ? firebaseDb : null);
 }
 
+// 카테고리 정규화 (기존 카테고리 데이터를 더메이트/쿠팡/다이소/기타로 변환)
+function normalizeMaterialCategory(cat) {
+  if (!cat) return '더메이트';
+  const trimmed = String(cat).trim();
+  if (MATERIAL_CATEGORIES.includes(trimmed)) return trimmed;
+  if (trimmed.includes('쿠팡')) return '쿠팡';
+  if (trimmed.includes('다이소')) return '다이소';
+  if (
+    trimmed.includes('더메이트') ||
+    trimmed.includes('신흥') ||
+    trimmed.includes('한일') ||
+    trimmed.includes('오스템') ||
+    trimmed.includes('덴티움') ||
+    ['CAD/CAM', '포세린', '레진', '석고', '메탈', '소모품', '기본'].includes(trimmed)
+  ) {
+    return '더메이트';
+  }
+  return '기타';
+}
+
+// 재료명 비교용 정규화 (공백 및 대소문자 무시)
+function normalizeMaterialName(name) {
+  return String(name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+// 카테고리별 배지 스타일 반환
+function getCategoryBadgeStyle(cat) {
+  const normalized = normalizeMaterialCategory(cat);
+  switch (normalized) {
+    case '더메이트':
+      return 'color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe;';
+    case '쿠팡':
+      return 'color: #e11d48; background: #fff1f2; border: 1px solid #fecdd3;';
+    case '다이소':
+      return 'color: #d97706; background: #fffbeb; border: 1px solid #fde68a;';
+    case '기타':
+    default:
+      return 'color: #475569; background: #f1f5f9; border: 1px solid #cbd5e1;';
+  }
+}
+
 // 초기 로드
 function initMaterialsModule() {
   loadStoredMaterials();
+  syncMasterListFromOrders();
   setupMaterialFirestoreListeners();
   renderMaterialTab();
 }
@@ -81,23 +83,237 @@ function loadStoredMaterials() {
     const savedCustom = localStorage.getItem(STORAGE_KEY_MAT_MASTER);
     if (savedCustom) {
       const parsed = JSON.parse(savedCustom);
-      // 기본 목록과 사용자 추가 목록 병합
-      const customIds = new Set(parsed.map(p => p.id));
-      materialMasterList = [
-        ...DEFAULT_MATERIAL_MASTER.filter(m => !customIds.has(m.id)),
-        ...parsed
-      ];
+      if (Array.isArray(parsed)) {
+        // 예전 기본 33종(mat_01 ~ mat_33) 중 주문 이력이 없는 항목 제외 및 카테고리 정규화
+        materialMasterList = parsed
+          .filter(m => m && m.name && !/^mat_\d+$/.test(String(m.id || '')))
+          .map(m => ({
+            ...m,
+            name: String(m.name).trim(),
+            category: normalizeMaterialCategory(m.category || m.defaultSupplier),
+            defaultSupplier: normalizeMaterialCategory(m.category || m.defaultSupplier)
+          }));
+      }
     }
     const savedOrders = localStorage.getItem(STORAGE_KEY_MAT_ORDERS);
     if (savedOrders) {
-      materialOrders = JSON.parse(savedOrders);
+      const parsedOrders = JSON.parse(savedOrders);
+      if (Array.isArray(parsedOrders)) {
+        materialOrders = parsedOrders.map(o => ({
+          ...o,
+          category: normalizeMaterialCategory(o.category || o.supplier),
+          supplier: normalizeMaterialCategory(o.category || o.supplier)
+        }));
+      }
     }
     const savedHistory = localStorage.getItem(STORAGE_KEY_MAT_SAVED_HISTORY);
     if (savedHistory) {
-      materialSavedHistory = JSON.parse(savedHistory);
+      const parsedHistory = JSON.parse(savedHistory);
+      if (Array.isArray(parsedHistory)) {
+        materialSavedHistory = parsedHistory;
+      }
+    }
+    const savedStatsLog = localStorage.getItem(STORAGE_KEY_MAT_STATS_LOG);
+    if (savedStatsLog) {
+      const parsedLog = JSON.parse(savedStatsLog);
+      if (Array.isArray(parsedLog)) {
+        materialOrderStatsLog = parsedLog;
+      }
     }
   } catch (e) {
     console.error('Failed to load local materials data:', e);
+  }
+}
+
+// 주문 내역(현재 발주, 저장된 입고체크 내역, 누적 로그)에 있는 재료들을 자주 시키는 재료 목록에 자동 반영 및 중복 병합
+function syncMasterListFromOrders() {
+  const byNormName = new Map();
+
+  // 1) 기존 마스터 목록 정리 (동일 이름 병합)
+  (materialMasterList || []).forEach(item => {
+    if (!item || !item.name) return;
+    const norm = normalizeMaterialName(item.name);
+    if (!norm) return;
+    const cat = normalizeMaterialCategory(item.category || item.defaultSupplier);
+    if (!byNormName.has(norm)) {
+      byNormName.set(norm, {
+        id: item.id || ('mat_custom_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4)),
+        name: String(item.name).trim(),
+        category: cat,
+        defaultSupplier: cat
+      });
+    }
+  });
+
+  // 2) 누적 로그, 저장 히스토리, 현재 주문 목록에서 누락된 재료 자동 추가
+  const ensureFromRecord = (name, cat) => {
+    const cleanName = String(name || '').trim();
+    const norm = normalizeMaterialName(cleanName);
+    if (!norm) return;
+    const normCat = normalizeMaterialCategory(cat);
+    if (!byNormName.has(norm)) {
+      byNormName.set(norm, {
+        id: 'mat_custom_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        name: cleanName,
+        category: normCat,
+        defaultSupplier: normCat
+      });
+    }
+  };
+
+  (materialOrderStatsLog || []).forEach(rec => {
+    if (rec && !rec.deleted) ensureFromRecord(rec.name, rec.category || rec.supplier);
+  });
+
+  (materialSavedHistory || []).forEach(batch => {
+    (batch.items || []).forEach(it => {
+      ensureFromRecord(it.name, it.category || it.supplier);
+    });
+  });
+
+  (materialOrders || []).forEach(ord => {
+    ensureFromRecord(ord.name, ord.category || ord.supplier);
+  });
+
+  materialMasterList = Array.from(byNormName.values());
+
+  // 현재 발주 목록의 itemId 및 카테고리 동기화
+  (materialOrders || []).forEach(ord => {
+    const matched = byNormName.get(normalizeMaterialName(ord.name));
+    if (matched) {
+      ord.itemId = matched.id;
+      ord.category = matched.category;
+      ord.supplier = matched.category;
+    }
+  });
+
+  updateFrequentMaterialDatalist();
+}
+
+// 재료명 자동완성 datalist 갱신
+function updateFrequentMaterialDatalist() {
+  const datalist = document.getElementById('frequent-material-datalist');
+  if (!datalist) return;
+  const statsMap = getMaterialOrderStatsMap();
+  const sorted = [...(materialMasterList || [])].sort((a, b) => {
+    const sa = statsMap.get(normalizeMaterialName(a.name)) || { total: 0, month: 0 };
+    const sb = statsMap.get(normalizeMaterialName(b.name)) || { total: 0, month: 0 };
+    if (sb.total !== sa.total) return sb.total - sa.total;
+    return a.name.localeCompare(b.name, 'ko');
+  });
+  datalist.innerHTML = sorted
+    .map(m => `<option value="${escapeHtml(m.name)}">${escapeHtml(m.category)}</option>`)
+    .join('');
+}
+
+// 재료별 [총 주문수 / 월 주문수] 계산
+function getMaterialOrderStatsMap() {
+  const uniqueOrders = new Map();
+
+  // 1) 누적 아카이브 로그
+  (materialOrderStatsLog || []).forEach(rec => {
+    if (!rec || !rec.id || rec.deleted) return;
+    uniqueOrders.set(rec.id, {
+      id: rec.id,
+      name: rec.name,
+      quantity: Math.max(1, Number(rec.quantity) || 1),
+      dateStr: rec.createdAt || rec.savedAt || ''
+    });
+  });
+
+  // 2) 입고 확인용 저장된 발주 목록
+  (materialSavedHistory || []).forEach(batch => {
+    const batchDate = batch.savedAt || '';
+    (batch.items || []).forEach((it, idx) => {
+      const recId = it.id || `${batch.id}_${idx}`;
+      uniqueOrders.set(recId, {
+        id: recId,
+        name: it.name,
+        quantity: Math.max(1, Number(it.quantity) || 1),
+        dateStr: it.createdAt || batchDate
+      });
+    });
+  });
+
+  // 3) 현재 이번 주 발주 목록 (가장 최신 수량 우선 반영)
+  (materialOrders || []).forEach(ord => {
+    if (!ord || !ord.id) return;
+    uniqueOrders.set(ord.id, {
+      id: ord.id,
+      name: ord.name,
+      quantity: Math.max(1, Number(ord.quantity) || 1),
+      dateStr: ord.createdAt || new Date().toISOString()
+    });
+  });
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  const statsMap = new Map();
+  uniqueOrders.forEach(rec => {
+    const norm = normalizeMaterialName(rec.name);
+    if (!norm) return;
+    if (!statsMap.has(norm)) {
+      statsMap.set(norm, { total: 0, month: 0 });
+    }
+    const entry = statsMap.get(norm);
+    const qty = Math.max(1, Number(rec.quantity) || 1);
+    entry.total += qty;
+
+    let isCurrentMonth = false;
+    if (rec.dateStr) {
+      const d = new Date(rec.dateStr);
+      if (!isNaN(d.getTime())) {
+        if (d.getFullYear() === currentYear && (d.getMonth() + 1) === currentMonth) {
+          isCurrentMonth = true;
+        }
+      } else if (String(rec.dateStr).startsWith(`${currentYear}-${String(currentMonth).padStart(2, '0')}`)) {
+        isCurrentMonth = true;
+      }
+    }
+    if (isCurrentMonth) {
+      entry.month += qty;
+    }
+  });
+
+  return statsMap;
+}
+
+// 현재 발주 품목들을 누적 통계 로그에 기록 (목록 저장 또는 주문 초기화 시 호출)
+function archiveOrdersToStatsLog(ordersToArchive) {
+  if (!Array.isArray(ordersToArchive) || ordersToArchive.length === 0) return;
+  if (!Array.isArray(materialOrderStatsLog)) materialOrderStatsLog = [];
+
+  const byId = new Map(materialOrderStatsLog.map(r => [r.id, r]));
+  ordersToArchive.forEach(ord => {
+    if (!ord || !ord.id) return;
+    byId.set(ord.id, {
+      id: ord.id,
+      itemId: ord.itemId || '',
+      name: ord.name,
+      category: normalizeMaterialCategory(ord.category || ord.supplier),
+      quantity: Math.max(1, Number(ord.quantity) || 1),
+      createdAt: ord.createdAt || new Date().toISOString()
+    });
+  });
+
+  materialOrderStatsLog = Array.from(byId.values());
+  saveStoredMaterialStatsLog();
+}
+
+function saveStoredMaterialStatsLog() {
+  try {
+    localStorage.setItem(STORAGE_KEY_MAT_STATS_LOG, JSON.stringify(materialOrderStatsLog));
+    const db = getMaterialFirestoreDb();
+    if (db) {
+      db.collection('materials').doc('order_stats_log').set({
+        logs: materialOrderStatsLog,
+        updatedAt: new Date().toISOString()
+      }).catch(err => console.warn('Firestore order_stats_log sync err:', err));
+    }
+  } catch (e) {
+    console.error('saveStoredMaterialStatsLog error:', e);
   }
 }
 
@@ -131,14 +347,14 @@ function saveStoredMaterialHistory() {
   }
 }
 
-function saveCustomMasterItem(item) {
+function saveCustomMasterItem() {
   try {
-    const customOnly = materialMasterList.filter(m => !DEFAULT_MATERIAL_MASTER.some(d => d.id === m.id));
-    localStorage.setItem(STORAGE_KEY_MAT_MASTER, JSON.stringify(customOnly));
+    localStorage.setItem(STORAGE_KEY_MAT_MASTER, JSON.stringify(materialMasterList));
+    updateFrequentMaterialDatalist();
     const db = getMaterialFirestoreDb();
     if (db) {
       db.collection('materials').doc('custom_master').set({
-        items: customOnly,
+        items: materialMasterList,
         updatedAt: new Date().toISOString()
       }).catch(err => console.warn('Firestore custom master sync err:', err));
     }
@@ -151,39 +367,44 @@ function setupMaterialFirestoreListeners() {
   const db = getMaterialFirestoreDb();
   if (!db) return;
 
-  // 1. 실시간 이번 주 발주 목록 동기화 (접속한 모든 사용자 실시간 공유)
+  // 1. 실시간 이번 주 발주 목록 동기화
   db.collection('materials').doc('current_orders').onSnapshot(doc => {
     if (doc.exists && doc.data() && Array.isArray(doc.data().orders)) {
-      materialOrders = doc.data().orders;
+      materialOrders = doc.data().orders.map(o => ({
+        ...o,
+        category: normalizeMaterialCategory(o.category || o.supplier),
+        supplier: normalizeMaterialCategory(o.category || o.supplier)
+      }));
       localStorage.setItem(STORAGE_KEY_MAT_ORDERS, JSON.stringify(materialOrders));
+      syncMasterListFromOrders();
       renderMaterialTab();
       const capModal = document.getElementById('material-capture-modal');
       if (capModal && capModal.classList.contains('active')) {
         renderCapturePreviewContent();
       }
     } else if (!doc.exists && materialOrders.length > 0) {
-      // 클라우드에 아직 문서가 없고 로컬에 담아둔 재료가 있으면 즉시 클라우드로 업로드하여 공유
       saveStoredMaterialsOrders();
     }
   }, err => console.warn('Firestore material listener note:', err));
 
-  // 2. 사용자 추가 재료 마스터 실시간 동기화
+  // 2. 자주 주문하는 재료 마스터 실시간 동기화
   db.collection('materials').doc('custom_master').onSnapshot(doc => {
     if (doc.exists && doc.data() && Array.isArray(doc.data().items)) {
-      const customItems = doc.data().items;
-      const customIds = new Set(customItems.map(c => c.id));
-      materialMasterList = [
-        ...DEFAULT_MATERIAL_MASTER.filter(m => !customIds.has(m.id)),
-        ...customItems
-      ];
-      localStorage.setItem(STORAGE_KEY_MAT_MASTER, JSON.stringify(customItems));
+      const customItems = doc.data().items
+        .filter(m => m && m.name && !/^mat_\d+$/.test(String(m.id || '')))
+        .map(m => ({
+          ...m,
+          name: String(m.name).trim(),
+          category: normalizeMaterialCategory(m.category || m.defaultSupplier),
+          defaultSupplier: normalizeMaterialCategory(m.category || m.defaultSupplier)
+        }));
+      materialMasterList = customItems;
+      syncMasterListFromOrders();
+      localStorage.setItem(STORAGE_KEY_MAT_MASTER, JSON.stringify(materialMasterList));
       renderMaterialMasterGrid();
       renderMaterialSupplierChips();
-    } else if (!doc.exists) {
-      const customOnly = materialMasterList.filter(m => !DEFAULT_MATERIAL_MASTER.some(d => d.id === m.id));
-      if (customOnly.length > 0) {
-        saveCustomMasterItem();
-      }
+    } else if (!doc.exists && materialMasterList.length > 0) {
+      saveCustomMasterItem();
     }
   }, err => console.warn('Firestore material master listener note:', err));
 
@@ -192,11 +413,24 @@ function setupMaterialFirestoreListeners() {
     if (doc.exists && doc.data() && Array.isArray(doc.data().history)) {
       materialSavedHistory = doc.data().history;
       localStorage.setItem(STORAGE_KEY_MAT_SAVED_HISTORY, JSON.stringify(materialSavedHistory));
-      renderMaterialSavedHistory();
+      syncMasterListFromOrders();
+      renderMaterialTab();
     } else if (!doc.exists && materialSavedHistory.length > 0) {
       saveStoredMaterialHistory();
     }
   }, err => console.warn('Firestore material saved_history listener note:', err));
+
+  // 4. 누적 주문 통계 로그 실시간 동기화
+  db.collection('materials').doc('order_stats_log').onSnapshot(doc => {
+    if (doc.exists && doc.data() && Array.isArray(doc.data().logs)) {
+      materialOrderStatsLog = doc.data().logs;
+      localStorage.setItem(STORAGE_KEY_MAT_STATS_LOG, JSON.stringify(materialOrderStatsLog));
+      syncMasterListFromOrders();
+      renderMaterialMasterGrid();
+    } else if (!doc.exists && materialOrderStatsLog.length > 0) {
+      saveStoredMaterialStatsLog();
+    }
+  }, err => console.warn('Firestore material order_stats_log listener note:', err));
 }
 
 // 탭 렌더링 메인 함수
@@ -224,10 +458,10 @@ function renderMaterialOrderList() {
   if (urgentCountBadge) urgentCountBadge.innerText = `긴급 ${urgentCount}건`;
   if (checkedCountBadge) checkedCountBadge.innerText = `캡쳐선택: ${checkedOrders.length}건`;
 
-  // 재료상 필터 적용
+  // 카테고리 필터 적용
   let filteredOrders = materialOrders;
   if (materialSupplierFilter !== 'ALL') {
-    filteredOrders = materialOrders.filter(o => o.supplier === materialSupplierFilter);
+    filteredOrders = materialOrders.filter(o => normalizeMaterialCategory(o.category || o.supplier) === materialSupplierFilter);
   }
 
   if (filteredOrders.length === 0) {
@@ -236,7 +470,7 @@ function renderMaterialOrderList() {
         <td style="text-align: center; padding: 40px 10px; color: #94a3b8; font-size: 13.5px;">
           🛒 이번 주 주문할 재료가 아직 없습니다.<br>
           <span style="font-size: 12px; color: #cbd5e1; margin-top: 6px; display: inline-block;">
-            좌측 '재료목록'에서 품목을 선택하거나 '재료등록'을 클릭해 담아주세요!
+            좌측 '자주 주문하는 재료 목록'에서 담거나 상단 '🛒 주문하기'를 클릭해 주문해주세요!
           </span>
         </td>
       </tr>
@@ -244,8 +478,10 @@ function renderMaterialOrderList() {
     return;
   }
 
-  tbody.innerHTML = filteredOrders.map((ord, idx) => {
+  tbody.innerHTML = filteredOrders.map(ord => {
     const isUrgent = ord.urgency === 'urgent';
+    const cat = normalizeMaterialCategory(ord.category || ord.supplier);
+    const catStyle = getCategoryBadgeStyle(cat);
     const urgencyBadge = isUrgent
       ? `<span class="urgency-badge urgency-urgent" onclick="toggleOrderUrgency('${ord.id}')" title="클릭시 정기 주문으로 변경">🚨 긴급</span>`
       : `<span class="urgency-badge urgency-regular" onclick="toggleOrderUrgency('${ord.id}')" title="클릭시 긴급 주문으로 변경">📦 정기</span>`;
@@ -260,8 +496,7 @@ function renderMaterialOrderList() {
           <div class="order-row-bottom">
             <div class="order-row-meta">
               ${urgencyBadge}
-              <span class="supplier-chip">${escapeHtml(ord.supplier || '기본')}</span>
-              <span class="order-item-spec">${escapeHtml(ord.spec || '-')}</span>
+              <span class="supplier-chip" style="${catStyle}">${escapeHtml(cat)}</span>
             </div>
             <div class="order-row-controls">
               <div class="qty-controller">
@@ -269,7 +504,6 @@ function renderMaterialOrderList() {
                 <input type="number" class="qty-input" min="1" value="${ord.quantity}" onclick="this.select()" onfocus="this.select()" onchange="updateOrderQtyDirect('${ord.id}', this.value)" title="클릭하여 수량 직접 입력" />
                 <button type="button" class="qty-btn" onclick="changeOrderQty('${ord.id}', 1)" title="1개 증가">+</button>
               </div>
-              <span class="order-item-unit">${escapeHtml(ord.unit || 'ea')}</span>
               <button type="button" class="btn-danger order-delete-btn" onclick="deleteMaterialOrder('${ord.id}')" title="주문 목록에서 삭제">✕</button>
             </div>
           </div>
@@ -279,80 +513,101 @@ function renderMaterialOrderList() {
   }).join('');
 }
 
-// 재료 마스터 도감 렌더링
+// 자주 주문하는 재료 목록 (3칸 그리드, 주문 통계순 정렬) 렌더링
 function renderMaterialMasterGrid() {
   const container = document.getElementById('material-master-grid');
   if (!container) return;
 
+  const statsMap = getMaterialOrderStatsMap();
   const keyword = materialSearchKeyword.trim().toLowerCase();
-  let list = materialMasterList;
+  let list = [...(materialMasterList || [])];
 
   if (materialCategoryFilter !== 'ALL') {
-    list = list.filter(m => m.category === materialCategoryFilter);
+    list = list.filter(m => normalizeMaterialCategory(m.category || m.defaultSupplier) === materialCategoryFilter);
   }
 
   if (keyword) {
-    list = list.filter(m => 
-      m.name.toLowerCase().includes(keyword) || 
-      (m.spec && m.spec.toLowerCase().includes(keyword)) ||
-      (m.defaultSupplier && m.defaultSupplier.toLowerCase().includes(keyword)) ||
-      (m.category && m.category.toLowerCase().includes(keyword))
+    list = list.filter(m =>
+      m.name.toLowerCase().includes(keyword) ||
+      normalizeMaterialCategory(m.category || m.defaultSupplier).toLowerCase().includes(keyword)
     );
   }
 
+  // 총 주문수 내림차순 -> 월 주문수 내림차순 -> 이름순 정렬
+  list.sort((a, b) => {
+    const sa = statsMap.get(normalizeMaterialName(a.name)) || { total: 0, month: 0 };
+    const sb = statsMap.get(normalizeMaterialName(b.name)) || { total: 0, month: 0 };
+    if (sb.total !== sa.total) return sb.total - sa.total;
+    if (sb.month !== sa.month) return sb.month - sa.month;
+    return a.name.localeCompare(b.name, 'ko');
+  });
+
   if (list.length === 0) {
     container.innerHTML = `
-      <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: #94a3b8; font-size: 13px;">
-        🔍 검색된 재료가 없습니다. 상단 '재료등록'을 통해 바로 추가해보세요!
+      <div style="grid-column: 1 / -1; text-align: center; padding: 36px 16px; color: #94a3b8; font-size: 13px; line-height: 1.6;">
+        📦 등록된 자주 시키는 재료가 없습니다.<br>
+        상단 <strong>[🛒 주문하기]</strong> 버튼으로 재료를 주문하면 주문 통계와 함께 이곳에 자동으로 모아집니다!
       </div>
     `;
     return;
   }
 
   container.innerHTML = list.map(item => {
-    const matchedOrders = (materialOrders || []).filter(o => o.itemId === item.id || o.name === item.name);
+    const normName = normalizeMaterialName(item.name);
+    const stats = statsMap.get(normName) || { total: 0, month: 0 };
+    const cat = normalizeMaterialCategory(item.category || item.defaultSupplier);
+    const catStyle = getCategoryBadgeStyle(cat);
+
+    const matchedOrders = (materialOrders || []).filter(
+      o => o.itemId === item.id || normalizeMaterialName(o.name) === normName
+    );
     const regularQty = matchedOrders
       .filter(o => o.urgency !== 'urgent')
       .reduce((sum, o) => sum + (Number(o.quantity) || 1), 0);
     const urgentQty = matchedOrders
       .filter(o => o.urgency === 'urgent')
       .reduce((sum, o) => sum + (Number(o.quantity) || 1), 0);
-    const totalQty = regularQty + urgentQty;
+    const totalCartQty = regularQty + urgentQty;
 
     return `
-      <div class="material-item-card ${totalQty > 0 ? 'is-in-order' : ''}">
+      <div class="material-item-card ${totalCartQty > 0 ? 'is-in-order' : ''}">
         <div class="material-card-header">
-          <div>
-            <span style="font-size: 10.5px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 2px 6px; border-radius: 4px;">${escapeHtml(item.category)}</span>
-            <div class="material-card-name" style="margin-top: 4px;">${escapeHtml(item.name)}</div>
-            <div class="material-card-spec">${escapeHtml(item.spec || '-')}</div>
-          </div>
+          <span style="font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 5px; ${catStyle}">${escapeHtml(cat)}</span>
+          <span style="font-size: 11px; font-weight: 700; color: #64748b; white-space: nowrap;" title="총 주문수 / 월 주문수">
+            총 <strong style="color: #0f172a;">${stats.total}</strong> / 월 <strong style="color: #2563eb;">${stats.month}</strong>
+          </span>
         </div>
-        <div class="material-card-footer" style="justify-content: flex-end;">
-          <div style="display: flex; gap: 4px; justify-content: flex-end; width: 100%;">
-            <button type="button" class="urgency-badge urgency-regular" style="padding: 3px 8px; font-size: 11px;" onclick="quickAddMaterialToOrder('${item.id}', 'regular')">📦 정기 담기${regularQty > 0 ? ` (${regularQty})` : ''}</button>
-            <button type="button" class="urgency-badge urgency-urgent" style="padding: 3px 8px; font-size: 11px;" onclick="quickAddMaterialToOrder('${item.id}', 'urgent')">🚨 긴급 담기${urgentQty > 0 ? ` (${urgentQty})` : ''}</button>
-          </div>
+        <div class="material-card-name" onclick="openEditMaterialModal('${item.id}')" title="클릭하여 재료명·카테고리 편집">
+          ${escapeHtml(item.name)}
+        </div>
+        <div class="material-card-footer">
+          <button type="button" class="urgency-badge urgency-regular" style="padding: 4px 6px; font-size: 11px;" onclick="quickAddMaterialToOrder('${item.id}', 'regular')">📦 정기담기${regularQty > 0 ? ` (${regularQty})` : ''}</button>
+          <button type="button" class="urgency-badge urgency-urgent" style="padding: 4px 6px; font-size: 11px;" onclick="quickAddMaterialToOrder('${item.id}', 'urgent')">🚨 긴급담기${urgentQty > 0 ? ` (${urgentQty})` : ''}</button>
         </div>
       </div>
     `;
   }).join('');
 }
 
-// 재료상 필터 칩 렌더링
+// 우측 발주 목록 카테고리 필터 칩 렌더링
 function renderMaterialSupplierChips() {
   const container = document.getElementById('mat-supplier-filter-container');
   if (!container) return;
 
-  const suppliers = Array.from(new Set(materialOrders.map(o => o.supplier).filter(Boolean)));
+  const presentCategories = Array.from(
+    new Set(materialOrders.map(o => normalizeMaterialCategory(o.category || o.supplier)).filter(Boolean))
+  );
+  // MATERIAL_CATEGORIES 순서대로 정렬
+  presentCategories.sort((a, b) => MATERIAL_CATEGORIES.indexOf(a) - MATERIAL_CATEGORIES.indexOf(b));
+
   let html = `
     <button type="button" class="filter-chip ${materialSupplierFilter === 'ALL' ? 'active' : ''}" onclick="setMaterialSupplierFilter('ALL')">
       전체 보기 (${materialOrders.length})
     </button>
   `;
 
-  suppliers.forEach(s => {
-    const cnt = materialOrders.filter(o => o.supplier === s).length;
+  presentCategories.forEach(s => {
+    const cnt = materialOrders.filter(o => normalizeMaterialCategory(o.category || o.supplier) === s).length;
     html += `
       <button type="button" class="filter-chip ${materialSupplierFilter === s ? 'active' : ''}" onclick="setMaterialSupplierFilter('${escapeHtml(s)}')">
         ${escapeHtml(s)} (${cnt})
@@ -383,27 +638,36 @@ function handleMaterialSearch(val) {
   renderMaterialMasterGrid();
 }
 
-// 발주 목록에 재료 담기 (퀵)
-function quickAddMaterialToOrder(masterId, urgency) {
+// 발주 목록에 재료 담기 (퀵 / 수량 지정)
+function quickAddMaterialToOrder(masterId, urgency, addQty = 1) {
   const item = materialMasterList.find(m => m.id === masterId);
   if (!item) return;
 
+  const qtyToAdd = Math.max(1, Number(addQty) || 1);
+  const normName = normalizeMaterialName(item.name);
+  const cat = normalizeMaterialCategory(item.category || item.defaultSupplier);
+
   // 이미 발주 목록에 같은 재료 & 같은 긴급도가 있는지 확인
-  const existing = materialOrders.find(o => o.itemId === masterId && o.urgency === urgency);
+  const existing = materialOrders.find(
+    o => (o.itemId === masterId || normalizeMaterialName(o.name) === normName) && o.urgency === urgency
+  );
   if (existing) {
-    existing.quantity += 1;
+    existing.quantity = (Number(existing.quantity) || 1) + qtyToAdd;
+    existing.category = cat;
+    existing.supplier = cat;
     existing.checked = true;
   } else {
     materialOrders.push({
       id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
       itemId: item.id,
       name: item.name,
-      spec: item.spec,
-      supplier: item.defaultSupplier || '신흥',
+      category: cat,
+      supplier: cat,
+      spec: '',
       urgency: urgency, // 'urgent' or 'regular'
-      quantity: 1,
-      unit: item.unit || 'ea',
-      applicant: '용희', // 기본 신청자
+      quantity: qtyToAdd,
+      unit: '',
+      applicant: '용희',
       note: '',
       checked: true,
       createdAt: new Date().toISOString()
@@ -438,7 +702,7 @@ function toggleOrderCheck(orderId, isChecked) {
 function toggleAllMaterialOrders(isChecked) {
   let targetOrders = materialOrders;
   if (materialSupplierFilter !== 'ALL') {
-    targetOrders = materialOrders.filter(o => o.supplier === materialSupplierFilter);
+    targetOrders = materialOrders.filter(o => normalizeMaterialCategory(o.category || o.supplier) === materialSupplierFilter);
   }
   targetOrders.forEach(o => o.checked = isChecked);
   saveStoredMaterialsOrders();
@@ -490,8 +754,13 @@ function updateOrderNote(orderId, note) {
 }
 
 function deleteMaterialOrder(orderId) {
-  if (!confirm('이 재료를 주문 목록에서 제외하시겠습니까?')) return;
+  if (!confirm('이 재료를 이번 주 발주 목록에서 삭제하시겠습니까?')) return;
   materialOrders = materialOrders.filter(o => o.id !== orderId);
+  if (Array.isArray(materialOrderStatsLog)) {
+    const beforeLen = materialOrderStatsLog.length;
+    materialOrderStatsLog = materialOrderStatsLog.filter(r => r.id !== orderId);
+    if (materialOrderStatsLog.length !== beforeLen) saveStoredMaterialStatsLog();
+  }
   saveStoredMaterialsOrders();
   renderMaterialTab();
 }
@@ -499,7 +768,7 @@ function deleteMaterialOrder(orderId) {
 function deleteSelectedMaterialOrders() {
   let checkedOrders = materialOrders.filter(o => o.checked);
   if (materialSupplierFilter !== 'ALL') {
-    checkedOrders = checkedOrders.filter(o => o.supplier === materialSupplierFilter);
+    checkedOrders = checkedOrders.filter(o => normalizeMaterialCategory(o.category || o.supplier) === materialSupplierFilter);
   }
   if (checkedOrders.length === 0) {
     alert('삭제할 재료를 체크박스로 먼저 선택해주세요.');
@@ -508,26 +777,48 @@ function deleteSelectedMaterialOrders() {
   if (!confirm(`선택한 재료 ${checkedOrders.length}건을 이번 주 발주 목록에서 삭제하시겠습니까?`)) return;
   const removeIds = new Set(checkedOrders.map(o => o.id));
   materialOrders = materialOrders.filter(o => !removeIds.has(o.id));
+  if (Array.isArray(materialOrderStatsLog)) {
+    const beforeLen = materialOrderStatsLog.length;
+    materialOrderStatsLog = materialOrderStatsLog.filter(r => !removeIds.has(r.id));
+    if (materialOrderStatsLog.length !== beforeLen) saveStoredMaterialStatsLog();
+  }
   saveStoredMaterialsOrders();
   renderMaterialTab();
 }
 
 function clearAllMaterialOrders() {
   if (materialOrders.length === 0) return;
-  if (!confirm('이번 주 발주 목록을 모두 초기화(비우기)하시겠습니까?\n발주 완료 후 다음 주 주문을 시작할 때 사용하세요.')) return;
+  if (!confirm('이번 주 발주 목록을 모두 초기화(비우기)하시겠습니까?\n발주 완료 후 다음 주 주문을 시작할 때 사용하세요. (주문 통계는 유지됩니다)')) return;
+  // 초기화 전 이번 주 발주 내역을 누적 통계 로그에 보존
+  archiveOrdersToStatsLog(materialOrders);
   materialOrders = [];
   saveStoredMaterialsOrders();
   renderMaterialTab();
 }
 
-// 사용자가 새로운 재료 등록 모달 열기/저장
+// =========================================================================
+// [주문하기] 모달 열기 / 저장
+// =========================================================================
 function openAddCustomMaterialModal() {
-  document.getElementById('modal-new-mat-name').value = '';
-  document.getElementById('modal-new-mat-cat').value = '소모품';
-  document.getElementById('modal-new-mat-supplier').value = '신흥';
-  document.getElementById('modal-new-mat-spec').value = '';
-  document.getElementById('modal-new-mat-unit').value = '개';
+  const nameInput = document.getElementById('modal-new-mat-name');
+  const catSelect = document.getElementById('modal-new-mat-cat');
+  const qtyInput = document.getElementById('modal-new-mat-qty');
+  const urgencySelect = document.getElementById('modal-new-mat-urgency');
+
+  if (nameInput) nameInput.value = '';
+  if (catSelect) {
+    catSelect.value = (materialCategoryFilter !== 'ALL' && MATERIAL_CATEGORIES.includes(materialCategoryFilter))
+      ? materialCategoryFilter
+      : '더메이트';
+  }
+  if (qtyInput) qtyInput.value = '1';
+  if (urgencySelect) urgencySelect.value = 'regular';
+
+  updateFrequentMaterialDatalist();
   document.getElementById('custom-material-modal').classList.add('active');
+  setTimeout(() => {
+    if (nameInput) nameInput.focus();
+  }, 50);
 }
 
 function closeCustomMaterialModal() {
@@ -536,36 +827,198 @@ function closeCustomMaterialModal() {
 
 function submitCustomMaterial(e) {
   if (e) e.preventDefault();
-  const name = document.getElementById('modal-new-mat-name').value.trim();
-  const category = document.getElementById('modal-new-mat-cat').value;
-  const supplier = document.getElementById('modal-new-mat-supplier').value.trim() || '신흥';
-  const spec = document.getElementById('modal-new-mat-spec').value.trim();
-  const unit = document.getElementById('modal-new-mat-unit').value.trim() || '개';
+  const nameEl = document.getElementById('modal-new-mat-name');
+  const catEl = document.getElementById('modal-new-mat-cat');
+  const qtyEl = document.getElementById('modal-new-mat-qty');
+  const urgEl = document.getElementById('modal-new-mat-urgency');
+
+  const name = nameEl ? nameEl.value.trim() : '';
+  const category = normalizeMaterialCategory(catEl ? catEl.value : '더메이트');
+  const qty = Math.max(1, parseInt(qtyEl ? qtyEl.value : '1', 10) || 1);
+  const urgency = (urgEl && urgEl.value === 'urgent') ? 'urgent' : 'regular';
 
   if (!name) {
     alert('재료명을 입력해주세요.');
     return;
   }
 
-  const newItem = {
-    id: 'mat_custom_' + Date.now(),
-    name,
-    category,
-    defaultSupplier: supplier,
-    spec,
-    unit
-  };
+  const normName = normalizeMaterialName(name);
+  let targetItem = materialMasterList.find(m => normalizeMaterialName(m.name) === normName);
 
-  materialMasterList.unshift(newItem);
-  saveCustomMasterItem(newItem);
-  closeCustomMaterialModal();
-  renderMaterialMasterGrid();
-  renderMaterialSupplierChips();
-
-  // 바로 이번 주 정기 발주에 담을지 확인
-  if (confirm(`'${name}' 재료가 등록되었습니다.\n지금 바로 이번 주 발주 목록에 담으시겠습니까?`)) {
-    quickAddMaterialToOrder(newItem.id, 'regular');
+  if (targetItem) {
+    // 이미 등록된 재료면 카테고리 최신화
+    targetItem.category = category;
+    targetItem.defaultSupplier = category;
+  } else {
+    targetItem = {
+      id: 'mat_custom_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+      name,
+      category,
+      defaultSupplier: category
+    };
+    materialMasterList.unshift(targetItem);
   }
+
+  saveCustomMasterItem();
+  closeCustomMaterialModal();
+
+  // 입력한 주문량만큼 즉시 이번 주 발주 목록에 추가
+  quickAddMaterialToOrder(targetItem.id, urgency, qty);
+}
+
+// =========================================================================
+// 좌측 자주 시키는 재료 [재료명 · 카테고리 편집] 및 중복 통합 모달
+// =========================================================================
+function openEditMaterialModal(masterId) {
+  const item = materialMasterList.find(m => m.id === masterId);
+  if (!item) return;
+
+  const idInput = document.getElementById('modal-edit-mat-id');
+  const nameInput = document.getElementById('modal-edit-mat-name');
+  const catSelect = document.getElementById('modal-edit-mat-cat');
+
+  if (idInput) idInput.value = item.id;
+  if (nameInput) nameInput.value = item.name;
+  if (catSelect) catSelect.value = normalizeMaterialCategory(item.category || item.defaultSupplier);
+
+  updateFrequentMaterialDatalist();
+  document.getElementById('edit-material-modal').classList.add('active');
+  setTimeout(() => {
+    if (nameInput) {
+      nameInput.focus();
+      nameInput.select();
+    }
+  }, 50);
+}
+
+function closeEditMaterialModal() {
+  const modal = document.getElementById('edit-material-modal');
+  if (modal) modal.classList.remove('active');
+}
+
+function submitEditMaterial(e) {
+  if (e) e.preventDefault();
+  const idInput = document.getElementById('modal-edit-mat-id');
+  const nameInput = document.getElementById('modal-edit-mat-name');
+  const catSelect = document.getElementById('modal-edit-mat-cat');
+
+  const editId = idInput ? idInput.value : '';
+  const newName = nameInput ? nameInput.value.trim() : '';
+  const newCategory = normalizeMaterialCategory(catSelect ? catSelect.value : '더메이트');
+
+  if (!newName) {
+    alert('재료명을 입력해주세요.');
+    return;
+  }
+
+  const targetItem = materialMasterList.find(m => m.id === editId);
+  if (!targetItem) {
+    closeEditMaterialModal();
+    return;
+  }
+
+  const oldName = targetItem.name;
+  const oldNorm = normalizeMaterialName(oldName);
+  const newNorm = normalizeMaterialName(newName);
+
+  // 동일한 이름을 가진 다른 항목이 이미 존재하는지 확인 (중복 재료 통합)
+  const existingDuplicate = materialMasterList.find(
+    m => m.id !== editId && normalizeMaterialName(m.name) === newNorm
+  );
+
+  let finalMasterId = editId;
+  if (existingDuplicate) {
+    existingDuplicate.name = newName;
+    existingDuplicate.category = newCategory;
+    existingDuplicate.defaultSupplier = newCategory;
+    finalMasterId = existingDuplicate.id;
+    materialMasterList = materialMasterList.filter(m => m.id !== editId);
+  } else {
+    targetItem.name = newName;
+    targetItem.category = newCategory;
+    targetItem.defaultSupplier = newCategory;
+  }
+
+  // 1) 이번 주 발주 목록(materialOrders) 내 해당 재료 이름·카테고리 일괄 변경 및 중복 행 합산
+  const mergedOrders = [];
+  (materialOrders || []).forEach(ord => {
+    const ordNorm = normalizeMaterialName(ord.name);
+    if (ord.itemId === editId || ord.itemId === finalMasterId || ordNorm === oldNorm || ordNorm === newNorm) {
+      ord.itemId = finalMasterId;
+      ord.name = newName;
+      ord.category = newCategory;
+      ord.supplier = newCategory;
+    }
+    const dupRow = mergedOrders.find(
+      m => (m.itemId === ord.itemId || normalizeMaterialName(m.name) === normalizeMaterialName(ord.name)) && m.urgency === ord.urgency
+    );
+    if (dupRow) {
+      dupRow.quantity = (Number(dupRow.quantity) || 1) + (Number(ord.quantity) || 1);
+      dupRow.checked = dupRow.checked || ord.checked;
+    } else {
+      mergedOrders.push(ord);
+    }
+  });
+  materialOrders = mergedOrders;
+
+  // 2) 저장된 발주 입고체크 목록(materialSavedHistory) 내 재료명·카테고리 일괄 업데이트
+  let historyUpdated = false;
+  (materialSavedHistory || []).forEach(batch => {
+    (batch.items || []).forEach(it => {
+      const itNorm = normalizeMaterialName(it.name);
+      if (it.itemId === editId || itNorm === oldNorm || itNorm === newNorm) {
+        it.itemId = finalMasterId;
+        it.name = newName;
+        it.category = newCategory;
+        it.supplier = newCategory;
+        historyUpdated = true;
+      }
+    });
+  });
+
+  // 3) 누적 주문 통계 로그(materialOrderStatsLog) 내 재료명·카테고리 일괄 업데이트
+  let statsUpdated = false;
+  (materialOrderStatsLog || []).forEach(rec => {
+    const recNorm = normalizeMaterialName(rec.name);
+    if (rec.itemId === editId || recNorm === oldNorm || recNorm === newNorm) {
+      rec.itemId = finalMasterId;
+      rec.name = newName;
+      rec.category = newCategory;
+      statsUpdated = true;
+    }
+  });
+
+  saveCustomMasterItem();
+  saveStoredMaterialsOrders();
+  if (historyUpdated) saveStoredMaterialHistory();
+  if (statsUpdated) saveStoredMaterialStatsLog();
+
+  closeEditMaterialModal();
+  renderMaterialTab();
+}
+
+function deleteFrequentMaterialItem() {
+  const idInput = document.getElementById('modal-edit-mat-id');
+  const editId = idInput ? idInput.value : '';
+  const targetItem = materialMasterList.find(m => m.id === editId);
+  if (!targetItem) return;
+
+  if (!confirm(`'${targetItem.name}' 재료를 자주 주문하는 재료 목록에서 삭제하시겠습니까?`)) return;
+
+  const targetNorm = normalizeMaterialName(targetItem.name);
+  materialMasterList = materialMasterList.filter(m => m.id !== editId);
+
+  // 누적 로그에서도 제외하여 자동 재등록 방지
+  if (Array.isArray(materialOrderStatsLog)) {
+    materialOrderStatsLog = materialOrderStatsLog.filter(
+      r => r.itemId !== editId && normalizeMaterialName(r.name) !== targetNorm
+    );
+    saveStoredMaterialStatsLog();
+  }
+
+  saveCustomMasterItem();
+  closeEditMaterialModal();
+  renderMaterialTab();
 }
 
 // =========================================================================
@@ -574,12 +1027,15 @@ function submitCustomMaterial(e) {
 function openMaterialCaptureModal() {
   const checkedOrders = materialOrders.filter(o => o.checked);
   if (checkedOrders.length === 0) {
-    alert('캡쳐할 재료를 1개 이상 체크박스로 선택해주세요!\n재료상별로 전달할 품목만 골라서 체크할 수 있습니다.');
+    alert('캡쳐할 재료를 1개 이상 체크박스로 선택해주세요!\n카테고리별로 전달할 품목만 골라서 체크할 수 있습니다.');
     return;
   }
 
-  // 기본 수신처: 더메이트 귀하
-  document.getElementById('capture-supplier-input').value = '더메이트 귀하';
+  // 기본 수신처: 필터링된 카테고리 또는 더메이트 귀하
+  const defaultRecipient = (materialSupplierFilter !== 'ALL')
+    ? `${materialSupplierFilter} 귀하`
+    : '더메이트 귀하';
+  document.getElementById('capture-supplier-input').value = defaultRecipient;
 
   renderCapturePreviewContent();
   document.getElementById('material-capture-modal').classList.add('active');
@@ -598,20 +1054,22 @@ function renderCapturePreviewContent() {
   const now = new Date();
   const dateStr = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
 
-  let rowsHtml = checkedOrders.map((ord, idx) => `
-    <tr>
-      <td style="text-align: center; color: #64748b; font-weight: 600;">${idx + 1}</td>
-      <td style="text-align: center; white-space: nowrap;">
-        ${ord.urgency === 'urgent' 
-          ? '<span style="display: inline-block; white-space: nowrap; background: #fee2e2; color: #dc2626; font-size: 11px; font-weight: 800; padding: 3px 7px; border-radius: 4px; border: 1px solid #f87171;">🚨 긴급</span>' 
-          : '<span style="display: inline-block; white-space: nowrap; background: #e0f2fe; color: #0284c7; font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 4px;">📦 정기</span>'}
-      </td>
-      <td style="font-weight: 700; color: #0f172a;">${escapeHtml(ord.name)}</td>
-      <td style="color: #475569; font-size: 12px;">${escapeHtml(ord.spec || '-')}</td>
-      <td style="text-align: center; font-weight: 800; color: #1e3a8a; white-space: nowrap;">${ord.quantity} ${escapeHtml(ord.unit || 'ea')}</td>
-      <td style="color: #64748b; font-size: 12px;">${escapeHtml(ord.note || '-')}</td>
-    </tr>
-  `).join('');
+  let rowsHtml = checkedOrders.map((ord, idx) => {
+    const cat = normalizeMaterialCategory(ord.category || ord.supplier);
+    return `
+      <tr>
+        <td style="text-align: center; color: #64748b; font-weight: 600;">${idx + 1}</td>
+        <td style="text-align: center; white-space: nowrap;">
+          ${ord.urgency === 'urgent'
+            ? '<span style="display: inline-block; white-space: nowrap; background: #fee2e2; color: #dc2626; font-size: 11px; font-weight: 800; padding: 3px 7px; border-radius: 4px; border: 1px solid #f87171;">🚨 긴급</span>'
+            : '<span style="display: inline-block; white-space: nowrap; background: #e0f2fe; color: #0284c7; font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 4px;">📦 정기</span>'}
+        </td>
+        <td style="text-align: center; color: #475569; font-size: 12px; font-weight: 700;">${escapeHtml(cat)}</td>
+        <td style="font-weight: 700; color: #0f172a;">${escapeHtml(ord.name)}</td>
+        <td style="text-align: center; font-weight: 800; color: #1e3a8a; white-space: nowrap;">${ord.quantity}</td>
+      </tr>
+    `;
+  }).join('');
 
   container.innerHTML = `
     <div class="capture-header">
@@ -632,12 +1090,11 @@ function renderCapturePreviewContent() {
     <table class="capture-table">
       <thead>
         <tr>
-          <th style="width: 38px; text-align: center;">No</th>
-          <th style="width: 75px; text-align: center; white-space: nowrap;">구분</th>
-          <th>품목명</th>
-          <th style="width: 140px;">규격 / 세부사항</th>
-          <th style="width: 80px; text-align: center; white-space: nowrap;">수량</th>
-          <th style="width: 130px;">비고</th>
+          <th style="width: 42px; text-align: center;">No</th>
+          <th style="width: 80px; text-align: center; white-space: nowrap;">구분</th>
+          <th style="width: 90px; text-align: center; white-space: nowrap;">카테고리</th>
+          <th>재료명</th>
+          <th style="width: 80px; text-align: center; white-space: nowrap;">주문량</th>
         </tr>
       </thead>
       <tbody>
@@ -646,7 +1103,7 @@ function renderCapturePreviewContent() {
     </table>
 
     <div class="capture-footer">
-      <div>* 수량과 규격확인 부탁드립니다. 감사합니다.</div>
+      <div>* 수량 확인 부탁드립니다. 감사합니다.</div>
       <div style="font-weight: 800; color: #0f172a;">서울비디치과기공실</div>
     </div>
   `;
@@ -665,13 +1122,13 @@ async function downloadCaptureImage() {
 
   try {
     const canvas = await html2canvas(target, {
-      scale: 2, // 고해상도 선명하게
+      scale: 2,
       useCORS: true,
       backgroundColor: '#ffffff'
     });
     const link = document.createElement('a');
     const now = new Date();
-    const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
     link.download = `BD_재료발주서_${dateStr}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
@@ -679,7 +1136,7 @@ async function downloadCaptureImage() {
     console.error('html2canvas error:', err);
     alert('이미지 생성 중 오류가 발생했습니다: ' + err.message);
   } finally {
-    if (btn) btn.innerText = '📷 이미지로 저장 (다운로드)';
+    if (btn) btn.innerText = '📷 이미지로 저장 (PNG)';
   }
 }
 
@@ -708,7 +1165,6 @@ async function copyCaptureImageToClipboard() {
           ]);
           alert('✅ 발주서 이미지가 클립보드에 복사되었습니다!\n카카오톡 대화창이나 메시지 입력창에 Ctrl+V (붙여넣기) 하세요.');
         } else {
-          // 클립보드 이미지 API 미지원 브라우저
           alert('이 브라우저는 클립보드 이미지 복사를 지원하지 않습니다.\n[이미지로 저장] 버튼을 이용해주세요.');
         }
       } catch (clipErr) {
@@ -729,7 +1185,7 @@ function copyMaterialOrderText() {
   const checkedOrders = materialOrders.filter(o => o.checked);
   if (checkedOrders.length === 0) return;
 
-  const supplier = document.getElementById('capture-supplier-input').value || '재료상 귀하';
+  const supplier = document.getElementById('capture-supplier-input').value || '더메이트 귀하';
   const now = new Date();
   const dateStr = `${now.getFullYear()}.${now.getMonth() + 1}.${now.getDate()}`;
 
@@ -740,11 +1196,7 @@ function copyMaterialOrderText() {
 
   checkedOrders.forEach((ord, i) => {
     const tag = ord.urgency === 'urgent' ? '[🚨긴급]' : '[정기]';
-    txt += `${i + 1}. ${tag} ${ord.name}`;
-    if (ord.spec) txt += ` (${ord.spec})`;
-    txt += ` - ${ord.quantity}${ord.unit || 'ea'}`;
-    if (ord.note) txt += ` [비고: ${ord.note}]`;
-    txt += `\n`;
+    txt += `${i + 1}. ${tag} ${ord.name} - ${ord.quantity}\n`;
   });
 
   txt += `------------------------------------\n`;
@@ -780,10 +1232,9 @@ function saveCurrentMaterialOrderToCheckList() {
     return;
   }
 
-  // 체크된 항목이 있으면 체크된 항목 우선, 없으면 전체 발주 목록 저장
   let targetItems = materialOrders;
   if (materialSupplierFilter !== 'ALL') {
-    targetItems = materialOrders.filter(o => o.supplier === materialSupplierFilter);
+    targetItems = materialOrders.filter(o => normalizeMaterialCategory(o.category || o.supplier) === materialSupplierFilter);
   }
 
   if (targetItems.length === 0) {
@@ -796,24 +1247,30 @@ function saveCurrentMaterialOrderToCheckList() {
     id: 'mat_batch_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
     savedAt: nowIso,
     supplierFilter: materialSupplierFilter === 'ALL' ? '전체 발주' : materialSupplierFilter,
-    items: targetItems.map(ord => ({
-      id: ord.id,
-      name: ord.name,
-      spec: ord.spec || '',
-      supplier: ord.supplier || '기본',
-      urgency: ord.urgency || 'regular',
-      quantity: ord.quantity || 1,
-      unit: ord.unit || 'ea',
-      received: false
-    }))
+    items: targetItems.map(ord => {
+      const cat = normalizeMaterialCategory(ord.category || ord.supplier);
+      return {
+        id: ord.id,
+        itemId: ord.itemId || '',
+        name: ord.name,
+        category: cat,
+        supplier: cat,
+        urgency: ord.urgency || 'regular',
+        quantity: ord.quantity || 1,
+        createdAt: ord.createdAt || nowIso,
+        received: false
+      };
+    })
   };
 
   if (!Array.isArray(materialSavedHistory)) {
     materialSavedHistory = [];
   }
   materialSavedHistory.unshift(newBatch);
+  archiveOrdersToStatsLog(targetItems);
   saveStoredMaterialHistory();
   renderMaterialSavedHistory();
+  renderMaterialMasterGrid();
 
   const card = document.getElementById('material-saved-history-card');
   if (card) {
@@ -853,6 +1310,8 @@ function renderMaterialSavedHistory() {
 
     const rowsHtml = items.map((it, idx) => {
       const isRec = !!it.received;
+      const cat = normalizeMaterialCategory(it.category || it.supplier);
+      const catStyle = getCategoryBadgeStyle(cat);
       const urgBadge = it.urgency === 'urgent'
         ? `<span class="urgency-badge urgency-urgent" style="cursor: default;">🚨 긴급</span>`
         : `<span class="urgency-badge urgency-regular" style="cursor: default;">📦 정기</span>`;
@@ -866,11 +1325,10 @@ function renderMaterialSavedHistory() {
           <div class="order-row-bottom">
             <div class="order-row-meta">
               ${urgBadge}
-              <span class="supplier-chip">${escapeHtml(it.supplier || '기본')}</span>
-              <span class="order-item-spec">${escapeHtml(it.spec || '-')}</span>
+              <span class="supplier-chip" style="${catStyle}">${escapeHtml(cat)}</span>
             </div>
             <div class="order-row-controls">
-              <span style="font-size: 13px; font-weight: 800; color: #1e3a8a;">${it.quantity}${escapeHtml(it.unit || 'ea')}</span>
+              <span style="font-size: 13px; font-weight: 800; color: #1e3a8a;">수량 ${it.quantity}</span>
               <button type="button" class="receive-status-btn ${isRec ? 'done' : 'pending'}" onclick="event.stopPropagation(); toggleSavedMaterialItemCheck('${batch.id}', ${idx})">
                 ${isRec ? '✅ 입고완료' : '⬜ 입고대기'}
               </button>
@@ -923,10 +1381,15 @@ function toggleAllSavedMaterialBatchCheck(batchId, receivedState) {
 }
 
 function deleteSavedMaterialBatch(batchId) {
-  if (!confirm('이 저장된 발주 확인 목록을 삭제하시겠습니까?')) return;
+  if (!confirm('이 저장된 발주 확인 목록을 삭제하시겠습니까? (자주 주문하는 재료 통계는 그대로 유지됩니다)')) return;
+  const targetBatch = (materialSavedHistory || []).find(b => b.id === batchId);
+  if (targetBatch && Array.isArray(targetBatch.items)) {
+    archiveOrdersToStatsLog(targetBatch.items);
+  }
   materialSavedHistory = (materialSavedHistory || []).filter(b => b.id !== batchId);
   saveStoredMaterialHistory();
   renderMaterialSavedHistory();
+  renderMaterialMasterGrid();
 }
 
 function escapeHtml(str) {
