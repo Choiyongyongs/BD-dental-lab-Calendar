@@ -12,15 +12,18 @@ const DEFAULT_MATERIAL_MASTER = [];
 
 // 상태 변수
 let materialMasterList = [];
+let materialDeletedNames = []; // 목록에서 명시적으로 삭제한 재료명 (자동 재등록 방지)
 let materialOrders = [];
 let materialSavedHistory = [];
 let materialOrderStatsLog = []; // 주간 초기화/삭제 후에도 누적 주문 통계를 유지하기 위한 기록
 let materialCategoryFilter = 'ALL';
 let materialSearchKeyword = '';
 let materialSupplierFilter = 'ALL';
+let materialFirestoreUnsubscribes = [];
 
 // 로컬스토리지 키
 const STORAGE_KEY_MAT_MASTER = 'bd_material_custom_master';
+const STORAGE_KEY_MAT_DELETED = 'bd_material_deleted_names';
 const STORAGE_KEY_MAT_ORDERS = 'bd_material_current_orders';
 const STORAGE_KEY_MAT_SAVED_HISTORY = 'bd_material_saved_history';
 const STORAGE_KEY_MAT_STATS_LOG = 'bd_material_order_stats_log';
@@ -120,6 +123,13 @@ function loadStoredMaterials() {
         materialOrderStatsLog = parsedLog;
       }
     }
+    const savedDeleted = localStorage.getItem(STORAGE_KEY_MAT_DELETED);
+    if (savedDeleted) {
+      const parsedDel = JSON.parse(savedDeleted);
+      if (Array.isArray(parsedDel)) {
+        materialDeletedNames = parsedDel;
+      }
+    }
   } catch (e) {
     console.error('Failed to load local materials data:', e);
   }
@@ -128,12 +138,13 @@ function loadStoredMaterials() {
 // 주문 내역(현재 발주, 저장된 입고체크 내역, 누적 로그)에 있는 재료들을 자주 시키는 재료 목록에 자동 반영 및 중복 병합
 function syncMasterListFromOrders() {
   const byNormName = new Map();
+  const deletedSet = new Set((materialDeletedNames || []).map(n => normalizeMaterialName(n)));
 
   // 1) 기존 마스터 목록 정리 (동일 이름 병합)
   (materialMasterList || []).forEach(item => {
     if (!item || !item.name) return;
     const norm = normalizeMaterialName(item.name);
-    if (!norm) return;
+    if (!norm || deletedSet.has(norm)) return;
     const cat = normalizeMaterialCategory(item.category || item.defaultSupplier);
     if (!byNormName.has(norm)) {
       byNormName.set(norm, {
@@ -146,10 +157,11 @@ function syncMasterListFromOrders() {
   });
 
   // 2) 누적 로그, 저장 히스토리, 현재 주문 목록에서 누락된 재료 자동 추가
-  const ensureFromRecord = (name, cat) => {
+  const ensureFromRecord = (name, cat, allowEvenIfDeleted = false) => {
     const cleanName = String(name || '').trim();
     const norm = normalizeMaterialName(cleanName);
     if (!norm) return;
+    if (!allowEvenIfDeleted && deletedSet.has(norm)) return;
     const normCat = normalizeMaterialCategory(cat);
     if (!byNormName.has(norm)) {
       byNormName.set(norm, {
@@ -162,17 +174,17 @@ function syncMasterListFromOrders() {
   };
 
   (materialOrderStatsLog || []).forEach(rec => {
-    if (rec && !rec.deleted) ensureFromRecord(rec.name, rec.category || rec.supplier);
+    if (rec && !rec.deleted) ensureFromRecord(rec.name, rec.category || rec.supplier, false);
   });
 
   (materialSavedHistory || []).forEach(batch => {
     (batch.items || []).forEach(it => {
-      ensureFromRecord(it.name, it.category || it.supplier);
+      ensureFromRecord(it.name, it.category || it.supplier, false);
     });
   });
 
   (materialOrders || []).forEach(ord => {
-    ensureFromRecord(ord.name, ord.category || ord.supplier);
+    ensureFromRecord(ord.name, ord.category || ord.supplier, true);
   });
 
   materialMasterList = Array.from(byNormName.values());
@@ -350,11 +362,13 @@ function saveStoredMaterialHistory() {
 function saveCustomMasterItem() {
   try {
     localStorage.setItem(STORAGE_KEY_MAT_MASTER, JSON.stringify(materialMasterList));
+    localStorage.setItem(STORAGE_KEY_MAT_DELETED, JSON.stringify(materialDeletedNames || []));
     updateFrequentMaterialDatalist();
     const db = getMaterialFirestoreDb();
     if (db) {
       db.collection('materials').doc('custom_master').set({
         items: materialMasterList,
+        deletedNames: materialDeletedNames || [],
         updatedAt: new Date().toISOString()
       }).catch(err => console.warn('Firestore custom master sync err:', err));
     }
@@ -367,8 +381,15 @@ function setupMaterialFirestoreListeners() {
   const db = getMaterialFirestoreDb();
   if (!db) return;
 
+  if (Array.isArray(materialFirestoreUnsubscribes) && materialFirestoreUnsubscribes.length > 0) {
+    materialFirestoreUnsubscribes.forEach(unsub => { if (typeof unsub === 'function') unsub(); });
+    materialFirestoreUnsubscribes = [];
+  }
+
   // 1. 실시간 이번 주 발주 목록 동기화
-  db.collection('materials').doc('current_orders').onSnapshot(doc => {
+  const unsubOrders = db.collection('materials').doc('current_orders').onSnapshot(doc => {
+    if (typeof updateCloudStatusBadge === 'function') updateCloudStatusBadge('connected', 'DB 연결됨');
+    if (doc.metadata && doc.metadata.hasPendingWrites) return;
     if (doc.exists && doc.data() && Array.isArray(doc.data().orders)) {
       materialOrders = doc.data().orders.map(o => ({
         ...o,
@@ -388,8 +409,14 @@ function setupMaterialFirestoreListeners() {
   }, err => console.warn('Firestore material listener note:', err));
 
   // 2. 자주 주문하는 재료 마스터 실시간 동기화
-  db.collection('materials').doc('custom_master').onSnapshot(doc => {
+  const unsubMaster = db.collection('materials').doc('custom_master').onSnapshot(doc => {
+    if (typeof updateCloudStatusBadge === 'function') updateCloudStatusBadge('connected', 'DB 연결됨');
+    if (doc.metadata && doc.metadata.hasPendingWrites) return;
     if (doc.exists && doc.data() && Array.isArray(doc.data().items)) {
+      if (Array.isArray(doc.data().deletedNames)) {
+        materialDeletedNames = doc.data().deletedNames;
+        localStorage.setItem(STORAGE_KEY_MAT_DELETED, JSON.stringify(materialDeletedNames));
+      }
       const customItems = doc.data().items
         .filter(m => m && m.name && !/^mat_\d+$/.test(String(m.id || '')))
         .map(m => ({
@@ -409,7 +436,9 @@ function setupMaterialFirestoreListeners() {
   }, err => console.warn('Firestore material master listener note:', err));
 
   // 3. 저장된 발주 목록 (입고 확인 체크리스트) 실시간 동기화
-  db.collection('materials').doc('saved_history').onSnapshot(doc => {
+  const unsubHistory = db.collection('materials').doc('saved_history').onSnapshot(doc => {
+    if (typeof updateCloudStatusBadge === 'function') updateCloudStatusBadge('connected', 'DB 연결됨');
+    if (doc.metadata && doc.metadata.hasPendingWrites) return;
     if (doc.exists && doc.data() && Array.isArray(doc.data().history)) {
       materialSavedHistory = doc.data().history;
       localStorage.setItem(STORAGE_KEY_MAT_SAVED_HISTORY, JSON.stringify(materialSavedHistory));
@@ -421,7 +450,9 @@ function setupMaterialFirestoreListeners() {
   }, err => console.warn('Firestore material saved_history listener note:', err));
 
   // 4. 누적 주문 통계 로그 실시간 동기화
-  db.collection('materials').doc('order_stats_log').onSnapshot(doc => {
+  const unsubStats = db.collection('materials').doc('order_stats_log').onSnapshot(doc => {
+    if (typeof updateCloudStatusBadge === 'function') updateCloudStatusBadge('connected', 'DB 연결됨');
+    if (doc.metadata && doc.metadata.hasPendingWrites) return;
     if (doc.exists && doc.data() && Array.isArray(doc.data().logs)) {
       materialOrderStatsLog = doc.data().logs;
       localStorage.setItem(STORAGE_KEY_MAT_STATS_LOG, JSON.stringify(materialOrderStatsLog));
@@ -431,6 +462,8 @@ function setupMaterialFirestoreListeners() {
       saveStoredMaterialStatsLog();
     }
   }, err => console.warn('Firestore material order_stats_log listener note:', err));
+
+  materialFirestoreUnsubscribes.push(unsubOrders, unsubMaster, unsubHistory, unsubStats);
 }
 
 // 탭 렌더링 메인 함수
@@ -501,7 +534,7 @@ function renderMaterialOrderList() {
             <div class="order-row-controls">
               <div class="qty-controller">
                 <button type="button" class="qty-btn" onclick="changeOrderQty('${ord.id}', -1)" title="1개 감소">-</button>
-                <input type="number" class="qty-input" min="1" value="${ord.quantity}" onclick="this.select()" onfocus="this.select()" onchange="updateOrderQtyDirect('${ord.id}', this.value)" title="클릭하여 수량 직접 입력" />
+                <input type="number" class="qty-input" min="1" value="${ord.quantity}" onclick="this.select()" onfocus="this.select()" oninput="updateOrderQtyDirect('${ord.id}', this.value, true)" onchange="updateOrderQtyDirect('${ord.id}', this.value, false)" title="클릭하여 수량 직접 입력" />
                 <button type="button" class="qty-btn" onclick="changeOrderQty('${ord.id}', 1)" title="1개 증가">+</button>
               </div>
               <button type="button" class="btn-danger order-delete-btn" onclick="deleteMaterialOrder('${ord.id}')" title="주문 목록에서 삭제">✕</button>
@@ -726,13 +759,16 @@ function changeOrderQty(orderId, delta) {
   }
 }
 
-function updateOrderQtyDirect(orderId, val) {
+function updateOrderQtyDirect(orderId, val, isTyping = false) {
   const ord = materialOrders.find(o => o.id === orderId);
   if (ord) {
     const num = parseInt(val, 10);
+    if (isTyping && (val === '' || isNaN(num))) return;
     ord.quantity = isNaN(num) || num < 1 ? 1 : num;
     saveStoredMaterialsOrders();
-    renderMaterialOrderList();
+    if (!isTyping) {
+      renderMaterialOrderList();
+    }
     renderMaterialMasterGrid();
   }
 }
@@ -843,6 +879,10 @@ function submitCustomMaterial(e) {
   }
 
   const normName = normalizeMaterialName(name);
+  // 삭제 목록에 있었던 재료를 다시 주문하면 삭제 목록에서 해제
+  if (Array.isArray(materialDeletedNames)) {
+    materialDeletedNames = materialDeletedNames.filter(n => normalizeMaterialName(n) !== normName);
+  }
   let targetItem = materialMasterList.find(m => normalizeMaterialName(m.name) === normName);
 
   if (targetItem) {
@@ -1007,6 +1047,11 @@ function deleteFrequentMaterialItem() {
 
   const targetNorm = normalizeMaterialName(targetItem.name);
   materialMasterList = materialMasterList.filter(m => m.id !== editId);
+
+  if (!Array.isArray(materialDeletedNames)) materialDeletedNames = [];
+  if (!materialDeletedNames.some(n => normalizeMaterialName(n) === targetNorm)) {
+    materialDeletedNames.push(targetItem.name);
+  }
 
   // 누적 로그에서도 제외하여 자동 재등록 방지
   if (Array.isArray(materialOrderStatsLog)) {

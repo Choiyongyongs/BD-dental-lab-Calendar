@@ -35,6 +35,11 @@ let equipmentCalibState = {
 // 현재 조회 중인 주의 월요일 Date 객체
 let currentEquipMonday = getMondayOfDate(new Date());
 
+// 실시간 동기화 중복/충돌 방지용 상태
+let equipFirestoreUnsubscribe = null;
+let equipFieldEditTimestamps = {}; // 'dateKey|machine|field' -> timestamp
+let equipSaveTimer = null;
+
 function getEquipmentFirestoreDb() {
   return window.firebaseDb || (typeof firebaseDb !== 'undefined' ? firebaseDb : null);
 }
@@ -83,19 +88,55 @@ function loadStoredEquipmentCalib() {
   }
 }
 
-function saveStoredEquipmentCalib() {
+// 전체 상태 저장 (초기화 / 캘리브레이션 완료 등)
+function saveStoredEquipmentCalib(fullOverwrite = false) {
   try {
     localStorage.setItem(STORAGE_KEY_EQUIP_CALIB, JSON.stringify(equipmentCalibState));
     const db = getEquipmentFirestoreDb();
     if (db) {
-      db.collection('equipment').doc('calibration_data').set({
+      const payload = {
         records: equipmentCalibState.records || {},
         resetAfterDate: equipmentCalibState.resetAfterDate || {},
         updatedAt: new Date().toISOString()
-      }).catch(err => console.warn('Firestore equipment calibration sync err:', err));
+      };
+      if (fullOverwrite) {
+        db.collection('equipment').doc('calibration_data').set(payload)
+          .catch(err => console.warn('Firestore equipment calibration overwrite sync err:', err));
+      } else {
+        db.collection('equipment').doc('calibration_data').set(payload, { merge: true })
+          .catch(err => console.warn('Firestore equipment calibration merge sync err:', err));
+      }
     }
   } catch (e) {
     console.error('saveStoredEquipmentCalib error:', e);
+  }
+}
+
+// 개별 입력칸 단위 실시간 병합 저장 (다중 사용자 동시 입력 시 서로 다른 칸 덮어쓰기 방지)
+function saveSingleEquipmentFieldToCloud(dateKey, machine, field, rawVal, resetCleared = false) {
+  try {
+    localStorage.setItem(STORAGE_KEY_EQUIP_CALIB, JSON.stringify(equipmentCalibState));
+    const db = getEquipmentFirestoreDb();
+    if (!db) return;
+
+    const patch = {
+      records: {
+        [dateKey]: {
+          [machine]: {
+            [field]: rawVal
+          }
+        }
+      },
+      updatedAt: new Date().toISOString()
+    };
+    if (resetCleared) {
+      patch.resetAfterDate = equipmentCalibState.resetAfterDate || {};
+    }
+
+    db.collection('equipment').doc('calibration_data').set(patch, { merge: true })
+      .catch(err => console.warn('Firestore equipment field sync err:', err));
+  } catch (e) {
+    console.error('saveSingleEquipmentFieldToCloud error:', e);
   }
 }
 
@@ -103,34 +144,72 @@ function setupEquipmentFirestoreListeners() {
   const db = getEquipmentFirestoreDb();
   if (!db) return;
 
-  db.collection('equipment').doc('calibration_data').onSnapshot(doc => {
+  if (typeof equipFirestoreUnsubscribe === 'function') {
+    equipFirestoreUnsubscribe();
+    equipFirestoreUnsubscribe = null;
+  }
+
+  equipFirestoreUnsubscribe = db.collection('equipment').doc('calibration_data').onSnapshot(doc => {
+    if (typeof updateCloudStatusBadge === 'function') {
+      updateCloudStatusBadge('connected', 'DB 연결됨');
+    }
+    // 로컬에서 방금 전송 중인 pending write 스냅샷은 건너뛰어 타이핑 중 커서/값 튐 방지
+    if (doc.metadata && doc.metadata.hasPendingWrites) return;
+
     if (doc.exists && doc.data()) {
       const data = doc.data();
-      equipmentCalibState.records = data.records || {};
+      const incomingRecords = data.records || {};
+      const now = Date.now();
+
+      // 최근 2초 이내에 현재 기기에서 직접 타이핑한 셀은 로컬 값을 우선 유지
+      if (!equipmentCalibState.records) equipmentCalibState.records = {};
+      const mergedRecords = JSON.parse(JSON.stringify(incomingRecords));
+
+      Object.keys(equipFieldEditTimestamps).forEach(cellKey => {
+        const editedAt = equipFieldEditTimestamps[cellKey];
+        if (now - editedAt < 2000) {
+          const [dKey, mach, fld] = cellKey.split('|');
+          const localVal = equipmentCalibState.records?.[dKey]?.[mach]?.[fld];
+          if (localVal !== undefined) {
+            if (!mergedRecords[dKey]) mergedRecords[dKey] = {};
+            if (!mergedRecords[dKey][mach]) mergedRecords[dKey][mach] = {};
+            mergedRecords[dKey][mach][fld] = localVal;
+          }
+        } else {
+          delete equipFieldEditTimestamps[cellKey];
+        }
+      });
+
+      equipmentCalibState.records = mergedRecords;
       equipmentCalibState.resetAfterDate = data.resetAfterDate || {};
       localStorage.setItem(STORAGE_KEY_EQUIP_CALIB, JSON.stringify(equipmentCalibState));
 
-      // 현재 입력 포커스 중이면 값 덮어쓰기로 포커스가 깨지지 않도록 상태만 업데이트, 아니면 전체 렌더링
-      const activeEl = document.activeElement;
-      if (activeEl && activeEl.classList && activeEl.classList.contains('calib-input')) {
+      // 현재 테이블이 렌더링되어 있으면 포커스를 깨뜨리지 않고 값과 색상/알람만 즉시 동기화
+      const hasRenderedInputs = document.querySelectorAll('.calib-input').length > 0;
+      if (hasRenderedInputs) {
         syncInputsFromStateWithoutFocusLoss();
         updateEquipmentEvaluationUI();
       } else {
         renderEquipmentTab();
       }
     } else if (!doc.exists && Object.keys(equipmentCalibState.records || {}).length > 0) {
-      saveStoredEquipmentCalib();
+      saveStoredEquipmentCalib(true);
     }
   }, err => console.warn('Firestore equipment listener note:', err));
 }
 
 function syncInputsFromStateWithoutFocusLoss() {
   const activeEl = document.activeElement;
+  const now = Date.now();
   document.querySelectorAll('.calib-input').forEach(inp => {
     if (inp === activeEl) return;
     const dateKey = inp.getAttribute('data-date');
     const machine = inp.getAttribute('data-machine');
     const field = inp.getAttribute('data-field');
+    const cellKey = `${dateKey}|${machine}|${field}`;
+    if (equipFieldEditTimestamps[cellKey] && (now - equipFieldEditTimestamps[cellKey] < 2000)) {
+      return;
+    }
     const val = equipmentCalibState.records?.[dateKey]?.[machine]?.[field] ?? '';
     if (inp.value !== String(val)) {
       inp.value = val;
@@ -220,7 +299,7 @@ function evaluateMachineDay(dateKey, machine) {
 function evaluateMachineStreak(machine, weekDateKeys) {
   const resetAfter = equipmentCalibState.resetAfterDate?.[machine] || '';
 
-  // 전체 기록된 날짜 + 현재 보고 있는 주간 날짜들을 시간순 정렬하여 조회수의 마지막 날짜까지 스캔
+  // 전체 기록된 날짜 + 현재 보고 있는 주간 날짜들을 시간순 정렬하여 조회 주의 마지막 날짜까지 스캔
   const maxWeekDate = weekDateKeys[weekDateKeys.length - 1];
   const allDateSet = new Set([
     ...Object.keys(equipmentCalibState.records || {}),
@@ -359,6 +438,7 @@ function renderEquipmentTab() {
               placeholder="${isToday ? '오늘 입력' : '-'}"
               value="${escapeEquipHtml(savedVal)}"
               oninput="onCalibInputChange(this)"
+              onchange="onCalibInputChange(this)"
               onkeydown="onCalibInputKeydown(event, this)"
             />
           </td>
@@ -389,7 +469,7 @@ function renderEquipmentTab() {
   updateEquipmentEvaluationUI();
 }
 
-// 수치 입력 시 포커스 유지한 채 상태 저장 + 실시간 판정 업데이트
+// 수치 입력 시 포커스 유지한 채 상태 저장 + 실시간 클라우드 공유 + 판정 업데이트
 function onCalibInputChange(inputEl) {
   if (!inputEl) return;
   const dateKey = inputEl.getAttribute('data-date');
@@ -402,13 +482,16 @@ function onCalibInputChange(inputEl) {
   if (!equipmentCalibState.records[dateKey][machine]) equipmentCalibState.records[dateKey][machine] = {};
 
   equipmentCalibState.records[dateKey][machine][field] = rawVal;
+  equipFieldEditTimestamps[`${dateKey}|${machine}|${field}`] = Date.now();
 
   // 만약 이전에 캘리브레이션 완료 초기화를 눌렀던 날짜에 다시 새 값을 입력하면 초기화 기준일 해제
+  let resetCleared = false;
   if (equipmentCalibState.resetAfterDate?.[machine] && dateKey <= equipmentCalibState.resetAfterDate[machine]) {
     delete equipmentCalibState.resetAfterDate[machine];
+    resetCleared = true;
   }
 
-  saveStoredEquipmentCalib();
+  saveSingleEquipmentFieldToCloud(dateKey, machine, field, rawVal, resetCleared);
   updateEquipmentEvaluationUI();
 }
 
@@ -617,7 +700,7 @@ function completeMachineCalibration(machine) {
   if (!equipmentCalibState.resetAfterDate) equipmentCalibState.resetAfterDate = {};
   equipmentCalibState.resetAfterDate[machine] = lastFailDate;
 
-  saveStoredEquipmentCalib();
+  saveStoredEquipmentCalib(true);
   updateEquipmentEvaluationUI();
 }
 
@@ -631,7 +714,7 @@ function clearCurrentWeekEquipmentData() {
       delete equipmentCalibState.records[dKey];
     }
   });
-  saveStoredEquipmentCalib();
+  saveStoredEquipmentCalib(true);
   renderEquipmentTab();
 }
 
@@ -644,4 +727,3 @@ function escapeEquipHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
-

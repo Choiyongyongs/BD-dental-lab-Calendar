@@ -2271,6 +2271,11 @@
 
       setupFirestoreListeners();
       checkAndMigrateLocalDataToFirestore();
+
+      // 재료, 점심, 장비 모듈 Firebase 리스너 등록
+      if (typeof setupMaterialFirestoreListeners === 'function') setupMaterialFirestoreListeners();
+      if (typeof setupLunchFirestoreListeners === 'function') setupLunchFirestoreListeners();
+      if (typeof setupEquipmentFirestoreListeners === 'function') setupEquipmentFirestoreListeners();
     } catch (err) {
       console.error('Firebase init error:', err);
       isFirebaseReady = false;
@@ -2290,6 +2295,7 @@
     else if (id === 'tab-stats') renderStats();
     else if (id === 'tab-material') { if (typeof renderMaterialTab === 'function') renderMaterialTab(); }
     else if (id === 'tab-lunch') { if (typeof renderLunchTab === 'function') renderLunchTab(); }
+    else if (id === 'tab-equipment') { if (typeof renderEquipmentTab === 'function') renderEquipmentTab(); }
   }
 
   function setupFirestoreListeners() {
@@ -7180,7 +7186,6 @@
     }, { passive: false });
   }
 
-  // 초기 로드 실행 (근무표 이름 치환 복원 및 '용희1' -> '용희' 자동 복구)
   initExcelDataRenames();
   recoverAndNormalizeYonghee();
   renderCalendar();
