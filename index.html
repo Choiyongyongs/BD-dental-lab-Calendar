@@ -939,9 +939,10 @@
   </style>
   <!-- html2canvas for capturing materials order -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <link rel="stylesheet" href="materials-lunch.css?v=1793185000000">
-  <script src="materials.js?v=1793185000000"></script>
+  <link rel="stylesheet" href="materials-lunch.css?v=1793186000000">
+  <script src="materials.js?v=1793186000000"></script>
   <script src="lunch.js?v=1793183400000"></script>
+  <script src="equipment.js?v=1793186000000"></script>
 </head>
 <body>
 <div class="container">
@@ -964,6 +965,7 @@
         <button class="tab-btn" onclick="switchTab('stats')"><span class="tab-icon">📊</span><span class="tab-text">통계</span></button>
         <button class="tab-btn" onclick="switchTab('material')"><span class="tab-icon">📦</span><span class="tab-text">재료</span></button>
         <button class="tab-btn" onclick="switchTab('lunch')"><span class="tab-icon">🍱</span><span class="tab-text">점심</span></button>
+        <button class="tab-btn" onclick="switchTab('equipment')"><span class="tab-icon">⚙️</span><span class="tab-text">장비</span></button>
       </div>
     </div>
   </div>
@@ -1394,6 +1396,52 @@
             <div id="lunch-orders-aggregated-box" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;"></div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. 장비 캘리브레이션 탭 -->
+  <div id="tab-equipment" class="tab-content">
+    <div class="header">
+      <div>
+        <div class="title">⚙️ 장비 캘리브레이션 관리</div>
+        <div style="font-size: 13px; color: #64748b; margin-top: 4px;">
+          1호기 · 2호기 · 3호기 일일 캘리브레이션 블럭 측정 기록 및 편차(0.03 초과) 자동 판정
+        </div>
+      </div>
+      <div class="controls">
+        <button type="button" onclick="changeEquipmentWeek(-1)">◀ 이전 주</button>
+        <button type="button" onclick="goTodayEquipmentWeek()" style="font-weight: 800; background: #fff7ed; color: #c2410c; border: 1.5px solid #fdba74;">📍 이번 주 (오늘)</button>
+        <button type="button" onclick="changeEquipmentWeek(1)">다음 주 ▶</button>
+        <button type="button" class="btn-danger" onclick="clearCurrentWeekEquipmentData()">🗑️ 주간 초기화</button>
+      </div>
+    </div>
+
+    <!-- 판정 기준 안내 배너 -->
+    <div class="feature-banner">
+      <div class="feature-banner-text">
+        <span class="feature-banner-badge">부적합 판정 기준</span>
+        • <strong>12시 블럭</strong>: <code>| (X+) - (X-) | &gt; 0.03</code> 초과 시 부적합 &nbsp;|&nbsp;
+        <strong>6시 블럭</strong>: <code>| (X+) - (X-) | &gt; 0.03</code> 초과 시 부적합 &nbsp;|&nbsp;
+        <strong>Z축 편차</strong>: <code>| (12시 Z) - (6시 Z) | &gt; 0.03</code> 초과 시 부적합<br>
+        • <strong>1번 부적합</strong>: 해당 장비 입력란 전체 <strong style="background: #fef08a; color: #854d0e; padding: 1px 6px; border-radius: 4px;">노란색</strong> 변경 &nbsp;|&nbsp;
+        <strong>2번(2일 연속) 부적합</strong>: 해당 장비 입력란 전체 <strong style="background: #fecaca; color: #991b1b; padding: 1px 6px; border-radius: 4px;">빨간색</strong> 변경 및 캘리브레이션 알람 표시
+      </div>
+      <div id="equipment-week-title" style="font-size: 14px; font-weight: 800; color: #1e293b;"></div>
+    </div>
+
+    <!-- 표 상단 알람 배너 영역 ("N호기 캘리브레이션 하세요") -->
+    <div id="equipment-alarm-container"></div>
+
+    <!-- 장비 캘리브레이션 주간 입력 표 -->
+    <div class="card" style="padding: 16px;">
+      <div class="calib-table-wrap">
+        <table class="calib-table">
+          <thead>
+            <tr id="equipment-table-head-row"></tr>
+          </thead>
+          <tbody id="equipment-table-body"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -3271,6 +3319,9 @@
       if (typeof renderMaterialTab === 'function') renderMaterialTab();
     } else if (tabId === 'lunch') {
       if (typeof renderLunchTab === 'function') renderLunchTab();
+    } else if (tabId === 'equipment') {
+      if (typeof goTodayEquipmentWeek === 'function') goTodayEquipmentWeek();
+      else if (typeof renderEquipmentTab === 'function') renderEquipmentTab();
     }
   }
 
@@ -7138,6 +7189,7 @@
   enableHorizontalWheelScroll('ot-member-summary-cards');
   if (typeof initMaterialsModule === 'function') initMaterialsModule();
   if (typeof initLunchModule === 'function') initLunchModule();
+  if (typeof initEquipmentModule === 'function') initEquipmentModule();
 
 // 카카오톡 단톡방 공유용 텍스트 복사 (사용자 지정 양식 최신 보장)
 function copyLunchOrderText() {
