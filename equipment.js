@@ -392,11 +392,21 @@ function renderEquipmentTab() {
 
       // 장비명 셀 (6행 + 1요약행 = 7행 병합)
       if (isFirstRowOfMachine) {
+        const lastCalibDate = equipmentCalibState.resetAfterDate?.[machine];
+        let lastCalibText = '';
+        if (lastCalibDate) {
+          const parts = lastCalibDate.split('-');
+          lastCalibText = `<div class="calib-last-date-text" title="마지막 캘리브레이션: ${lastCalibDate}">최근: ${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)}</div>`;
+        }
         bodyHtml += `
           <td rowspan="7" class="calib-machine-cell" id="calib-machine-cell-${mIdx}">
             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
               <span style="font-size: 16px; font-weight: 900; color: #0f172a;">${machine}</span>
               <span class="calib-machine-badge" id="calib-machine-badge-${mIdx}">정상</span>
+              <button type="button" class="calib-machine-btn" onclick="openEquipCalibModal('${machine}')" title="${machine} 캘리브레이션 일자 등록">
+                🔧 캘리브레이션
+              </button>
+              ${lastCalibText}
             </div>
           </td>
         `;
@@ -666,9 +676,6 @@ function updateEquipmentEvaluationUI() {
             </div>
           </div>
         </div>
-        <button type="button" class="btn-primary" style="background: #dc2626; border-color: #b91c1c; font-size: 12.5px; font-weight: 800; padding: 7px 14px; white-space: nowrap;" onclick="completeMachineCalibration('${item.machine}')">
-          ✅ ${item.machine} 캘리브레이션 완료 (초기화)
-        </button>
       </div>
     `).join('');
   }
@@ -689,19 +696,71 @@ function updateEquipmentEvaluationUI() {
   alarmContainer.innerHTML = alarmHtml;
 }
 
-// 장비 캘리브레이션 완료 처리 (연속 부적합 알람 해제)
-function completeMachineCalibration(machine) {
-  if (!confirm(`${machine} 캘리브레이션을 완료하셨습니까?\n확인 시 ${machine}의 부적합 경고 상태가 정상으로 초기화됩니다.`)) return;
+// =========================================================================
+// 캘리브레이션 일자 선택 모달 기능 (1주일 중 선택)
+// =========================================================================
+function openEquipCalibModal(machine) {
+  const modal = document.getElementById('equip-calib-modal');
+  const titleEl = document.getElementById('equip-calib-modal-title');
+  const machineInput = document.getElementById('modal-equip-machine-name');
+  const selectEl = document.getElementById('modal-equip-date-select');
+  if (!modal || !selectEl) return;
+
+  if (titleEl) titleEl.innerText = `🔧 ${machine} 캘리브레이션 등록`;
+  if (machineInput) machineInput.value = machine;
+
   const weekDates = getWeekDatesFromMonday(currentEquipMonday);
-  const weekDateKeys = weekDates.map(d => formatEquipDateKey(d));
-  const streakInfo = evaluateMachineStreak(machine, weekDateKeys);
-  const lastFailDate = streakInfo.failDatesInStreak[streakInfo.failDatesInStreak.length - 1] || formatEquipDateKey(new Date());
+  const todayKey = formatEquipDateKey(new Date());
+  const existingResetDate = equipmentCalibState.resetAfterDate?.[machine] || '';
+
+  // 1주일(월~일) 선택 옵션 생성
+  let optionsHtml = '';
+  weekDates.forEach((d, idx) => {
+    const dKey = formatEquipDateKey(d);
+    const dayName = WEEK_DAY_LABELS[idx];
+    const isToday = (dKey === todayKey);
+    const isCurrentReset = (dKey === existingResetDate);
+    const label = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} (${dayName}요일)${isToday ? ' - 오늘' : ''}${isCurrentReset ? ' [현재 등록됨]' : ''}`;
+    const selected = isCurrentReset || (!existingResetDate && isToday);
+    optionsHtml += `<option value="${dKey}" ${selected ? 'selected' : ''}>${label}</option>`;
+  });
+
+  selectEl.innerHTML = optionsHtml;
+  modal.classList.add('active');
+}
+
+function closeEquipCalibModal() {
+  const modal = document.getElementById('equip-calib-modal');
+  if (modal) modal.classList.remove('active');
+}
+
+function submitEquipCalibDate(e) {
+  if (e) e.preventDefault();
+  const machine = document.getElementById('modal-equip-machine-name')?.value;
+  const selectedDate = document.getElementById('modal-equip-date-select')?.value;
+  if (!machine || !selectedDate) return;
 
   if (!equipmentCalibState.resetAfterDate) equipmentCalibState.resetAfterDate = {};
-  equipmentCalibState.resetAfterDate[machine] = lastFailDate;
+  equipmentCalibState.resetAfterDate[machine] = selectedDate;
 
   saveStoredEquipmentCalib(true);
-  updateEquipmentEvaluationUI();
+  closeEquipCalibModal();
+  renderEquipmentTab();
+}
+
+function cancelMachineCalibration() {
+  const machine = document.getElementById('modal-equip-machine-name')?.value;
+  if (!machine) return;
+
+  if (!confirm(`${machine}의 캘리브레이션 등록 기록을 해제하시겠습니까?`)) return;
+
+  if (equipmentCalibState.resetAfterDate && equipmentCalibState.resetAfterDate[machine]) {
+    delete equipmentCalibState.resetAfterDate[machine];
+    saveStoredEquipmentCalib(true);
+  }
+
+  closeEquipCalibModal();
+  renderEquipmentTab();
 }
 
 // 현재 주간 데이터 초기화

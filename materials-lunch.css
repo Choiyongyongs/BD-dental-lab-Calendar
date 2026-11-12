@@ -1149,6 +1149,37 @@ input[type="number"] {
   border: 1px solid #ef4444;
 }
 
+.calib-machine-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 8px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #1e3a8a;
+  background: #eff6ff;
+  border: 1.5px solid #bfdbfe;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.calib-machine-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+.calib-machine-btn:active {
+  transform: scale(0.97);
+}
+.calib-last-date-text {
+  font-size: 10.5px;
+  color: #64748b;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
 .calib-pos-cell {
   background: #fcfcfd;
   text-align: center;
