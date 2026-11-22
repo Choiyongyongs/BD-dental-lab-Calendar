@@ -480,7 +480,6 @@ function renderEquipmentTab() {
               <button type="button" class="calib-machine-btn" onclick="openEquipCalibModal('${machine}')" title="${machine} 캘리브레이션 일자 선택">
                 🔧 캘리브레이션
               </button>
-              <div id="calib-machine-history-${mIdx}" style="display: flex; flex-direction: column; gap: 3px; align-items: center;"></div>
             </div>
           </td>
         `;
@@ -631,10 +630,9 @@ function updateEquipmentEvaluationUI() {
       warnMachines.push({ machine, streak, failDates: streakInfo.failDatesInStreak });
     }
 
-    // 1) 장비명 셀 배지 및 캘리브레이션 이력 업데이트
+    // 1) 장비명 셀 배지 업데이트
     const machineCell = document.getElementById(`calib-machine-cell-${mIdx}`);
     const machineBadge = document.getElementById(`calib-machine-badge-${mIdx}`);
-    const machineHistoryBox = document.getElementById(`calib-machine-history-${mIdx}`);
     if (machineCell && machineBadge) {
       machineCell.classList.remove('machine-state-warn', 'machine-state-danger');
       if (streak >= 2) {
@@ -648,27 +646,6 @@ function updateEquipmentEvaluationUI() {
       } else {
         machineBadge.className = 'calib-machine-badge badge-ok';
         machineBadge.innerHTML = `✅ 정상`;
-      }
-    }
-
-    if (machineHistoryBox) {
-      const weekCalibDates = weekDateKeys.filter(dk => isMachineCalibratedOnDate(machine, dk));
-      const allCalibDates = equipmentCalibState.calibratedDates?.[machine] || [];
-      if (weekCalibDates.length > 0) {
-        machineHistoryBox.innerHTML = weekCalibDates.map(dk => `
-          <span class="calib-done-chip" title="${dk} 캘리브레이션 완료">
-            🔧 ${formatShortDateWithDay(dk)} 완료
-          </span>
-        `).join('');
-      } else if (allCalibDates.length > 0) {
-        const latest = allCalibDates[allCalibDates.length - 1];
-        machineHistoryBox.innerHTML = `
-          <span class="calib-last-date-text" title="최근 캘리브레이션: ${latest}">
-            최근: ${formatShortDateWithDay(latest)}
-          </span>
-        `;
-      } else {
-        machineHistoryBox.innerHTML = '';
       }
     }
 
