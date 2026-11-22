@@ -26,19 +26,25 @@ const CALIB_TOLERANCE = 0.03;
 
 const STORAGE_KEY_EQUIP_CALIB = 'bd_equipment_calibration_v1';
 
-// 상태 데이터: { records: { 'YYYY-MM-DD': { '1호기': { p12_xp: '', ... } } }, resetAfterDate: { '1호기': 'YYYY-MM-DD' } }
+// 상태 데이터:
+// records: { 'YYYY-MM-DD': { '1호기': { p12_xp: '', ... } } }
+// resetAfterDate: { '1호기': 'YYYY-MM-DD' }
+// calibratedDates: { '1호기': ['YYYY-MM-DD', ...] }
 let equipmentCalibState = {
   records: {},
-  resetAfterDate: {}
+  resetAfterDate: {},
+  calibratedDates: {}
 };
 
 // 현재 조회 중인 주의 월요일 Date 객체
 let currentEquipMonday = getMondayOfDate(new Date());
 
+// 적합/부적합 클릭 시 수치 차이 펼쳐보기 토글 상태 ('1호기|YYYY-MM-DD')
+let expandedCalibDiffCells = new Set();
+
 // 실시간 동기화 중복/충돌 방지용 상태
 let equipFirestoreUnsubscribe = null;
 let equipFieldEditTimestamps = {}; // 'dateKey|machine|field' -> timestamp
-let equipSaveTimer = null;
 
 function getEquipmentFirestoreDb() {
   return window.firebaseDb || (typeof firebaseDb !== 'undefined' ? firebaseDb : null);
@@ -56,6 +62,23 @@ function formatEquipDateKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function getDayOfWeekKorFromDateKey(dateKey) {
+  if (!dateKey) return '';
+  const parts = String(dateKey).split('-').map(Number);
+  if (parts.length !== 3) return '';
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  return dayNames[d.getDay()] || '';
+}
+
+function formatShortDateWithDay(dateKey) {
+  if (!dateKey) return '';
+  const parts = String(dateKey).split('-').map(Number);
+  if (parts.length !== 3) return dateKey;
+  const dayKor = getDayOfWeekKorFromDateKey(dateKey);
+  return `${parts[1]}/${parts[2]}(${dayKor})`;
+}
+
 function getWeekDatesFromMonday(mondayDate) {
   const dates = [];
   for (let i = 0; i < 7; i++) {
@@ -64,6 +87,62 @@ function getWeekDatesFromMonday(mondayDate) {
     dates.push(d);
   }
   return dates;
+}
+
+// calibratedDates와 resetAfterDate 동기화 정규화
+function normalizeCalibratedDatesState() {
+  if (!equipmentCalibState.calibratedDates || typeof equipmentCalibState.calibratedDates !== 'object') {
+    equipmentCalibState.calibratedDates = {};
+  }
+  if (!equipmentCalibState.resetAfterDate || typeof equipmentCalibState.resetAfterDate !== 'object') {
+    equipmentCalibState.resetAfterDate = {};
+  }
+
+  EQUIPMENT_MACHINES.forEach(m => {
+    const arr = Array.isArray(equipmentCalibState.calibratedDates[m])
+      ? [...equipmentCalibState.calibratedDates[m]]
+      : [];
+    const legacyDate = equipmentCalibState.resetAfterDate[m];
+    if (legacyDate && !arr.includes(legacyDate)) {
+      arr.push(legacyDate);
+    }
+    const uniqueSorted = Array.from(new Set(arr.filter(Boolean))).sort();
+    equipmentCalibState.calibratedDates[m] = uniqueSorted;
+    if (uniqueSorted.length > 0) {
+      equipmentCalibState.resetAfterDate[m] = uniqueSorted[uniqueSorted.length - 1];
+    } else {
+      delete equipmentCalibState.resetAfterDate[m];
+    }
+  });
+}
+
+function isMachineCalibratedOnDate(machine, dateKey) {
+  const list = equipmentCalibState.calibratedDates?.[machine];
+  if (Array.isArray(list) && list.includes(dateKey)) return true;
+  return equipmentCalibState.resetAfterDate?.[machine] === dateKey;
+}
+
+// 부적합 판정 기준 상세 토글
+function toggleCalibCriteriaDetail() {
+  const box = document.getElementById('calib-criteria-detail-box');
+  const arrow = document.getElementById('calib-criteria-arrow');
+  if (!box) return;
+  const isHidden = box.style.display === 'none' || !box.style.display;
+  box.style.display = isHidden ? 'block' : 'none';
+  if (arrow) {
+    arrow.innerText = isHidden ? '▲' : '▼';
+  }
+}
+
+// 적합 / 부적합 클릭 시 수치 차이 표시 토글
+function toggleCalibDiffDetail(machine, dateKey) {
+  const key = `${machine}|${dateKey}`;
+  if (expandedCalibDiffCells.has(key)) {
+    expandedCalibDiffCells.delete(key);
+  } else {
+    expandedCalibDiffCells.add(key);
+  }
+  updateEquipmentEvaluationUI();
 }
 
 // 초기 로드
@@ -81,6 +160,8 @@ function loadStoredEquipmentCalib() {
       if (parsed && typeof parsed === 'object') {
         equipmentCalibState.records = parsed.records || {};
         equipmentCalibState.resetAfterDate = parsed.resetAfterDate || {};
+        equipmentCalibState.calibratedDates = parsed.calibratedDates || {};
+        normalizeCalibratedDatesState();
       }
     }
   } catch (e) {
@@ -91,12 +172,14 @@ function loadStoredEquipmentCalib() {
 // 전체 상태 저장 (초기화 / 캘리브레이션 완료 등)
 function saveStoredEquipmentCalib(fullOverwrite = false) {
   try {
+    normalizeCalibratedDatesState();
     localStorage.setItem(STORAGE_KEY_EQUIP_CALIB, JSON.stringify(equipmentCalibState));
     const db = getEquipmentFirestoreDb();
     if (db) {
       const payload = {
         records: equipmentCalibState.records || {},
         resetAfterDate: equipmentCalibState.resetAfterDate || {},
+        calibratedDates: equipmentCalibState.calibratedDates || {},
         updatedAt: new Date().toISOString()
       };
       if (fullOverwrite) {
@@ -113,7 +196,7 @@ function saveStoredEquipmentCalib(fullOverwrite = false) {
 }
 
 // 개별 입력칸 단위 실시간 병합 저장 (다중 사용자 동시 입력 시 서로 다른 칸 덮어쓰기 방지)
-function saveSingleEquipmentFieldToCloud(dateKey, machine, field, rawVal, resetCleared = false) {
+function saveSingleEquipmentFieldToCloud(dateKey, machine, field, rawVal) {
   try {
     localStorage.setItem(STORAGE_KEY_EQUIP_CALIB, JSON.stringify(equipmentCalibState));
     const db = getEquipmentFirestoreDb();
@@ -129,9 +212,6 @@ function saveSingleEquipmentFieldToCloud(dateKey, machine, field, rawVal, resetC
       },
       updatedAt: new Date().toISOString()
     };
-    if (resetCleared) {
-      patch.resetAfterDate = equipmentCalibState.resetAfterDate || {};
-    }
 
     db.collection('equipment').doc('calibration_data').set(patch, { merge: true })
       .catch(err => console.warn('Firestore equipment field sync err:', err));
@@ -153,7 +233,6 @@ function setupEquipmentFirestoreListeners() {
     if (typeof updateCloudStatusBadge === 'function') {
       updateCloudStatusBadge('connected', 'DB 연결됨');
     }
-    // 로컬에서 방금 전송 중인 pending write 스냅샷은 건너뛰어 타이핑 중 커서/값 튐 방지
     if (doc.metadata && doc.metadata.hasPendingWrites) return;
 
     if (doc.exists && doc.data()) {
@@ -161,7 +240,6 @@ function setupEquipmentFirestoreListeners() {
       const incomingRecords = data.records || {};
       const now = Date.now();
 
-      // 최근 2초 이내에 현재 기기에서 직접 타이핑한 셀은 로컬 값을 우선 유지
       if (!equipmentCalibState.records) equipmentCalibState.records = {};
       const mergedRecords = JSON.parse(JSON.stringify(incomingRecords));
 
@@ -182,9 +260,10 @@ function setupEquipmentFirestoreListeners() {
 
       equipmentCalibState.records = mergedRecords;
       equipmentCalibState.resetAfterDate = data.resetAfterDate || {};
+      equipmentCalibState.calibratedDates = data.calibratedDates || {};
+      normalizeCalibratedDatesState();
       localStorage.setItem(STORAGE_KEY_EQUIP_CALIB, JSON.stringify(equipmentCalibState));
 
-      // 현재 테이블이 렌더링되어 있으면 포커스를 깨뜨리지 않고 값과 색상/알람만 즉시 동기화
       const hasRenderedInputs = document.querySelectorAll('.calib-input').length > 0;
       if (hasRenderedInputs) {
         syncInputsFromStateWithoutFocusLoss();
@@ -272,11 +351,6 @@ function evaluateMachineDay(dateKey, machine) {
   const isFail = fail12X || fail6X || failZ;
   const isCompletePass = hasAllPairs && !isFail;
 
-  const reasons = [];
-  if (fail12X) reasons.push(`12시 X편차(${diff12X.toFixed(3)})`);
-  if (fail6X)  reasons.push(`6시 X편차(${diff6X.toFixed(3)})`);
-  if (failZ)   reasons.push(`Z축 편차(${diffZ.toFixed(3)})`);
-
   return {
     hasAnyInput,
     hasAnyPair,
@@ -288,8 +362,7 @@ function evaluateMachineDay(dateKey, machine) {
     fail6X,
     failZ,
     isFail,
-    isCompletePass,
-    reasons
+    isCompletePass
   };
 }
 
@@ -297,29 +370,36 @@ function evaluateMachineDay(dateKey, machine) {
  * 각 장비(1호기, 2호기, 3호기)의 연속 부적합 횟수(failStreak) 및 주간 부적합 현황 계산
  */
 function evaluateMachineStreak(machine, weekDateKeys) {
+  const calibratedSet = new Set(equipmentCalibState.calibratedDates?.[machine] || []);
   const resetAfter = equipmentCalibState.resetAfterDate?.[machine] || '';
+  if (resetAfter) calibratedSet.add(resetAfter);
 
-  // 전체 기록된 날짜 + 현재 보고 있는 주간 날짜들을 시간순 정렬하여 조회 주의 마지막 날짜까지 스캔
   const maxWeekDate = weekDateKeys[weekDateKeys.length - 1];
   const allDateSet = new Set([
     ...Object.keys(equipmentCalibState.records || {}),
+    ...Array.from(calibratedSet),
     ...weekDateKeys
   ]);
 
   const sortedDates = Array.from(allDateSet)
-    .filter(d => d <= maxWeekDate && (!resetAfter || d > resetAfter))
+    .filter(d => d <= maxWeekDate)
     .sort();
 
   let streak = 0;
   const failDatesInStreak = [];
 
   sortedDates.forEach(dKey => {
+    // 해당 날짜에 캘리브레이션을 수행한 기록이 있으면 그 날까지의 부적합 연속 카운트 초기화
+    if (calibratedSet.has(dKey)) {
+      streak = 0;
+      failDatesInStreak.length = 0;
+      return;
+    }
     const ev = evaluateMachineDay(dKey, machine);
     if (ev.isFail) {
       streak += 1;
       failDatesInStreak.push(dKey);
     } else if (ev.isCompletePass) {
-      // 6개 수치(3쌍)가 모두 정상 범위(<=0.03)로 입력된 날이 있으면 연속 부적합 초기화
       streak = 0;
       failDatesInStreak.length = 0;
     }
@@ -355,9 +435,9 @@ function renderEquipmentTab() {
 
   // 1) 테이블 헤더 렌더링 (월 ~ 일, 오늘 요일 강조 표시)
   let headHtml = `
-    <th style="width: 92px; text-align: center;">장비</th>
-    <th style="width: 68px; text-align: center;">위치</th>
-    <th style="width: 68px; text-align: center;">축</th>
+    <th style="width: 105px; text-align: center;">장비</th>
+    <th style="width: 66px; text-align: center;">위치</th>
+    <th style="width: 66px; text-align: center;">축</th>
   `;
 
   weekDates.forEach((d, idx) => {
@@ -368,7 +448,7 @@ function renderEquipmentTab() {
     const weekendColor = idx === 5 ? '#2563eb' : (idx === 6 ? '#dc2626' : '#0f172a');
 
     headHtml += `
-      <th class="calib-day-th ${isToday ? 'is-today-col' : ''}" style="text-align: center; min-width: 110px;">
+      <th class="calib-day-th ${isToday ? 'is-today-col' : ''}" style="text-align: center; min-width: 112px;">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
           ${isToday ? '<span class="calib-today-pill">📍 오늘 입력</span>' : ''}
           <span style="font-size: 14px; font-weight: 800; color: ${isToday ? '#c2410c' : weekendColor};">
@@ -392,21 +472,15 @@ function renderEquipmentTab() {
 
       // 장비명 셀 (6행 + 1요약행 = 7행 병합)
       if (isFirstRowOfMachine) {
-        const lastCalibDate = equipmentCalibState.resetAfterDate?.[machine];
-        let lastCalibText = '';
-        if (lastCalibDate) {
-          const parts = lastCalibDate.split('-');
-          lastCalibText = `<div class="calib-last-date-text" title="마지막 캘리브레이션: ${lastCalibDate}">최근: ${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)}</div>`;
-        }
         bodyHtml += `
           <td rowspan="7" class="calib-machine-cell" id="calib-machine-cell-${mIdx}">
             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
               <span style="font-size: 16px; font-weight: 900; color: #0f172a;">${machine}</span>
               <span class="calib-machine-badge" id="calib-machine-badge-${mIdx}">정상</span>
-              <button type="button" class="calib-machine-btn" onclick="openEquipCalibModal('${machine}')" title="${machine} 캘리브레이션 일자 등록">
+              <button type="button" class="calib-machine-btn" onclick="openEquipCalibModal('${machine}')" title="${machine} 캘리브레이션 일자 선택">
                 🔧 캘리브레이션
               </button>
-              ${lastCalibText}
+              <div id="calib-machine-history-${mIdx}" style="display: flex; flex-direction: column; gap: 3px; align-items: center;"></div>
             </div>
           </td>
         `;
@@ -458,11 +532,11 @@ function renderEquipmentTab() {
       bodyHtml += `</tr>`;
     });
 
-    // 각 장비 하단 요일별 자동 판정 및 편차 표시 행
+    // 각 장비 하단 요일별 자동 판정 및 캘리브레이션 표시 행
     bodyHtml += `
       <tr class="calib-eval-row calib-machine-divider" data-machine="${machine}">
         <td colspan="2" style="text-align: center; font-size: 11.5px; font-weight: 800; color: #475569; background: #f8fafc;">
-          일별 판정 / 편차
+          일별 판정
         </td>
         ${weekDates.map((d, dIdx) => {
           const dKey = weekDateKeys[dIdx];
@@ -475,7 +549,7 @@ function renderEquipmentTab() {
 
   container.innerHTML = bodyHtml;
 
-  // 3) 부적합 판정, 입력란 색상(노란색/빨간색) 및 상단 알람 배너 반영
+  // 3) 부적합 판정, 입력란 색상(노란색/빨간색), 캘리브레이션 표시 및 상단 알람 배너 반영
   updateEquipmentEvaluationUI();
 }
 
@@ -494,14 +568,7 @@ function onCalibInputChange(inputEl) {
   equipmentCalibState.records[dateKey][machine][field] = rawVal;
   equipFieldEditTimestamps[`${dateKey}|${machine}|${field}`] = Date.now();
 
-  // 만약 이전에 캘리브레이션 완료 초기화를 눌렀던 날짜에 다시 새 값을 입력하면 초기화 기준일 해제
-  let resetCleared = false;
-  if (equipmentCalibState.resetAfterDate?.[machine] && dateKey <= equipmentCalibState.resetAfterDate[machine]) {
-    delete equipmentCalibState.resetAfterDate[machine];
-    resetCleared = true;
-  }
-
-  saveSingleEquipmentFieldToCloud(dateKey, machine, field, rawVal, resetCleared);
+  saveSingleEquipmentFieldToCloud(dateKey, machine, field, rawVal);
   updateEquipmentEvaluationUI();
 }
 
@@ -521,7 +588,6 @@ function onCalibInputKeydown(e, inputEl) {
         nextEl.select();
       }
     } else {
-      // 다음 장비의 첫 행으로 이동
       const mIdx = EQUIPMENT_MACHINES.indexOf(machine);
       if (mIdx >= 0 && mIdx + 1 < EQUIPMENT_MACHINES.length) {
         const nextMachine = EQUIPMENT_MACHINES[mIdx + 1];
@@ -546,7 +612,7 @@ function onCalibInputKeydown(e, inputEl) {
 }
 
 /**
- * 실시간 판정 UI 업데이트 (입력란 노란색/빨간색 변경 & 상단 알람 배너 & 일별 편차 요약)
+ * 실시간 판정 UI 업데이트 (입력란 노란색/빨간색 변경 & 상단 알람 배너 & 일별 적합/부적합 클릭 시 수치 차이 & 캘리브레이션 완료 표시)
  */
 function updateEquipmentEvaluationUI() {
   const weekDates = getWeekDatesFromMonday(currentEquipMonday);
@@ -565,9 +631,10 @@ function updateEquipmentEvaluationUI() {
       warnMachines.push({ machine, streak, failDates: streakInfo.failDatesInStreak });
     }
 
-    // 1) 장비명 셀 배지 및 배경색 업데이트
+    // 1) 장비명 셀 배지 및 캘리브레이션 이력 업데이트
     const machineCell = document.getElementById(`calib-machine-cell-${mIdx}`);
     const machineBadge = document.getElementById(`calib-machine-badge-${mIdx}`);
+    const machineHistoryBox = document.getElementById(`calib-machine-history-${mIdx}`);
     if (machineCell && machineBadge) {
       machineCell.classList.remove('machine-state-warn', 'machine-state-danger');
       if (streak >= 2) {
@@ -584,6 +651,27 @@ function updateEquipmentEvaluationUI() {
       }
     }
 
+    if (machineHistoryBox) {
+      const weekCalibDates = weekDateKeys.filter(dk => isMachineCalibratedOnDate(machine, dk));
+      const allCalibDates = equipmentCalibState.calibratedDates?.[machine] || [];
+      if (weekCalibDates.length > 0) {
+        machineHistoryBox.innerHTML = weekCalibDates.map(dk => `
+          <span class="calib-done-chip" title="${dk} 캘리브레이션 완료">
+            🔧 ${formatShortDateWithDay(dk)} 완료
+          </span>
+        `).join('');
+      } else if (allCalibDates.length > 0) {
+        const latest = allCalibDates[allCalibDates.length - 1];
+        machineHistoryBox.innerHTML = `
+          <span class="calib-last-date-text" title="최근 캘리브레이션: ${latest}">
+            최근: ${formatShortDateWithDay(latest)}
+          </span>
+        `;
+      } else {
+        machineHistoryBox.innerHTML = '';
+      }
+    }
+
     // 2) 해당 장비의 모든 입력란 색상 변경 (1번 부적합 -> 노란색, 2번 부적합 -> 빨간색)
     const machineInputs = document.querySelectorAll(`.calib-input[data-machine="${machine}"]`);
     machineInputs.forEach(inp => {
@@ -595,10 +683,12 @@ function updateEquipmentEvaluationUI() {
       }
     });
 
-    // 3) 요일별 개별 편차 판정 및 부적합 항목 강조
+    // 3) 요일별 개별 편차 판정 (클릭 시 수치 차이 노출) 및 캘리브레이션 완료 표시
     weekDateKeys.forEach((dKey, dIdx) => {
       const ev = evaluateMachineDay(dKey, machine);
       const evalCell = document.getElementById(`calib-eval-${mIdx}-${dIdx}`);
+      const isCalibratedDay = isMachineCalibratedOnDate(machine, dKey);
+      const isExpanded = expandedCalibDiffCells.has(`${machine}|${dKey}`);
 
       // 초과된 축의 입력칸에 테두리 강조 추가
       if (ev.fail12X) {
@@ -616,42 +706,62 @@ function updateEquipmentEvaluationUI() {
 
       if (!evalCell) return;
 
+      const calibBadgeHtml = isCalibratedDay
+        ? `<span class="calib-day-done-badge" title="${dKey} (${WEEK_DAY_LABELS[dIdx]}요일) ${machine} 캘리브레이션 완료">🔧 ${formatShortDateWithDay(dKey)} 캘리브레이션</span>`
+        : '';
+
       if (!ev.hasAnyInput) {
-        evalCell.innerHTML = `<span style="color: #cbd5e1;">미입력</span>`;
+        evalCell.innerHTML = `
+          <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+            ${calibBadgeHtml}
+            ${!isCalibratedDay ? '<span style="color: #cbd5e1;">미입력</span>' : ''}
+          </div>
+        `;
         return;
       }
 
       const diffLines = [];
       if (ev.diff12X !== null) {
-        diffLines.push(`<span style="color: ${ev.fail12X ? '#dc2626; font-weight:800;' : '#475569;'}">12시X: ${ev.diff12X.toFixed(2)}</span>`);
+        diffLines.push(`<div style="color: ${ev.fail12X ? '#dc2626; font-weight:800;' : '#334155;'}">12시 x: ${ev.diff12X.toFixed(2)}</div>`);
       }
       if (ev.diff6X !== null) {
-        diffLines.push(`<span style="color: ${ev.fail6X ? '#dc2626; font-weight:800;' : '#475569;'}">6시X: ${ev.diff6X.toFixed(2)}</span>`);
+        diffLines.push(`<div style="color: ${ev.fail6X ? '#dc2626; font-weight:800;' : '#334155;'}">6시 x: ${ev.diff6X.toFixed(2)}</div>`);
       }
       if (ev.diffZ !== null) {
-        diffLines.push(`<span style="color: ${ev.failZ ? '#dc2626; font-weight:800;' : '#475569;'}">Z차: ${ev.diffZ.toFixed(2)}</span>`);
+        diffLines.push(`<div style="color: ${ev.failZ ? '#dc2626; font-weight:800;' : '#334155;'}">z축: ${ev.diffZ.toFixed(2)}</div>`);
       }
+
+      const diffDetailBoxHtml = (isExpanded && diffLines.length > 0)
+        ? `<div class="calib-diff-popup-box">${diffLines.join('')}</div>`
+        : '';
 
       if (ev.isFail) {
         evalCell.innerHTML = `
-          <div style="display: flex; flex-direction: column; gap: 2px; align-items: center;">
-            <span style="background: #fee2e2; color: #b91c1c; border: 1px solid #f87171; font-weight: 800; padding: 1px 6px; border-radius: 999px; font-size: 10.5px;">
-              ❌ 부적합
-            </span>
-            <div style="font-size: 10.5px; line-height: 1.25;">${diffLines.join(' · ')}</div>
+          <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+            ${calibBadgeHtml}
+            <button type="button" class="calib-status-toggle-btn is-fail" onclick="toggleCalibDiffDetail('${machine}', '${dKey}')" title="클릭하여 수치 차이 보기">
+              ❌ 부적합 <span style="font-size: 9px; opacity: 0.8;">${isExpanded ? '▲' : '▼'}</span>
+            </button>
+            ${diffDetailBoxHtml}
           </div>
         `;
       } else if (ev.hasAnyPair) {
         evalCell.innerHTML = `
-          <div style="display: flex; flex-direction: column; gap: 2px; align-items: center;">
-            <span style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 800; padding: 1px 6px; border-radius: 999px; font-size: 10.5px;">
-              ⭕ 적합
-            </span>
-            <div style="font-size: 10.5px; line-height: 1.25;">${diffLines.join(' · ')}</div>
+          <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+            ${calibBadgeHtml}
+            <button type="button" class="calib-status-toggle-btn is-pass" onclick="toggleCalibDiffDetail('${machine}', '${dKey}')" title="클릭하여 수치 차이 보기">
+              ⭕ 적합 <span style="font-size: 9px; opacity: 0.8;">${isExpanded ? '▲' : '▼'}</span>
+            </button>
+            ${diffDetailBoxHtml}
           </div>
         `;
       } else {
-        evalCell.innerHTML = `<span style="color: #94a3b8; font-size: 10.5px;">입력 중...</span>`;
+        evalCell.innerHTML = `
+          <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+            ${calibBadgeHtml}
+            <span style="color: #94a3b8; font-size: 10.5px;">입력 중...</span>
+          </div>
+        `;
       }
     });
   });
@@ -697,36 +807,71 @@ function updateEquipmentEvaluationUI() {
 }
 
 // =========================================================================
-// 캘리브레이션 일자 선택 모달 기능 (1주일 중 선택)
+// 캘리브레이션 일자 클릭 선택 모달 기능 (1주일 중 클릭하여 즉시 표시/해제)
 // =========================================================================
 function openEquipCalibModal(machine) {
   const modal = document.getElementById('equip-calib-modal');
   const titleEl = document.getElementById('equip-calib-modal-title');
   const machineInput = document.getElementById('modal-equip-machine-name');
-  const selectEl = document.getElementById('modal-equip-date-select');
-  if (!modal || !selectEl) return;
+  const dayListEl = document.getElementById('modal-equip-day-list');
+  if (!modal || !dayListEl) return;
 
-  if (titleEl) titleEl.innerText = `🔧 ${machine} 캘리브레이션 등록`;
+  if (titleEl) titleEl.innerText = `🔧 ${machine} 캘리브레이션 날짜 선택`;
   if (machineInput) machineInput.value = machine;
+
+  renderEquipCalibModalDayList(machine);
+  modal.classList.add('active');
+}
+
+function renderEquipCalibModalDayList(machine) {
+  const dayListEl = document.getElementById('modal-equip-day-list');
+  if (!dayListEl) return;
 
   const weekDates = getWeekDatesFromMonday(currentEquipMonday);
   const todayKey = formatEquipDateKey(new Date());
-  const existingResetDate = equipmentCalibState.resetAfterDate?.[machine] || '';
 
-  // 1주일(월~일) 선택 옵션 생성
-  let optionsHtml = '';
-  weekDates.forEach((d, idx) => {
+  dayListEl.innerHTML = weekDates.map((d, idx) => {
     const dKey = formatEquipDateKey(d);
     const dayName = WEEK_DAY_LABELS[idx];
     const isToday = (dKey === todayKey);
-    const isCurrentReset = (dKey === existingResetDate);
-    const label = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} (${dayName}요일)${isToday ? ' - 오늘' : ''}${isCurrentReset ? ' [현재 등록됨]' : ''}`;
-    const selected = isCurrentReset || (!existingResetDate && isToday);
-    optionsHtml += `<option value="${dKey}" ${selected ? 'selected' : ''}>${label}</option>`;
-  });
+    const isCalibrated = isMachineCalibratedOnDate(machine, dKey);
 
-  selectEl.innerHTML = optionsHtml;
-  modal.classList.add('active');
+    return `
+      <button
+        type="button"
+        class="calib-day-select-btn ${isCalibrated ? 'is-selected' : ''}"
+        onclick="selectEquipCalibDay('${machine}', '${dKey}')"
+      >
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 14px; font-weight: 800;">
+            ${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} (${dayName}요일)
+          </span>
+          ${isToday ? '<span style="background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px;">오늘</span>' : ''}
+        </div>
+        <span style="font-size: 12.5px; font-weight: 800; color: ${isCalibrated ? '#1d4ed8' : '#64748b'};">
+          ${isCalibrated ? '🔧 캘리브레이션 완료 ✓' : '클릭하여 선택'}
+        </span>
+      </button>
+    `;
+  }).join('');
+}
+
+function selectEquipCalibDay(machine, dateKey) {
+  if (!machine || !dateKey) return;
+  normalizeCalibratedDatesState();
+
+  const currentList = equipmentCalibState.calibratedDates[machine] || [];
+  if (currentList.includes(dateKey)) {
+    // 이미 등록된 날짜를 다시 누르면 해제 토글
+    equipmentCalibState.calibratedDates[machine] = currentList.filter(d => d !== dateKey);
+  } else {
+    equipmentCalibState.calibratedDates[machine] = [...currentList, dateKey].sort();
+  }
+
+  normalizeCalibratedDatesState();
+  saveStoredEquipmentCalib(true);
+  closeEquipCalibModal();
+  renderEquipmentTab();
 }
 
 function closeEquipCalibModal() {
@@ -734,31 +879,22 @@ function closeEquipCalibModal() {
   if (modal) modal.classList.remove('active');
 }
 
-function submitEquipCalibDate(e) {
-  if (e) e.preventDefault();
-  const machine = document.getElementById('modal-equip-machine-name')?.value;
-  const selectedDate = document.getElementById('modal-equip-date-select')?.value;
-  if (!machine || !selectedDate) return;
-
-  if (!equipmentCalibState.resetAfterDate) equipmentCalibState.resetAfterDate = {};
-  equipmentCalibState.resetAfterDate[machine] = selectedDate;
-
-  saveStoredEquipmentCalib(true);
-  closeEquipCalibModal();
-  renderEquipmentTab();
-}
-
 function cancelMachineCalibration() {
   const machine = document.getElementById('modal-equip-machine-name')?.value;
   if (!machine) return;
 
-  if (!confirm(`${machine}의 캘리브레이션 등록 기록을 해제하시겠습니까?`)) return;
+  if (!confirm(`${machine}의 이번 주 캘리브레이션 기록을 모두 해제하시겠습니까?`)) return;
 
-  if (equipmentCalibState.resetAfterDate && equipmentCalibState.resetAfterDate[machine]) {
+  const weekDateSet = new Set(getWeekDatesFromMonday(currentEquipMonday).map(d => formatEquipDateKey(d)));
+  if (equipmentCalibState.calibratedDates && Array.isArray(equipmentCalibState.calibratedDates[machine])) {
+    equipmentCalibState.calibratedDates[machine] = equipmentCalibState.calibratedDates[machine].filter(d => !weekDateSet.has(d));
+  }
+  if (equipmentCalibState.resetAfterDate && weekDateSet.has(equipmentCalibState.resetAfterDate[machine])) {
     delete equipmentCalibState.resetAfterDate[machine];
-    saveStoredEquipmentCalib(true);
   }
 
+  normalizeCalibratedDatesState();
+  saveStoredEquipmentCalib(true);
   closeEquipCalibModal();
   renderEquipmentTab();
 }
