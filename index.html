@@ -946,7 +946,7 @@
   <!-- html2canvas for capturing materials order -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <link rel="stylesheet" href="materials-lunch.css?v=1793187000000">
-  <script src="materials.js?v=1793186000000"></script>
+  <script src="materials.js?v=1793189000000"></script>
   <script src="lunch.js?v=1793183400000"></script>
   <script src="equipment.js?v=1793188000000"></script>
 </head>
@@ -1294,14 +1294,17 @@
           </div>
         </div>
 
-        <!-- 저장된 발주 목록 (주문이 잘 들어왔는지 입고 체크하는 영역) -->
+        <!-- 입고 확인 체크 영역 -->
         <div class="card" id="material-saved-history-card">
           <div class="card-title" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span>✅ 저장된 발주 목록 (입고 확인 체크)</span>
+              <span>✅ 입고 확인 체크</span>
               <span id="mat-saved-history-badge" class="app-badge" style="background: #dcfce7; color: #166534;">0건</span>
             </div>
-            <span style="font-size: 11.5px; color: #64748b;">항목 클릭 시 [입고대기 ↔ 입고완료] 체크</span>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-size: 11.5px; color: #64748b;">날짜 클릭 시 접기/펼치기 · 항목 클릭 시 입고체크</span>
+              <button type="button" id="mat-toggle-all-collapse-btn" onclick="toggleAllSavedBatchesCollapse()" style="display: none; padding: 3px 8px; font-size: 11px;">전체 접기</button>
+            </div>
           </div>
           <div id="material-saved-history-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
         </div>

@@ -20,6 +20,7 @@ let materialCategoryFilter = 'ALL';
 let materialSearchKeyword = '';
 let materialSupplierFilter = 'ALL';
 let materialFirestoreUnsubscribes = [];
+let collapsedSavedBatchIds = new Set();
 
 // 로컬스토리지 키
 const STORAGE_KEY_MAT_MASTER = 'bd_material_custom_master';
@@ -27,6 +28,7 @@ const STORAGE_KEY_MAT_DELETED = 'bd_material_deleted_names';
 const STORAGE_KEY_MAT_ORDERS = 'bd_material_current_orders';
 const STORAGE_KEY_MAT_SAVED_HISTORY = 'bd_material_saved_history';
 const STORAGE_KEY_MAT_STATS_LOG = 'bd_material_order_stats_log';
+const STORAGE_KEY_MAT_COLLAPSED = 'bd_material_collapsed_batches';
 
 function getMaterialFirestoreDb() {
   return window.firebaseDb || (typeof firebaseDb !== 'undefined' ? firebaseDb : null);
@@ -128,6 +130,13 @@ function loadStoredMaterials() {
       const parsedDel = JSON.parse(savedDeleted);
       if (Array.isArray(parsedDel)) {
         materialDeletedNames = parsedDel;
+      }
+    }
+    const savedCollapsed = localStorage.getItem(STORAGE_KEY_MAT_COLLAPSED);
+    if (savedCollapsed) {
+      const parsedCol = JSON.parse(savedCollapsed);
+      if (Array.isArray(parsedCol)) {
+        collapsedSavedBatchIds = new Set(parsedCol);
       }
     }
   } catch (e) {
@@ -1323,14 +1332,55 @@ function saveCurrentMaterialOrderToCheckList() {
   }
 }
 
+function saveCollapsedBatchIds() {
+  try {
+    localStorage.setItem(STORAGE_KEY_MAT_COLLAPSED, JSON.stringify(Array.from(collapsedSavedBatchIds)));
+  } catch (e) {}
+}
+
+function toggleSavedBatchCollapse(batchId) {
+  if (!batchId) return;
+  if (collapsedSavedBatchIds.has(batchId)) {
+    collapsedSavedBatchIds.delete(batchId);
+  } else {
+    collapsedSavedBatchIds.add(batchId);
+  }
+  saveCollapsedBatchIds();
+  renderMaterialSavedHistory();
+}
+
+function toggleAllSavedBatchesCollapse() {
+  const list = Array.isArray(materialSavedHistory) ? materialSavedHistory : [];
+  if (list.length === 0) return;
+  const allCollapsed = list.every(b => collapsedSavedBatchIds.has(b.id));
+  if (allCollapsed) {
+    collapsedSavedBatchIds.clear();
+  } else {
+    list.forEach(b => collapsedSavedBatchIds.add(b.id));
+  }
+  saveCollapsedBatchIds();
+  renderMaterialSavedHistory();
+}
+
 function renderMaterialSavedHistory() {
   const container = document.getElementById('material-saved-history-container');
   const badge = document.getElementById('mat-saved-history-badge');
+  const toggleAllBtn = document.getElementById('mat-toggle-all-collapse-btn');
   if (!container) return;
 
   const list = Array.isArray(materialSavedHistory) ? materialSavedHistory : [];
   if (badge) {
     badge.innerText = `저장 ${list.length}건`;
+  }
+
+  if (toggleAllBtn) {
+    if (list.length > 0) {
+      toggleAllBtn.style.display = 'inline-flex';
+      const allCollapsed = list.every(b => collapsedSavedBatchIds.has(b.id));
+      toggleAllBtn.innerText = allCollapsed ? '▼ 전체 펼치기' : '▲ 전체 접기';
+    } else {
+      toggleAllBtn.style.display = 'none';
+    }
   }
 
   if (list.length === 0) {
@@ -1348,6 +1398,7 @@ function renderMaterialSavedHistory() {
     const receivedCnt = items.filter(it => it.received).length;
     const allReceived = totalCnt > 0 && receivedCnt === totalCnt;
     const dateLabel = formatSavedDateTime(batch.savedAt);
+    const isCollapsed = collapsedSavedBatchIds.has(batch.id);
 
     const statusBadge = allReceived
       ? `<span style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 800;">🎉 전체 입고완료 (${receivedCnt}/${totalCnt})</span>`
@@ -1360,6 +1411,10 @@ function renderMaterialSavedHistory() {
       const urgBadge = it.urgency === 'urgent'
         ? `<span class="urgency-badge urgency-urgent" style="cursor: default;">🚨 긴급</span>`
         : `<span class="urgency-badge urgency-regular" style="cursor: default;">📦 정기</span>`;
+
+      const deleteReceivedBtn = isRec
+        ? `<button type="button" class="btn-danger order-delete-btn" onclick="event.stopPropagation(); deleteReceivedSavedMaterialItem('${batch.id}', ${idx})" title="입고완료된 이 재료 삭제">✕</button>`
+        : '';
 
       return `
         <div class="saved-check-row ${isRec ? 'is-received' : ''}" onclick="toggleSavedMaterialItemCheck('${batch.id}', ${idx})" style="cursor: pointer;">
@@ -1377,31 +1432,36 @@ function renderMaterialSavedHistory() {
               <button type="button" class="receive-status-btn ${isRec ? 'done' : 'pending'}" onclick="event.stopPropagation(); toggleSavedMaterialItemCheck('${batch.id}', ${idx})">
                 ${isRec ? '✅ 입고완료' : '⬜ 입고대기'}
               </button>
+              ${deleteReceivedBtn}
             </div>
           </div>
         </div>
       `;
     }).join('');
 
+    const deleteReceivedBatchBtn = receivedCnt > 0
+      ? `<button type="button" class="btn-danger" style="padding: 4px 8px; font-size: 11.5px;" onclick="event.stopPropagation(); deleteAllReceivedItemsInBatch('${batch.id}')" title="이 날짜에서 입고완료 체크된 재료만 삭제">입고완료 삭제(${receivedCnt})</button>`
+      : '';
+
     return `
       <div class="saved-batch-box">
-        <div class="saved-batch-header">
+        <div class="saved-batch-header" onclick="toggleSavedBatchCollapse('${batch.id}')" style="cursor: pointer; ${isCollapsed ? 'border-bottom: none;' : ''}" title="클릭하여 날짜별 목록 ${isCollapsed ? '펼치기' : '접기'}">
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 11.5px; color: #475569; font-weight: 900; width: 14px; display: inline-block; text-align: center;">${isCollapsed ? '▶' : '▼'}</span>
             <strong style="font-size: 13px; color: #0f172a;">📅 ${escapeHtml(dateLabel)} 발주분</strong>
             ${statusBadge}
           </div>
-          <div style="display: flex; align-items: center; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;" onclick="event.stopPropagation();">
             <button type="button" class="btn-outline" style="padding: 4px 8px; font-size: 11.5px;" onclick="toggleAllSavedMaterialBatchCheck('${batch.id}', ${!allReceived})">
               ${allReceived ? '전체 해제' : '전체 완료체크'}
             </button>
+            ${deleteReceivedBatchBtn}
             <button type="button" class="btn-danger" style="padding: 4px 8px; font-size: 11.5px;" onclick="deleteSavedMaterialBatch('${batch.id}')">
-              삭제
+              전체 삭제
             </button>
           </div>
         </div>
-        <div>
-          ${rowsHtml}
-        </div>
+        ${isCollapsed ? '' : `<div>${rowsHtml}</div>`}
       </div>
     `;
   }).join('');
@@ -1423,6 +1483,52 @@ function toggleAllSavedMaterialBatchCheck(batchId, receivedState) {
   });
   saveStoredMaterialHistory();
   renderMaterialSavedHistory();
+}
+
+function deleteReceivedSavedMaterialItem(batchId, itemIdx) {
+  const batch = (materialSavedHistory || []).find(b => b.id === batchId);
+  if (!batch || !Array.isArray(batch.items) || !batch.items[itemIdx]) return;
+  const targetItem = batch.items[itemIdx];
+  if (!targetItem.received) {
+    alert('입고완료 체크된 재료만 개별 삭제할 수 있습니다.');
+    return;
+  }
+  if (!confirm(`입고완료된 '${targetItem.name}' 항목을 목록에서 삭제하시겠습니까?`)) return;
+
+  archiveOrdersToStatsLog([targetItem]);
+  batch.items.splice(itemIdx, 1);
+
+  if (batch.items.length === 0) {
+    materialSavedHistory = (materialSavedHistory || []).filter(b => b.id !== batchId);
+    collapsedSavedBatchIds.delete(batchId);
+    saveCollapsedBatchIds();
+  }
+
+  saveStoredMaterialHistory();
+  renderMaterialSavedHistory();
+  renderMaterialMasterGrid();
+}
+
+function deleteAllReceivedItemsInBatch(batchId) {
+  const batch = (materialSavedHistory || []).find(b => b.id === batchId);
+  if (!batch || !Array.isArray(batch.items)) return;
+  const receivedItems = batch.items.filter(it => it.received);
+  if (receivedItems.length === 0) return;
+
+  if (!confirm(`이 발주분에서 입고완료된 재료 ${receivedItems.length}건을 삭제하시겠습니까?`)) return;
+
+  archiveOrdersToStatsLog(receivedItems);
+  batch.items = batch.items.filter(it => !it.received);
+
+  if (batch.items.length === 0) {
+    materialSavedHistory = (materialSavedHistory || []).filter(b => b.id !== batchId);
+    collapsedSavedBatchIds.delete(batchId);
+    saveCollapsedBatchIds();
+  }
+
+  saveStoredMaterialHistory();
+  renderMaterialSavedHistory();
+  renderMaterialMasterGrid();
 }
 
 function deleteSavedMaterialBatch(batchId) {
